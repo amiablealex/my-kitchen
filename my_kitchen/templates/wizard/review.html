@@ -22,10 +22,22 @@
     <li>Servings: {{ servings }}</li>
   </ul>
 
-  <form method="post" action="{{ url_for('wizard.generate') }}">
+  <form method="post" action="{{ url_for('wizard.generate') }}" id="generate-form">
     <p>
       <a href="{{ url_for('wizard.step_servings') }}">← Back</a>
-      <button type="submit">Generate recipes →</button>
+      <button type="submit" id="generate-btn">Generate recipes →</button>
     </p>
   </form>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    // Prevent double-submit: the LLM call takes a while, so block repeat
+    // clicks (each one is a real API call plus a duplicate generation row).
+    document.getElementById("generate-form").addEventListener("submit", function () {
+      var btn = document.getElementById("generate-btn");
+      btn.disabled = true;
+      btn.textContent = "Generating… this can take up to a minute";
+    });
+  </script>
 {% endblock %}
