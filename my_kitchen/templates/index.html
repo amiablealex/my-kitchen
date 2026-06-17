@@ -2,5 +2,10 @@
 {% block title %}My Kitchen{% endblock %}
 {% block content %}
   <h1>My Kitchen</h1>
-  <p>MVP skeleton is running.</p>
+  <p>What's for dinner?</p>
+  <p><a href="{{ url_for('wizard.start') }}">Let's cook →</a></p>
+  <p>
+    <a href="{{ url_for('stock.index') }}">Update stock</a> ·
+    <a href="{{ url_for('history.index') }}">History</a>
+  </p>
 {% endblock %}

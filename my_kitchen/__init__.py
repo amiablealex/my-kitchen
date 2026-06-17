@@ -33,4 +33,7 @@ def create_app(config_class=Config):
     from .wizard.routes import wizard_bp
     app.register_blueprint(wizard_bp)
 
+    from .history.routes import history_bp
+    app.register_blueprint(history_bp)
+
     return app

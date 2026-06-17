@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}History — My Kitchen{% endblock %}
+{% block content %}
+  <h1>History</h1>
+  {% if not rows %}
+    <p>Nothing cooked yet. <a href="{{ url_for('wizard.start') }}">Let's cook →</a></p>
+  {% else %}
+    <ul>
+      {% for row in rows %}
+        <li>
+          <strong>{{ row.gen.created_at.strftime("%Y-%m-%d %H:%M") }}</strong> UTC
+          — {{ row.gen.cuisine }}, {{ row.gen.time_band }}, serves {{ row.gen.servings }}
+
+          {% if row.status == "chosen" %}
+            <br>Chosen:
+            <a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a>
+          {% elif row.status == "unchosen" %}
+            <br>Generated (none chosen):
+            {% for r in row.recipes %}
+              <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if not loop.last %} · {% endif %}
+            {% endfor %}
+            — <a href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">choose one</a>
+          {% else %}
+            <br><em>Generation failed{% if row.gen.error %}: {{ row.gen.error }}{% endif %}</em>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}
