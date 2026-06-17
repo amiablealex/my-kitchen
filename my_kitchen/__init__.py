@@ -27,4 +27,7 @@ def create_app(config_class=Config):
     from .main.routes import main_bp
     app.register_blueprint(main_bp)
 
+    from .stock.routes import stock_bp
+    app.register_blueprint(stock_bp)
+
     return app

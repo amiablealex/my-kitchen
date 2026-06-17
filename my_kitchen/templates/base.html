@@ -6,8 +6,14 @@
   <title>{% block title %}My Kitchen{% endblock %}</title>
 </head>
 <body>
+  <nav>
+    <a href="{{ url_for('main.index') }}">Home</a> |
+    <a href="{{ url_for('stock.index') }}">Stock</a>
+  </nav>
+  <hr>
   <main>
     {% block content %}{% endblock %}
   </main>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

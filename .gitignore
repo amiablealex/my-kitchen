@@ -4,5 +4,8 @@ __pycache__/
 venv/
 .env
 *.db
+*.db*
+*.db-wal
+*.db-shm
 *.sqlite3
 .DS_Store
