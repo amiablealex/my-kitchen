@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ recipe.title }} — My Kitchen{% endblock %}
+{% block content %}
+  <h1>{{ recipe.title }}</h1>
+  <p><em>{{ recipe.blurb }}</em></p>
+  <p>Serves {{ recipe.servings }}.</p>
+
+  <h2>Ingredients</h2>
+  <ul>
+    {% for ing in recipe.ingredients_json %}
+      <li>
+        {% if ing.amount not in (none, '') %}{{ ing.amount }} {% endif %}{{ ing.unit }} {{ ing.item }}
+        {% if ing.to_buy %} <strong>(you may need to buy)</strong>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+
+  {% if recipe.prep_steps_json %}
+  <h2>Prep</h2>
+  <ol>
+    {% for step in recipe.prep_steps_json %}
+      <li>{% if step.title %}<strong>{{ step.title }}.</strong> {% endif %}{{ step.text }}{% if step.timer_minutes %} <em>({{ step.timer_minutes }} min)</em>{% endif %}</li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+
+  <h2>Cook</h2>
+  <ol>
+    {% for step in recipe.cook_steps_json %}
+      <li>{% if step.title %}<strong>{{ step.title }}.</strong> {% endif %}{{ step.text }}{% if step.timer_minutes %} <em>({{ step.timer_minutes }} min)</em>{% endif %}</li>
+    {% endfor %}
+  </ol>
+
+  <p><a href="{{ url_for('wizard.start') }}">Cook something else</a></p>
+{% endblock %}

@@ -1,29 +1,24 @@
 from flask import (
-    Blueprint, render_template, request, redirect, url_for, session
+    Blueprint, render_template, request, redirect, url_for, session,
+    current_app, abort,
 )
 
-from ..models import Category, Ingredient
+from ..extensions import db
+from ..models import Category, Ingredient, Generation, Recipe
+from ..llm.service import run_generation, default_user_id
 
 wizard_bp = Blueprint("wizard", __name__, url_prefix="/cook")
 
-# MVP-hardcoded option lists (made configurable in a later phase).
 CUISINES = ["Italian", "Mediterranean", "British", "Asian", "Surprise me"]
 TIME_BANDS = [("quick", "Quick (under 30 min)"), ("relaxed", "Relaxed (30–75 min)")]
 SECTIONS = [("protein", "Protein"), ("carb", "Carb"), ("veg", "Veg"), ("other", "Other")]
 
 
 def fresh_wizard():
-    return {
-        "selected_ingredient_ids": [],
-        "cuisine": "Surprise me",
-        "time_band": "quick",
-        "servings": 2,
-    }
+    return {"selected_ingredient_ids": [], "cuisine": "Surprise me", "time_band": "quick", "servings": 2}
 
 
 def get_wizard():
-    """Return the current wizard state, initialising defaults if absent.
-    Keeps direct access to a later step from crashing."""
     w = session.get("wizard")
     if not w:
         w = fresh_wizard()
@@ -38,7 +33,6 @@ def save_wizard(w):
 
 @wizard_bp.route("/")
 def start():
-    """Begin a fresh cook flow (clears any prior in-progress wizard)."""
     session["wizard"] = fresh_wizard()
     session.modified = True
     return redirect(url_for("wizard.step_stock"))
@@ -46,15 +40,11 @@ def start():
 
 @wizard_bp.route("/stock")
 def step_stock():
-    """Step 1 — stock check. Reuses the stock toggle/note endpoints + stock.js."""
     get_wizard()
     categories = Category.query.order_by(Category.display_order).all()
     core_groups = []
     for cat in categories:
-        items = sorted(
-            [i for i in cat.ingredients if not i.is_staple],
-            key=lambda i: i.name.lower(),
-        )
+        items = sorted([i for i in cat.ingredients if not i.is_staple], key=lambda i: i.name.lower())
         if items:
             core_groups.append((cat, items))
     return render_template("wizard/step_stock.html", core_groups=core_groups)
@@ -62,7 +52,6 @@ def step_stock():
 
 @wizard_bp.route("/ingredients", methods=["GET", "POST"])
 def step_ingredients():
-    """Step 2 — choose in-stock core ingredients, grouped into the four lanes."""
     w = get_wizard()
     if request.method == "POST":
         ids = request.form.getlist("ingredient_ids")
@@ -73,18 +62,13 @@ def step_ingredients():
     in_stock = Ingredient.query.filter_by(in_stock=True, is_staple=False).all()
     lanes = []
     for section_key, section_label in SECTIONS:
-        items = sorted(
-            [i for i in in_stock if i.category.section == section_key],
-            key=lambda i: i.name.lower(),
-        )
+        items = sorted([i for i in in_stock if i.category.section == section_key], key=lambda i: i.name.lower())
         lanes.append((section_label, items))
-    selected = set(w["selected_ingredient_ids"])
-    return render_template("wizard/step_ingredients.html", lanes=lanes, selected=selected)
+    return render_template("wizard/step_ingredients.html", lanes=lanes, selected=set(w["selected_ingredient_ids"]))
 
 
 @wizard_bp.route("/cuisine", methods=["GET", "POST"])
 def step_cuisine():
-    """Step 3 — cuisine."""
     w = get_wizard()
     if request.method == "POST":
         choice = request.form.get("cuisine", "Surprise me")
@@ -96,7 +80,6 @@ def step_cuisine():
 
 @wizard_bp.route("/time", methods=["GET", "POST"])
 def step_time():
-    """Step 4 — time band."""
     w = get_wizard()
     if request.method == "POST":
         choice = request.form.get("time_band", "quick")
@@ -108,7 +91,6 @@ def step_time():
 
 @wizard_bp.route("/servings", methods=["GET", "POST"])
 def step_servings():
-    """Step 5 — servings (the simple 'cooking for' proxy in the MVP)."""
     w = get_wizard()
     if request.method == "POST":
         try:
@@ -123,21 +105,46 @@ def step_servings():
 
 @wizard_bp.route("/review")
 def review():
-    """Pre-generate summary — proves the collected brief round-tripped."""
     w = get_wizard()
     ids = w["selected_ingredient_ids"] or [0]
     selected = Ingredient.query.filter(Ingredient.id.in_(ids)).all()
     time_label = dict(TIME_BANDS).get(w["time_band"], w["time_band"])
-    return render_template(
-        "wizard/review.html",
-        selected=selected,
-        cuisine=w["cuisine"],
-        time_label=time_label,
-        servings=w["servings"],
-    )
+    return render_template("wizard/review.html", selected=selected,
+                           cuisine=w["cuisine"], time_label=time_label, servings=w["servings"])
 
 
 @wizard_bp.route("/generate", methods=["POST"])
 def generate():
-    """Stub for CP4. The LLM call, choice screen, and recipe display land in CP5."""
-    return render_template("wizard/generate_stub.html")
+    w = get_wizard()
+    time_label = dict(TIME_BANDS).get(w["time_band"], w["time_band"])
+    gen, error = run_generation(current_app.config, w, time_label, user_id=default_user_id())
+    if error:
+        return render_template("wizard/error.html", error=error)
+    return redirect(url_for("wizard.choice", generation_id=gen.id))
+
+
+@wizard_bp.route("/choice/<int:generation_id>")
+def choice(generation_id):
+    gen = db.session.get(Generation, generation_id)
+    if gen is None or len(gen.recipes) < 2:
+        abort(404)
+    return render_template("wizard/choice.html", recipes=gen.recipes)
+
+
+@wizard_bp.route("/choose/<int:recipe_id>", methods=["POST"])
+def choose(recipe_id):
+    recipe = db.session.get(Recipe, recipe_id)
+    if recipe is None:
+        abort(404)
+    for sib in recipe.generation.recipes:
+        sib.was_chosen = (sib.id == recipe.id)
+    db.session.commit()
+    return redirect(url_for("wizard.recipe", recipe_id=recipe.id))
+
+
+@wizard_bp.route("/recipe/<int:recipe_id>")
+def recipe(recipe_id):
+    recipe = db.session.get(Recipe, recipe_id)
+    if recipe is None:
+        abort(404)
+    return render_template("wizard/recipe.html", recipe=recipe)

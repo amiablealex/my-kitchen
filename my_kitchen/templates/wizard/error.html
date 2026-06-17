@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Cook — Something went wrong{% endblock %}
+{% block content %}
+  <h1>Couldn't generate recipes</h1>
+  <p>The kitchen had a wobble — your choices are still saved, so you can try again.</p>
+  <p><small>Details: {{ error }}</small></p>
+  <p><a href="{{ url_for('wizard.review') }}">← Back to review and try again</a></p>
+{% endblock %}

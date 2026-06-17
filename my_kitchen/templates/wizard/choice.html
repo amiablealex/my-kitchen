@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Cook — Choose{% endblock %}
+{% block content %}
+  <h1>Two recipes — take your pick</h1>
+  {% for r in recipes %}
+    <div>
+      <h2>{{ r.title }}</h2>
+      <p><em>{{ r.blurb }}</em></p>
+      <form method="post" action="{{ url_for('wizard.choose', recipe_id=r.id) }}">
+        <button type="submit">Choose this →</button>
+      </form>
+    </div>
+    <hr>
+  {% endfor %}
+  <p><a href="{{ url_for('wizard.start') }}">Start over</a></p>
+{% endblock %}
