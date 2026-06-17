@@ -17,6 +17,13 @@ def create_app(config_class=Config):
 
     db.init_app(app)
 
+    # Import models so SQLAlchemy knows about them for create_all().
+    from . import models  # noqa: F401
+
+    # CLI: flask init-db / flask seed / flask shell context
+    from .cli import register_cli
+    register_cli(app)
+
     from .main.routes import main_bp
     app.register_blueprint(main_bp)
 
