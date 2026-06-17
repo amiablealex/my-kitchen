@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Cook — Choose ingredients{% endblock %}
+{% block content %}
+  <h1>Step 2: Choose ingredients to use up</h1>
+  <p>Pick the in-stock items to build the meal around. Staples (oil, salt, spices) are assumed — no need to choose them.</p>
+
+  <form method="post" action="{{ url_for('wizard.step_ingredients') }}">
+    {% for section_label, items in lanes %}
+      <h2>{{ section_label }}</h2>
+      {% if items %}
+        <ul>
+          {% for ing in items %}
+            <li>
+              <label>
+                <input type="checkbox" name="ingredient_ids" value="{{ ing.id }}"
+                       {% if ing.id in selected %}checked{% endif %}>
+                {{ ing.name }}{% if ing.note %} <em>({{ ing.note }})</em>{% endif %}
+              </label>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p><em>Nothing in stock in this lane.</em></p>
+      {% endif %}
+    {% endfor %}
+
+    <p>
+      <a href="{{ url_for('wizard.step_stock') }}">← Back</a>
+      <button type="submit">Continue →</button>
+    </p>
+  </form>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Cook — Servings{% endblock %}
+{% block content %}
+  <h1>Step 5: How many servings?</h1>
+  <form method="post" action="{{ url_for('wizard.step_servings') }}">
+    <label>Servings:
+      <input type="number" name="servings" min="1" max="20" value="{{ current }}">
+    </label>
+    <p>
+      <a href="{{ url_for('wizard.step_time') }}">← Back</a>
+      <button type="submit">Continue →</button>
+    </p>
+  </form>
+{% endblock %}

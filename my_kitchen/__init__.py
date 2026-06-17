@@ -30,4 +30,7 @@ def create_app(config_class=Config):
     from .stock.routes import stock_bp
     app.register_blueprint(stock_bp)
 
+    from .wizard.routes import wizard_bp
+    app.register_blueprint(wizard_bp)
+
     return app

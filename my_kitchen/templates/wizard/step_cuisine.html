@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Cook — Cuisine{% endblock %}
+{% block content %}
+  <h1>Step 3: Cuisine</h1>
+  <form method="post" action="{{ url_for('wizard.step_cuisine') }}">
+    {% for c in cuisines %}
+      <label>
+        <input type="radio" name="cuisine" value="{{ c }}" {% if c == current %}checked{% endif %}>
+        {{ c }}
+      </label><br>
+    {% endfor %}
+    <p>
+      <a href="{{ url_for('wizard.step_ingredients') }}">← Back</a>
+      <button type="submit">Continue →</button>
+    </p>
+  </form>
+{% endblock %}

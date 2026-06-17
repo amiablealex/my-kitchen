@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Cook — Generate{% endblock %}
+{% block content %}
+  <h1>Brief captured ✓</h1>
+  <p>The wizard collected everything it needs. Turning this into two recipes —
+     plus the choice screen and recipe display — gets wired up in the next checkpoint.</p>
+  <p><a href="{{ url_for('wizard.start') }}">Start another cook</a></p>
+{% endblock %}
