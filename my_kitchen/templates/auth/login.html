@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Log in — My Kitchen{% endblock %}
+{% block content %}
+  <h1>Log in</h1>
+  <form method="post" action="{{ url_for('auth.login') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ next }}">
+    <p><label>Name: <input type="text" name="name" required autofocus></label></p>
+    <p><label>Password: <input type="password" name="password" required></label></p>
+    <button type="submit">Log in</button>
+  </form>
+{% endblock %}

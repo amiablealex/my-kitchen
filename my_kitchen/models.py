@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 
 from .extensions import db
 
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # The four fixed wizard lanes. Category *names* are freely configurable, but a
 # category must map to one of these sections (spec section 3). Single source of
@@ -28,17 +30,29 @@ user_dietary_tags = db.Table(
 )
 
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, unique=True, nullable=False)
-    password_hash = db.Column(db.String, nullable=True)  # populated in Phase 1 (auth)
+    password_hash = db.Column(db.String, nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
 
     dietary_tags = db.relationship(
         "DietaryTag", secondary=user_dietary_tags, backref="users"
     )
+
+    # UserMixin supplies is_authenticated / is_anonymous / get_id(). Our own
+    # is_active *column* shadows UserMixin's always-True version — exactly what
+    # we want: Flask-Login's login_user() refuses a user whose is_active is
+    # False, so a retired user can't log in.
+    def set_password(self, raw_password):
+        self.password_hash = generate_password_hash(raw_password)
+
+    def check_password(self, raw_password):
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, raw_password)
 
 
 class DietaryTag(db.Model):

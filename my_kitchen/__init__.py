@@ -2,7 +2,7 @@ from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import Config
-from .extensions import db, migrate, csrf
+from .extensions import db, migrate, csrf, login_manager
 
 
 def create_app(config_class=Config):
@@ -17,10 +17,16 @@ def create_app(config_class=Config):
 
     db.init_app(app)
 
-    # App-wide CSRF protection. Validates a csrf_token on every state-changing
-    # request (POST/PUT/PATCH/DELETE). Forms carry it in a hidden field; the
-    # stock-list AJAX sends it as the X-CSRFToken header (see base.html meta tag).
+    # App-wide CSRF protection (see base.html meta tag + form hidden fields).
     csrf.init_app(app)
+
+    # Flask-Login: simple session auth. login_view drives @login_required
+    # redirects; the app-wide "must be logged in" gate is a before_app_request
+    # in the auth blueprint.
+    login_manager.init_app(app)
+    login_manager.login_view = "auth.login"
+    login_manager.login_message = "Please log in to continue."
+    login_manager.login_message_category = "error"
 
     # Import models so SQLAlchemy knows about them for create_all().
     from . import models  # noqa: F401
@@ -33,6 +39,10 @@ def create_app(config_class=Config):
     # CLI: flask init-db / flask seed / flask shell context
     from .cli import register_cli
     register_cli(app)
+
+    # Auth first so its before_app_request gate registers up front.
+    from .auth.routes import auth_bp
+    app.register_blueprint(auth_bp)
 
     from .main.routes import main_bp
     app.register_blueprint(main_bp)
