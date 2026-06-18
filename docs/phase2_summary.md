@@ -20,3 +20,5 @@ Constraints honoured: single-user, no auth, deliberately unstyled skeleton.
 Forward note for the roadmap
 Phases 2+ touch tables that are already in the baseline (dietary_tags, user_dietary_tags, the auth fields on users, favourites flags on recipes), so — like categories and equipment this phase — they should be application-code only, no migration required. The first time a new column is needed, item 1 above applies.
 Also still open from the MVP summary and untouched by Phase 1: server-side idempotency / async generation (Phase 5) and local-time display (Phase 4).
+
+2026-06-18
