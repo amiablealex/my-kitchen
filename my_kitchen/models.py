@@ -112,7 +112,10 @@ class Generation(db.Model):
     error = db.Column(db.Text, nullable=True)
 
     recipes = db.relationship("Recipe", backref="generation")
-
+    # Read-only link to the cook. The created_by_user_id FK column already
+    # exists, so this is ORM-level only — no migration, and autogenerate won't
+    # report a schema diff from it.
+    created_by = db.relationship("User")
 
 class Recipe(db.Model):
     __tablename__ = "recipes"

@@ -2,10 +2,11 @@ from flask import (
     Blueprint, render_template, request, redirect, url_for, session,
     current_app, abort,
 )
+from flask_login import current_user
 
 from ..extensions import db
 from ..models import Category, Ingredient, Generation, Recipe, SECTION_CHOICES
-from ..llm.service import run_generation, default_user_id
+from ..llm.service import run_generation
 
 wizard_bp = Blueprint("wizard", __name__, url_prefix="/cook")
 
@@ -117,7 +118,8 @@ def review():
 def generate():
     w = get_wizard()
     time_label = dict(TIME_BANDS).get(w["time_band"], w["time_band"])
-    gen, error = run_generation(current_app.config, w, time_label, user_id=default_user_id())
+    # The login gate guarantees an authenticated user here.
+    gen, error = run_generation(current_app.config, w, time_label, user_id=current_user.id)
     if error:
         return render_template("wizard/error.html", error=error)
     return redirect(url_for("wizard.choice", generation_id=gen.id))

@@ -1,4 +1,5 @@
-from flask import Flask
+from flask import Flask, request, redirect, url_for, flash, jsonify
+from flask_wtf.csrf import CSRFError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import Config
@@ -61,5 +62,17 @@ def create_app(config_class=Config):
 
     from .users.routes import users_bp
     app.register_blueprint(users_bp)
+
+    # Friendly CSRF failures (the carry-over promised in CP1/CP2). A CSRF error
+    # almost always means a stale token — a long-idle tab, or a restart with a
+    # changed SECRET_KEY. Forms get a flash + redirect; the stock-list AJAX
+    # (which sends its token via the X-CSRFToken header) gets a JSON 400 so its
+    # own error path handles it instead of trying to parse a redirect.
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        if request.headers.get("X-CSRFToken") is not None:
+            return jsonify(error="csrf"), 400
+        flash("That form expired — please refresh the page and try again.", "error")
+        return redirect(url_for("auth.login"))
 
     return app
