@@ -4,14 +4,14 @@ from flask import (
 )
 
 from ..extensions import db
-from ..models import Category, Ingredient, Generation, Recipe
+from ..models import Category, Ingredient, Generation, Recipe, SECTION_CHOICES
 from ..llm.service import run_generation, default_user_id
 
 wizard_bp = Blueprint("wizard", __name__, url_prefix="/cook")
 
 CUISINES = ["Italian", "Mediterranean", "British", "Asian", "Surprise me"]
 TIME_BANDS = [("quick", "Quick (under 30 min)"), ("relaxed", "Relaxed (30–75 min)")]
-SECTIONS = [("protein", "Protein"), ("carb", "Carb"), ("veg", "Veg"), ("other", "Other")]
+SECTIONS = SECTION_CHOICES
 
 
 def fresh_wizard():

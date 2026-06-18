@@ -3,6 +3,18 @@ from datetime import datetime, timezone
 from .extensions import db
 
 
+# The four fixed wizard lanes. Category *names* are freely configurable, but a
+# category must map to one of these sections (spec section 3). Single source of
+# truth, shared by the cook wizard (lane grouping) and the category manager.
+SECTION_CHOICES = [
+    ("protein", "Protein"),
+    ("carb", "Carb"),
+    ("veg", "Veg"),
+    ("other", "Other"),
+]
+SECTION_KEYS = {key for key, _ in SECTION_CHOICES}
+
+
 def utcnow():
     """Timezone-aware UTC now; works on 3.11 and avoids the 3.12 utcnow() deprecation."""
     return datetime.now(timezone.utc)

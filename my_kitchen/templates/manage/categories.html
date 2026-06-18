@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Manage categories — My Kitchen{% endblock %}
+{% block content %}
+  <h1>Categories</h1>
+  <p><a href="{{ url_for('manage.index') }}">&larr; Manage</a></p>
+  <p>Category names are yours to choose. Each maps to one of the four fixed
+     <em>sections</em> (Protein / Carb / Veg / Other) — that's the lane its
+     ingredients show up in when you cook.</p>
+
+  <h2>Add a category</h2>
+  <form method="post" action="{{ url_for('manage.category_add') }}">
+    <label>Name: <input type="text" name="name" required></label>
+    <label>Section:
+      <select name="section" required>
+        {% for key, label in sections %}
+          <option value="{{ key }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Order: <input type="number" name="display_order" value="{{ next_order }}" style="width:4em"></label>
+    <button type="submit">Add</button>
+  </form>
+
+  <h2>All categories ({{ categories|length }})</h2>
+  {% if categories %}
+    <table border="1" cellpadding="4">
+      <thead><tr><th>Order</th><th>Name</th><th>Section</th><th>Ingredients</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for c in categories %}
+        <tr>
+          <td>{{ c.display_order }}</td>
+          <td>{{ c.name }}</td>
+          <td>{{ c.section }}</td>
+          <td>{{ counts[c.id] }}</td>
+          <td>
+            <a href="{{ url_for('manage.category_edit', category_id=c.id) }}">Edit</a>
+            {% if counts[c.id] == 0 %}
+              <form method="post" action="{{ url_for('manage.category_delete', category_id=c.id) }}" style="display:inline"
+                    onsubmit="return confirm('Delete category \u201c{{ c.name }}\u201d?');">
+                <button type="submit">Delete</button>
+              </form>
+            {% else %}
+              <span><small>(move its {{ counts[c.id] }} ingredient(s) to delete)</small></span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p><em>No categories yet — add one above.</em></p>
+  {% endif %}
+{% endblock %}

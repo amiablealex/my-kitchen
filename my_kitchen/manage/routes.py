@@ -13,7 +13,7 @@ from flask import (
 from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
-from ..models import Category, Ingredient
+from ..models import Category, Ingredient, SECTION_CHOICES, SECTION_KEYS
 
 manage_bp = Blueprint("manage", __name__, url_prefix="/manage")
 
@@ -145,3 +145,115 @@ def ingredient_delete(ingredient_id):
     db.session.commit()
     flash(f'Permanently deleted "{name}".', "success")
     return redirect(url_for("manage.ingredients"))
+
+
+# ----------------------------------------------------------------- categories
+
+def _category_name_taken(name, exclude_id=None):
+    q = Category.query.filter(db.func.lower(Category.name) == name.lower())
+    if exclude_id is not None:
+        q = q.filter(Category.id != exclude_id)
+    return q.first() is not None
+
+
+def _next_display_order():
+    highest = db.session.query(db.func.max(Category.display_order)).scalar()
+    return (highest or 0) + 1
+
+
+def _parse_category_form():
+    """Pull + validate the shared add/edit fields. Returns (data, error)."""
+    name = (request.form.get("name") or "").strip()
+    section = (request.form.get("section") or "").strip()
+    order_raw = request.form.get("display_order", type=int)
+    if not name:
+        return None, "Name is required."
+    if section not in SECTION_KEYS:
+        return None, "Please choose a valid section."
+    display_order = order_raw if order_raw is not None else _next_display_order()
+    return {"name": name, "section": section, "display_order": display_order}, None
+
+
+@manage_bp.route("/categories")
+def categories():
+    cats = Category.query.order_by(Category.display_order, Category.name).all()
+    # ingredient counts (active + retired) drive the delete guard + display
+    counts = {c.id: len(c.ingredients) for c in cats}
+    return render_template(
+        "manage/categories.html",
+        categories=cats, counts=counts,
+        sections=SECTION_CHOICES, next_order=_next_display_order(),
+    )
+
+
+@manage_bp.route("/categories/add", methods=["POST"])
+def category_add():
+    data, error = _parse_category_form()
+    if error:
+        flash(error, "error")
+        return redirect(url_for("manage.categories"))
+    if _category_name_taken(data["name"]):
+        flash(f'"{data["name"]}" already exists.', "error")
+        return redirect(url_for("manage.categories"))
+    db.session.add(Category(**data))
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash(f'"{data["name"]}" already exists.', "error")
+        return redirect(url_for("manage.categories"))
+    flash(f'Added "{data["name"]}".', "success")
+    return redirect(url_for("manage.categories"))
+
+
+@manage_bp.route("/categories/<int:category_id>/edit", methods=["GET", "POST"])
+def category_edit(category_id):
+    cat = db.session.get(Category, category_id)
+    if cat is None:
+        abort(404)
+    if request.method == "POST":
+        data, error = _parse_category_form()
+        if error:
+            flash(error, "error")
+            return redirect(url_for("manage.category_edit", category_id=cat.id))
+        if _category_name_taken(data["name"], exclude_id=cat.id):
+            flash(f'"{data["name"]}" already exists.', "error")
+            return redirect(url_for("manage.category_edit", category_id=cat.id))
+        cat.name = data["name"]
+        cat.section = data["section"]
+        cat.display_order = data["display_order"]
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash(f'"{data["name"]}" already exists.', "error")
+            return redirect(url_for("manage.category_edit", category_id=cat.id))
+        flash(f'Saved "{cat.name}".', "success")
+        return redirect(url_for("manage.categories"))
+    return render_template(
+        "manage/category_edit.html",
+        cat=cat, sections=SECTION_CHOICES, ingredient_count=len(cat.ingredients),
+    )
+
+
+@manage_bp.route("/categories/<int:category_id>/delete", methods=["POST"])
+def category_delete(category_id):
+    cat = db.session.get(Category, category_id)
+    if cat is None:
+        abort(404)
+    # Guard: ingredients.category_id is NOT NULL, so a category with any
+    # ingredients (active OR retired) can't be deleted without orphaning them.
+    n = len(cat.ingredients)
+    if n:
+        flash(
+            f'Can\u2019t delete "{cat.name}" \u2014 it still has {n} '
+            f'ingredient{"s" if n != 1 else ""} (including any retired ones). '
+            "Move them to another category or remove them first.",
+            "error",
+        )
+        return redirect(url_for("manage.categories"))
+    name = cat.name
+    db.session.delete(cat)
+    db.session.commit()
+    flash(f'Deleted "{name}".', "success")
+    return redirect(url_for("manage.categories"))
