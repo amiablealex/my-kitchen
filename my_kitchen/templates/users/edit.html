@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ user.name }} — My Kitchen{% endblock %}
+{% block content %}
+  <h1>Edit user</h1>
+  <p><a href="{{ url_for('users.index') }}">&larr; Users</a></p>
+
+  <h2>Name</h2>
+  <form method="post" action="{{ url_for('users.edit', user_id=user.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Name: <input type="text" name="name" value="{{ user.name }}" required></label>
+    <button type="submit">Save name</button>
+  </form>
+  <p><small>Renaming keeps all of this user's existing cooking history attributed
+     to them — the link is by id, not name.</small></p>
+
+  <h2>Password</h2>
+  <form method="post" action="{{ url_for('users.set_password', user_id=user.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>New password: <input type="password" name="password" required></label>
+    <label>Confirm: <input type="password" name="password_confirm" required></label>
+    <button type="submit">Set password</button>
+  </form>
+
+  <p><small>Status: {{ "active" if user.is_active else "retired" }}.
+     {% if user.password_hash %}A password is set.{% else %}No password set yet — this user can't log in until one is.{% endif %}</small></p>
+{% endblock %}

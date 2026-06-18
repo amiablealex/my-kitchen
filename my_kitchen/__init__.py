@@ -59,4 +59,7 @@ def create_app(config_class=Config):
     from .manage.routes import manage_bp
     app.register_blueprint(manage_bp)
 
+    from .users.routes import users_bp
+    app.register_blueprint(users_bp)
+
     return app
