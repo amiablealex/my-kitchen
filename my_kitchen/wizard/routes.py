@@ -44,7 +44,7 @@ def step_stock():
     categories = Category.query.order_by(Category.display_order).all()
     core_groups = []
     for cat in categories:
-        items = sorted([i for i in cat.ingredients if not i.is_staple], key=lambda i: i.name.lower())
+        items = sorted([i for i in cat.ingredients if not i.is_staple and i.is_active], key=lambda i: i.name.lower())
         if items:
             core_groups.append((cat, items))
     return render_template("wizard/step_stock.html", core_groups=core_groups)
@@ -59,7 +59,7 @@ def step_ingredients():
         save_wizard(w)
         return redirect(url_for("wizard.step_cuisine"))
 
-    in_stock = Ingredient.query.filter_by(in_stock=True, is_staple=False).all()
+    in_stock = Ingredient.query.filter_by(in_stock=True, is_staple=False, is_active=True).all()
     lanes = []
     for section_key, section_label in SECTIONS:
         items = sorted([i for i in in_stock if i.category.section == section_key], key=lambda i: i.name.lower())

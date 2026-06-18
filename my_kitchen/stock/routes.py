@@ -14,7 +14,7 @@ def index():
     core_groups = []
     staple_groups = []
     for cat in categories:
-        items = sorted(cat.ingredients, key=lambda i: i.name.lower())
+        items = sorted([i for i in cat.ingredients if i.is_active], key=lambda i: i.name.lower())
         core = [i for i in items if not i.is_staple]
         staples = [i for i in items if i.is_staple]
         if core:

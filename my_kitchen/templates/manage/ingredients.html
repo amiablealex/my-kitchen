@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Manage ingredients — My Kitchen{% endblock %}
+{% block content %}
+  <h1>Ingredients</h1>
+  <p><a href="{{ url_for('manage.index') }}">&larr; Manage</a></p>
+
+  <h2>Add an ingredient</h2>
+  <form method="post" action="{{ url_for('manage.ingredient_add') }}">
+    <label>Name: <input type="text" name="name" required></label>
+    <label>Category:
+      <select name="category_id" required>
+        {% for c in categories %}
+          <option value="{{ c.id }}">{{ c.name }} ({{ c.section }})</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label><input type="checkbox" name="is_staple"> Staple (assumed always available)</label>
+    <button type="submit">Add</button>
+  </form>
+
+  <h2>Active ({{ active|length }})</h2>
+  {% if active %}
+    <table border="1" cellpadding="4">
+      <thead><tr><th>Name</th><th>Category</th><th>Staple</th><th>In stock</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for ing in active %}
+        <tr>
+          <td>{{ ing.name }}</td>
+          <td>{{ ing.category.name }}</td>
+          <td>{{ "yes" if ing.is_staple else "no" }}</td>
+          <td>{{ "yes" if ing.in_stock else "no" }}</td>
+          <td>
+            <a href="{{ url_for('manage.ingredient_edit', ingredient_id=ing.id) }}">Edit</a>
+            <form method="post" action="{{ url_for('manage.ingredient_retire', ingredient_id=ing.id) }}" style="display:inline">
+              <button type="submit">Retire</button>
+            </form>
+            <form method="post" action="{{ url_for('manage.ingredient_delete', ingredient_id=ing.id) }}" style="display:inline"
+                  onsubmit="return confirm('Permanently delete \u201c{{ ing.name }}\u201d? This cannot be undone. (Retire instead to keep it in history.)');">
+              <button type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p><em>No active ingredients yet — add one above.</em></p>
+  {% endif %}
+
+  {% if retired %}
+    <details>
+      <summary>Retired ({{ retired|length }})</summary>
+      <table border="1" cellpadding="4">
+        <thead><tr><th>Name</th><th>Category</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for ing in retired %}
+          <tr>
+            <td>{{ ing.name }}</td>
+            <td>{{ ing.category.name }}</td>
+            <td>
+              <form method="post" action="{{ url_for('manage.ingredient_activate', ingredient_id=ing.id) }}" style="display:inline">
+                <button type="submit">Reactivate</button>
+              </form>
+              <form method="post" action="{{ url_for('manage.ingredient_delete', ingredient_id=ing.id) }}" style="display:inline"
+                    onsubmit="return confirm('Permanently delete \u201c{{ ing.name }}\u201d? This cannot be undone.');">
+                <button type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  {% endif %}
+{% endblock %}

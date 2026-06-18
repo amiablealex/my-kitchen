@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ ing.name }} — My Kitchen{% endblock %}
+{% block content %}
+  <h1>Edit ingredient</h1>
+  <p><a href="{{ url_for('manage.ingredients') }}">&larr; Ingredients</a></p>
+  <form method="post" action="{{ url_for('manage.ingredient_edit', ingredient_id=ing.id) }}">
+    <label>Name: <input type="text" name="name" value="{{ ing.name }}" required></label>
+    <label>Category:
+      <select name="category_id" required>
+        {% for c in categories %}
+          <option value="{{ c.id }}" {% if c.id == ing.category_id %}selected{% endif %}>{{ c.name }} ({{ c.section }})</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label><input type="checkbox" name="is_staple" {% if ing.is_staple %}checked{% endif %}> Staple (assumed always available)</label>
+    <p>
+      <a href="{{ url_for('manage.ingredients') }}">Cancel</a>
+      <button type="submit">Save</button>
+    </p>
+  </form>
+  <p><small>Status: {{ "active" if ing.is_active else "retired" }}.
+     In stock and notes are managed on the <a href="{{ url_for('stock.index') }}">Stock</a> page.</small></p>
+{% endblock %}

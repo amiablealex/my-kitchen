@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Manage — My Kitchen{% endblock %}
+{% block content %}
+  <h1>Manage catalogue</h1>
+  <p>Set up your kitchen here: what ingredients exist, the categories they sit in,
+     and your equipment. (Stock in/out and notes live on the <a href="{{ url_for('stock.index') }}">Stock</a> page.)</p>
+  <ul>
+    <li><a href="{{ url_for('manage.ingredients') }}">Ingredients</a></li>
+    {# Categories and Equipment links are added in the next checkpoints. #}
+  </ul>
+{% endblock %}

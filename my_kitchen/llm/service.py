@@ -18,7 +18,7 @@ def build_brief(wizard_state, time_label):
     if selected_ids:
         rows = Ingredient.query.filter(Ingredient.id.in_(selected_ids)).all()
         selected = [{"name": r.name, "note": r.note} for r in rows]
-    staples = [r.name for r in Ingredient.query.filter_by(is_staple=True, in_stock=True).all()]
+    staples = [r.name for r in Ingredient.query.filter_by(is_staple=True, in_stock=True, is_active=True).all()]
     return {
         "ingredients": selected,
         "staples": staples,

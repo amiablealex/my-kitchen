@@ -41,4 +41,7 @@ def create_app(config_class=Config):
     from .history.routes import history_bp
     app.register_blueprint(history_bp)
 
+    from .manage.routes import manage_bp
+    app.register_blueprint(manage_bp)
+
     return app
