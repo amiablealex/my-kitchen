@@ -37,9 +37,20 @@ set `LLM_PROVIDER` and the matching key in `.env`, and restart.
 
 ## Database
 
-SQLite, created and seeded by `flask seed`. The DB file is gitignored (per-machine).
-`flask seed --reset` drops everything and reseeds — also needed if you add a model
-column, since there are no migrations yet.
+SQLite, with schema managed by Alembic (Flask-Migrate). The DB file is gitignored (per-machine).
+
+Fresh machine (empty DB):
+
+    flask db upgrade    # build the schema from migrations
+    flask seed          # add the placeholder catalogue
+
+Existing DB being put under migrations for the first time (one-off):
+
+    flask db stamp head # records the current schema as already-applied; touches no data
+
+After pulling a change that includes a new migration:
+
+    flask db upgrade
 
 `flask shell` opens a shell with `db` and all models pre-imported.
 

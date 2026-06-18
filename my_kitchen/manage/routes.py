@@ -13,7 +13,7 @@ from flask import (
 from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
-from ..models import Category, Ingredient, SECTION_CHOICES, SECTION_KEYS
+from ..models import Category, Ingredient, Equipment, SECTION_CHOICES, SECTION_KEYS
 
 manage_bp = Blueprint("manage", __name__, url_prefix="/manage")
 
@@ -257,3 +257,82 @@ def category_delete(category_id):
     db.session.commit()
     flash(f'Deleted "{name}".', "success")
     return redirect(url_for("manage.categories"))
+
+
+# ------------------------------------------------------------------ equipment
+
+def _equipment_name_taken(name, exclude_id=None):
+    """Courtesy case-insensitive duplicate check. Equipment names aren't a DB
+    unique constraint (free text by design), but exact dupes are just clutter."""
+    q = Equipment.query.filter(db.func.lower(Equipment.name) == name.lower())
+    if exclude_id is not None:
+        q = q.filter(Equipment.id != exclude_id)
+    return q.first() is not None
+
+
+@manage_bp.route("/equipment")
+def equipment():
+    items = Equipment.query.order_by(Equipment.name).all()
+    return render_template("manage/equipment.html", items=items)
+
+
+@manage_bp.route("/equipment/add", methods=["POST"])
+def equipment_add():
+    name = (request.form.get("name") or "").strip()
+    is_available = request.form.get("is_available") == "on"
+    if not name:
+        flash("Name is required.", "error")
+        return redirect(url_for("manage.equipment"))
+    if _equipment_name_taken(name):
+        flash(f'"{name}" is already in your equipment list.', "error")
+        return redirect(url_for("manage.equipment"))
+    db.session.add(Equipment(name=name, is_available=is_available))
+    db.session.commit()
+    flash(f'Added "{name}".', "success")
+    return redirect(url_for("manage.equipment"))
+
+
+@manage_bp.route("/equipment/<int:equipment_id>/edit", methods=["GET", "POST"])
+def equipment_edit(equipment_id):
+    item = db.session.get(Equipment, equipment_id)
+    if item is None:
+        abort(404)
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        is_available = request.form.get("is_available") == "on"
+        if not name:
+            flash("Name is required.", "error")
+            return redirect(url_for("manage.equipment_edit", equipment_id=item.id))
+        if _equipment_name_taken(name, exclude_id=item.id):
+            flash(f'"{name}" is already in your equipment list.', "error")
+            return redirect(url_for("manage.equipment_edit", equipment_id=item.id))
+        item.name = name
+        item.is_available = is_available
+        db.session.commit()
+        flash(f'Saved "{item.name}".', "success")
+        return redirect(url_for("manage.equipment"))
+    return render_template("manage/equipment_edit.html", item=item)
+
+
+@manage_bp.route("/equipment/<int:equipment_id>/toggle", methods=["POST"])
+def equipment_toggle(equipment_id):
+    item = db.session.get(Equipment, equipment_id)
+    if item is None:
+        abort(404)
+    item.is_available = not item.is_available
+    db.session.commit()
+    state = "available" if item.is_available else "unavailable"
+    flash(f'Marked "{item.name}" {state}.', "success")
+    return redirect(url_for("manage.equipment"))
+
+
+@manage_bp.route("/equipment/<int:equipment_id>/delete", methods=["POST"])
+def equipment_delete(equipment_id):
+    item = db.session.get(Equipment, equipment_id)
+    if item is None:
+        abort(404)
+    name = item.name
+    db.session.delete(item)
+    db.session.commit()
+    flash(f'Deleted "{name}".', "success")
+    return redirect(url_for("manage.equipment"))

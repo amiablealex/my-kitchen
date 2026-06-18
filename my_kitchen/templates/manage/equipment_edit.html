@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ item.name }} — My Kitchen{% endblock %}
+{% block content %}
+  <h1>Edit equipment</h1>
+  <p><a href="{{ url_for('manage.equipment') }}">&larr; Equipment</a></p>
+  <form method="post" action="{{ url_for('manage.equipment_edit', equipment_id=item.id) }}">
+    <label>Name: <input type="text" name="name" value="{{ item.name }}" required></label>
+    <label><input type="checkbox" name="is_available" {% if item.is_available %}checked{% endif %}> Available</label>
+    <p>
+      <a href="{{ url_for('manage.equipment') }}">Cancel</a>
+      <button type="submit">Save</button>
+    </p>
+  </form>
+{% endblock %}

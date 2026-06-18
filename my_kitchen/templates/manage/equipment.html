@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Manage equipment — My Kitchen{% endblock %}
+{% block content %}
+  <h1>Equipment</h1>
+  <p><a href="{{ url_for('manage.index') }}">&larr; Manage</a></p>
+  <p>What you've got to cook with. Mark something unavailable when it's broken or
+     lent out — it stays in the list. (Equipment isn't fed to the recipe generator
+     yet; that comes in a later phase.)</p>
+
+  <h2>Add equipment</h2>
+  <form method="post" action="{{ url_for('manage.equipment_add') }}">
+    <label>Name: <input type="text" name="name" placeholder="e.g. air fryer, wok, large baking dish" required></label>
+    <label><input type="checkbox" name="is_available" checked> Available</label>
+    <button type="submit">Add</button>
+  </form>
+
+  <h2>All equipment ({{ items|length }})</h2>
+  {% if items %}
+    <table border="1" cellpadding="4">
+      <thead><tr><th>Name</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for item in items %}
+        <tr>
+          <td>{{ item.name }}</td>
+          <td>{{ "available" if item.is_available else "unavailable" }}</td>
+          <td>
+            <a href="{{ url_for('manage.equipment_edit', equipment_id=item.id) }}">Edit</a>
+            <form method="post" action="{{ url_for('manage.equipment_toggle', equipment_id=item.id) }}" style="display:inline">
+              <button type="submit">{{ "Mark unavailable" if item.is_available else "Mark available" }}</button>
+            </form>
+            <form method="post" action="{{ url_for('manage.equipment_delete', equipment_id=item.id) }}" style="display:inline"
+                  onsubmit="return confirm('Delete \u201c{{ item.name }}\u201d from your equipment?');">
+              <button type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p><em>No equipment yet — add your first item above.</em></p>
+  {% endif %}
+{% endblock %}
