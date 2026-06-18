@@ -4,6 +4,7 @@
   <h1>Edit ingredient</h1>
   <p><a href="{{ url_for('manage.ingredients') }}">&larr; Ingredients</a></p>
   <form method="post" action="{{ url_for('manage.ingredient_edit', ingredient_id=ing.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Name: <input type="text" name="name" value="{{ ing.name }}" required></label>
     <label>Category:
       <select name="category_id" required>

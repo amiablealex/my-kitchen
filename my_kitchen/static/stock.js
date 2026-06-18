@@ -2,13 +2,21 @@
 // Endpoint URLs come from data-* attributes (built server-side with url_for),
 // so this works unchanged behind a reverse proxy / sub-path.
 
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute("content") : "";
+}
+
 document.addEventListener("change", function (event) {
   const target = event.target;
 
   if (target.classList.contains("stock-toggle")) {
     const url = target.dataset.toggleUrl;
     target.disabled = true;
-    fetch(url, { method: "POST" })
+    fetch(url, {
+      method: "POST",
+      headers: { "X-CSRFToken": csrfToken() },
+    })
       .then((r) => {
         if (!r.ok) throw new Error("toggle failed");
         return r.json();
@@ -28,7 +36,11 @@ document.addEventListener("change", function (event) {
   if (target.classList.contains("stock-note")) {
     const url = target.dataset.noteUrl;
     const body = new URLSearchParams({ note: target.value });
-    fetch(url, { method: "POST", body: body })
+    fetch(url, {
+      method: "POST",
+      headers: { "X-CSRFToken": csrfToken() },
+      body: body,
+    })
       .then((r) => {
         if (!r.ok) throw new Error("note save failed");
         return r.json();

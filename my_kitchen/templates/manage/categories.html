@@ -9,6 +9,7 @@
 
   <h2>Add a category</h2>
   <form method="post" action="{{ url_for('manage.category_add') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Name: <input type="text" name="name" required></label>
     <label>Section:
       <select name="section" required>
@@ -37,6 +38,7 @@
             {% if counts[c.id] == 0 %}
               <form method="post" action="{{ url_for('manage.category_delete', category_id=c.id) }}" style="display:inline"
                     onsubmit="return confirm('Delete category \u201c{{ c.name }}\u201d?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit">Delete</button>
               </form>
             {% else %}

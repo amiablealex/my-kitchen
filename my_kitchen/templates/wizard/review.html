@@ -23,6 +23,7 @@
   </ul>
 
   <form method="post" action="{{ url_for('wizard.generate') }}" id="generate-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <p>
       <a href="{{ url_for('wizard.step_servings') }}">← Back</a>
       <button type="submit" id="generate-btn">Generate recipes →</button>

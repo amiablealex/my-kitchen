@@ -8,6 +8,11 @@ class Config:
     # --- Flask ---
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-change-me")
 
+    # CSRF tokens are session-scoped with no separate time expiry, so a stock
+    # page left open on the kitchen tablet doesn't start rejecting toggles after
+    # an hour. Token is still bound to the session (cleared on logout/restart).
+    WTF_CSRF_TIME_LIMIT = None
+
     # --- Database (path configurable for the Pi / HA add-on later) ---
     _db_path = os.environ.get("MY_KITCHEN_DB_PATH", str(BASE_DIR / "my_kitchen.db"))
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", f"sqlite:///{_db_path}")

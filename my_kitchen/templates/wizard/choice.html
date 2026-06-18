@@ -7,6 +7,7 @@
       <h2>{{ r.title }}</h2>
       <p><em>{{ r.blurb }}</em></p>
       <form method="post" action="{{ url_for('wizard.choose', recipe_id=r.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit">Choose this →</button>
       </form>
     </div>

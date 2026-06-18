@@ -2,7 +2,7 @@ from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import Config
-from .extensions import db, migrate
+from .extensions import db, migrate, csrf
 
 
 def create_app(config_class=Config):
@@ -17,13 +17,18 @@ def create_app(config_class=Config):
 
     db.init_app(app)
 
+    # App-wide CSRF protection. Validates a csrf_token on every state-changing
+    # request (POST/PUT/PATCH/DELETE). Forms carry it in a hidden field; the
+    # stock-list AJAX sends it as the X-CSRFToken header (see base.html meta tag).
+    csrf.init_app(app)
+
     # Import models so SQLAlchemy knows about them for create_all().
     from . import models  # noqa: F401
 
     # Migrations. render_as_batch is required for SQLite: it rebuilds tables
     # to emulate the ALTER TABLE operations SQLite can't do natively. compare_type
     # lets autogenerate notice column-type changes too.
-    migrate.init_app(app, db, render_as_batch=True, compare_type=True)   # <-- add
+    migrate.init_app(app, db, render_as_batch=True, compare_type=True)
 
     # CLI: flask init-db / flask seed / flask shell context
     from .cli import register_cli

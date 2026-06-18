@@ -5,6 +5,7 @@
   <p>Pick the in-stock items to build the meal around. Staples (oil, salt, spices) are assumed — no need to choose them.</p>
 
   <form method="post" action="{{ url_for('wizard.step_ingredients') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% for section_label, items in lanes %}
       <h2>{{ section_label }}</h2>
       {% if items %}

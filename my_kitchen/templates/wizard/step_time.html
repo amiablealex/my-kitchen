@@ -3,6 +3,7 @@
 {% block content %}
   <h1>Step 4: How much time?</h1>
   <form method="post" action="{{ url_for('wizard.step_time') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% for value, label in time_bands %}
       <label>
         <input type="radio" name="time_band" value="{{ value }}" {% if value == current %}checked{% endif %}>

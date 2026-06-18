@@ -2,11 +2,13 @@ import sqlite3
 
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
 db = SQLAlchemy()
 migrate = Migrate()
+csrf = CSRFProtect()
 
 @event.listens_for(Engine, "connect")
 def _sqlite_pragmas(dbapi_connection, connection_record):

@@ -6,6 +6,7 @@
 
   <h2>Add an ingredient</h2>
   <form method="post" action="{{ url_for('manage.ingredient_add') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Name: <input type="text" name="name" required></label>
     <label>Category:
       <select name="category_id" required>
@@ -32,10 +33,12 @@
           <td>
             <a href="{{ url_for('manage.ingredient_edit', ingredient_id=ing.id) }}">Edit</a>
             <form method="post" action="{{ url_for('manage.ingredient_retire', ingredient_id=ing.id) }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit">Retire</button>
             </form>
             <form method="post" action="{{ url_for('manage.ingredient_delete', ingredient_id=ing.id) }}" style="display:inline"
                   onsubmit="return confirm('Permanently delete \u201c{{ ing.name }}\u201d? This cannot be undone. (Retire instead to keep it in history.)');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit">Delete</button>
             </form>
           </td>
@@ -59,10 +62,12 @@
             <td>{{ ing.category.name }}</td>
             <td>
               <form method="post" action="{{ url_for('manage.ingredient_activate', ingredient_id=ing.id) }}" style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit">Reactivate</button>
               </form>
               <form method="post" action="{{ url_for('manage.ingredient_delete', ingredient_id=ing.id) }}" style="display:inline"
                     onsubmit="return confirm('Permanently delete \u201c{{ ing.name }}\u201d? This cannot be undone.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit">Delete</button>
               </form>
             </td>

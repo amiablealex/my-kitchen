@@ -3,6 +3,7 @@
 {% block content %}
   <h1>Step 3: Cuisine</h1>
   <form method="post" action="{{ url_for('wizard.step_cuisine') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% for c in cuisines %}
       <label>
         <input type="radio" name="cuisine" value="{{ c }}" {% if c == current %}checked{% endif %}>

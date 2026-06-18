@@ -9,6 +9,7 @@
 
   <h2>Add equipment</h2>
   <form method="post" action="{{ url_for('manage.equipment_add') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Name: <input type="text" name="name" placeholder="e.g. air fryer, wok, large baking dish" required></label>
     <label><input type="checkbox" name="is_available" checked> Available</label>
     <button type="submit">Add</button>
@@ -26,10 +27,12 @@
           <td>
             <a href="{{ url_for('manage.equipment_edit', equipment_id=item.id) }}">Edit</a>
             <form method="post" action="{{ url_for('manage.equipment_toggle', equipment_id=item.id) }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit">{{ "Mark unavailable" if item.is_available else "Mark available" }}</button>
             </form>
             <form method="post" action="{{ url_for('manage.equipment_delete', equipment_id=item.id) }}" style="display:inline"
                   onsubmit="return confirm('Delete \u201c{{ item.name }}\u201d from your equipment?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit">Delete</button>
             </form>
           </td>

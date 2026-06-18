@@ -4,6 +4,7 @@
   <h1>Edit category</h1>
   <p><a href="{{ url_for('manage.categories') }}">&larr; Categories</a></p>
   <form method="post" action="{{ url_for('manage.category_edit', category_id=cat.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Name: <input type="text" name="name" value="{{ cat.name }}" required></label>
     <label>Section:
       <select name="section" required>

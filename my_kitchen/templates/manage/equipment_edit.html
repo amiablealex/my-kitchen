@@ -4,6 +4,7 @@
   <h1>Edit equipment</h1>
   <p><a href="{{ url_for('manage.equipment') }}">&larr; Equipment</a></p>
   <form method="post" action="{{ url_for('manage.equipment_edit', equipment_id=item.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Name: <input type="text" name="name" value="{{ item.name }}" required></label>
     <label><input type="checkbox" name="is_available" {% if item.is_available %}checked{% endif %}> Available</label>
     <p>
