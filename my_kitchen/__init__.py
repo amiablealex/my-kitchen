@@ -2,7 +2,7 @@ from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import Config
-from .extensions import db
+from .extensions import db, migrate
 
 
 def create_app(config_class=Config):
@@ -19,6 +19,11 @@ def create_app(config_class=Config):
 
     # Import models so SQLAlchemy knows about them for create_all().
     from . import models  # noqa: F401
+
+    # Migrations. render_as_batch is required for SQLite: it rebuilds tables
+    # to emulate the ALTER TABLE operations SQLite can't do natively. compare_type
+    # lets autogenerate notice column-type changes too.
+    migrate.init_app(app, db, render_as_batch=True, compare_type=True)   # <-- add
 
     # CLI: flask init-db / flask seed / flask shell context
     from .cli import register_cli
