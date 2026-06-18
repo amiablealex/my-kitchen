@@ -26,7 +26,7 @@ def register_cli(app):
             click.echo("Data already present — nothing to do. Use --reset to wipe and reseed.")
             return
 
-        # One placeholder user (id 1). Auth/password arrives in Phase 1.
+        # One placeholder user (id 1). Set its password with `flask set-password`.
         db.session.add(models.User(name="Home Cook", is_active=True))
 
         # Category names are freely editable; the four sections are fixed.
@@ -85,8 +85,74 @@ def register_cli(app):
             f"Seeded {models.User.query.count()} user, "
             f"{models.Category.query.count()} categories, "
             f"{models.Ingredient.query.count()} ingredients "
-            "(dietary_tags + equipment intentionally left empty for later phases)."
+            "(dietary_tags + equipment intentionally left empty for later phases). "
+            'Set the user password with: flask set-password "Home Cook"'
         )
+
+    @app.cli.command("set-password")
+    @click.argument("name")
+    @click.option("--password", default=None,
+                  help="Set non-interactively (e.g. for scripts). Omit to be "
+                       "prompted with hidden input + confirmation.")
+    def set_password(name, password):
+        """Set or reset a user's login password (by name, case-insensitive).
+
+        This is the first-login bootstrap and the reset mechanism. There is no
+        public/self-registration; passwords are only ever set here or in the
+        in-app My Kitchen area.
+        """
+        user = models.User.query.filter(
+            db.func.lower(models.User.name) == name.strip().lower()
+        ).first()
+        if user is None:
+            known = ", ".join(
+                u.name for u in models.User.query.order_by(models.User.name).all()
+            )
+            click.echo(f'No user named "{name}". Known users: {known or "(none)"}.')
+            raise SystemExit(1)
+        if password is None:
+            password = click.prompt(
+                f'New password for "{user.name}"',
+                hide_input=True, confirmation_prompt=True,
+            )
+        if not password:
+            click.echo("Password cannot be empty.")
+            raise SystemExit(1)
+        user.set_password(password)
+        db.session.commit()
+        click.echo(f'Password set for "{user.name}". They can log in now.')
+
+    @app.cli.command("create-user")
+    @click.argument("name")
+    @click.option("--password", default=None,
+                  help="Optionally set the password at creation. Omit to create "
+                       "now and set it later with set-password.")
+    def create_user(name, password):
+        """Create a household user (idempotent — safe to re-run).
+
+        If a user with that name already exists (active or retired), it's left
+        completely untouched. New users are created active.
+        """
+        name = name.strip()
+        if not name:
+            click.echo("Name cannot be empty.")
+            raise SystemExit(1)
+        existing = models.User.query.filter(
+            db.func.lower(models.User.name) == name.lower()
+        ).first()
+        if existing is not None:
+            state = "active" if existing.is_active else "retired"
+            click.echo(f'User "{existing.name}" already exists ({state}) — left untouched.')
+            return
+        user = models.User(name=name, is_active=True)
+        if password:
+            user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        if password:
+            click.echo(f'Created "{name}" with a password — they can log in now.')
+        else:
+            click.echo(f'Created "{name}". Set a password with:  flask set-password "{name}"')
 
     @app.shell_context_processor
     def shell_context():
