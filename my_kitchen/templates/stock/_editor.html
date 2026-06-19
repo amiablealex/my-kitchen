@@ -1,12 +1,13 @@
 {# Shared stock-editing component. Included by /stock and the wizard's
    /cook/stock step — the SAME markup + JS on both surfaces.
 
-   Shows only in-stock, active, non-staple ingredients, grouped by category.
+   Pantry: only in-stock, active, non-staple ingredients, grouped by category.
    Expects `groups` in context: [(category, [ingredients]) ...] from
    stock.service.in_stock_groups(). Behaviour lives in static/stock.js.
 
-   (Search-to-add and the "add a new ingredient" hand-off arrive in CP2 and
-   slot in below the pantry, inside this same partial.) #}
+   The "Add to stock" area searches the master catalogue (active, non-staple,
+   not-already-in-stock) and hands off to manage → ingredients for anything not
+   in the catalogue yet. #}
 <div id="pantry">
   {% for cat, ingredients in groups %}
     <section class="stock-group" data-category-id="{{ cat.id }}">
@@ -29,6 +30,25 @@
     </section>
   {% endfor %}
   <p class="pantry-empty"{% if groups %} hidden{% endif %}>
-    <em>Nothing in stock right now.</em>
+    <em>Nothing in stock right now — search below to add what you have in.</em>
   </p>
 </div>
+
+<section id="stock-search">
+  <h2>Add to stock</h2>
+  <label>
+    Search your catalogue:
+    <input type="search" id="stock-search-input"
+           placeholder="start typing an ingredient…"
+           autocomplete="off"
+           data-search-url="{{ url_for('stock.search') }}">
+  </label>
+  {# Results fragment (server-rendered by stock.search) is injected here. #}
+  <div id="stock-search-results"></div>
+  <p>
+    Not in your catalogue yet?
+    <a id="stock-add-new-link"
+       href="{{ url_for('manage.ingredients') }}"
+       data-base-url="{{ url_for('manage.ingredients') }}">Add a new ingredient →</a>
+  </p>
+</section>

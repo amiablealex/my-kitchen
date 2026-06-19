@@ -7,7 +7,9 @@
   <h2>Add an ingredient</h2>
   <form method="post" action="{{ url_for('manage.ingredient_add') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>Name: <input type="text" name="name" required></label>
+    <label>Name: <input type="text" name="name"
+           value="{{ prefill_name|default('', true) }}"
+           {% if prefill_name|default('', true) %}autofocus{% endif %} required></label>
     <label>Category:
       <select name="category_id" required>
         {% for c in categories %}

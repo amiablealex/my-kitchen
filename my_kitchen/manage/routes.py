@@ -58,9 +58,13 @@ def ingredients():
     all_items = Ingredient.query.order_by(Ingredient.name).all()
     active = [i for i in all_items if i.is_active]
     retired = [i for i in all_items if not i.is_active]
+    # ?name= pre-fills the add form, for the "add a new ingredient" hand-off
+    # from the stock search box.
+    prefill_name = (request.args.get("name") or "").strip()
     return render_template(
         "manage/ingredients.html",
         categories=cats, active=active, retired=retired,
+        prefill_name=prefill_name,
     )
 
 
