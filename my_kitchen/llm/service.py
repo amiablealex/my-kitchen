@@ -1,5 +1,5 @@
 from ..extensions import db
-from ..models import Ingredient, Generation, Recipe
+from ..models import Ingredient, Generation, Recipe, User
 from .prompt import SYSTEM_PROMPT, build_user_prompt
 from .schema import extract_json, validate_and_normalize
 from .providers import get_provider, ProviderError
@@ -11,6 +11,25 @@ def default_user_id():
     return u.id if u else None
 
 
+def combined_dietary(user_ids):
+    """Union of the selected users' dietary tags, de-duplicated, split into
+    (allergies, preferences) name lists. The single source of truth for the
+    dietary split — used both by the review screen and the brief."""
+    allergies, preferences = [], []
+    if not user_ids:
+        return allergies, preferences
+    users = User.query.filter(User.id.in_(user_ids)).all()
+    seen = set()
+    for u in users:
+        for tag in u.dietary_tags:
+            key = (tag.type, tag.name.lower())
+            if key in seen:
+                continue
+            seen.add(key)
+            (allergies if tag.type == "allergy" else preferences).append(tag.name)
+    return sorted(allergies), sorted(preferences)
+
+
 def build_brief(wizard_state, time_label):
     selected_ids = wizard_state.get("selected_ingredient_ids") or []
     selected = []
@@ -18,13 +37,20 @@ def build_brief(wizard_state, time_label):
         rows = Ingredient.query.filter(Ingredient.id.in_(selected_ids)).all()
         selected = [{"name": r.name, "note": r.note} for r in rows]
     staples = [r.name for r in Ingredient.query.filter_by(is_staple=True, in_stock=True, is_active=True).all()]
+    cooking_for_ids = wizard_state.get("cooking_for_user_ids") or []
+    guest_count = int(wizard_state.get("guest_count") or 0)
+    allergies, preferences = combined_dietary(cooking_for_ids)
     return {
         "ingredients": selected,
         "staples": staples,
         "cuisine": wizard_state.get("cuisine", "Surprise me"),
         "time_band": wizard_state.get("time_band", "quick"),
         "time_label": time_label,
-        "servings": wizard_state.get("servings", 2),
+        "servings": len(cooking_for_ids) + guest_count,
+        "cooking_for_user_ids": cooking_for_ids,
+        "guest_count": guest_count,
+        "allergies": allergies,
+        "preferences": preferences,
     }
 
 
@@ -38,8 +64,8 @@ def run_generation(app_config, wizard_state, time_label, user_id=None):
         cuisine=brief["cuisine"],
         time_band=brief["time_band"],
         servings=brief["servings"],
-        cooking_for_user_ids=[],
-        guest_count=0,
+        cooking_for_user_ids=brief["cooking_for_user_ids"],
+        guest_count=brief["guest_count"],
         selected_ingredient_ids=wizard_state.get("selected_ingredient_ids") or [],
         creative_seed="",  # MVP: no creative seed yet
         raw_prompt=user_prompt,

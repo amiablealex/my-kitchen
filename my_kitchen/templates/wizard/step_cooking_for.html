@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Cook — Who's eating?{% endblock %}
+{% block content %}
+  <h1>Step 5: Who's eating?</h1>
+  <p>Pick who this is for — servings and dietary needs come from your choices.
+     Add guests for extra covers with no dietary data.</p>
+  <form method="post" action="{{ url_for('wizard.step_cooking_for') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <h2>Household</h2>
+    {% if users %}
+      {% for u in users %}
+        <label>
+          <input type="checkbox" name="cooking_for_user_ids" value="{{ u.id }}"
+                 {% if u.id in selected %}checked{% endif %}>
+          {{ u.name }}
+          {% if u.dietary_tags %}
+            <small>({{ u.dietary_tags | map(attribute='name') | join(', ') }})</small>
+          {% endif %}
+        </label><br>
+      {% endfor %}
+    {% else %}
+      <p><em>No active users — add guests below.</em></p>
+    {% endif %}
+
+    <h2>Guests</h2>
+    <label>Extra covers (no dietary data):
+      <input type="number" name="guest_count" min="0" max="20" value="{{ guest_count }}" style="width:4em">
+    </label>
+
+    <p>
+      <a href="{{ url_for('wizard.step_time') }}">← Back</a>
+      <button type="submit">Continue →</button>
+    </p>
+  </form>
+{% endblock %}

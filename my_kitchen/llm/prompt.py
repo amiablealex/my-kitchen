@@ -5,6 +5,7 @@ Rules:
 - Use UK conventions: metric units (g, ml), Celsius oven temperatures (state fan where relevant), British ingredient names.
 - Build the recipes around the user's chosen ingredients. You may freely assume the listed staples are available.
 - You may suggest at most two extra items the user might need to buy; mark each "to_buy": true. Everything else is "to_buy": false.
+- If the brief lists allergies, they are absolute: never include those ingredients, or anything derived from or containing them, in either recipe. Dietary preferences are softer steers to honour where reasonable.
 - Respect the requested time band and serving count.
 - Return TWO genuinely distinct recipes that differ in technique or flavour direction, not minor variants.
 - Respond with VALID JSON ONLY, matching the schema exactly. No markdown, no commentary, no code fences.
@@ -39,6 +40,22 @@ def build_user_prompt(brief):
     if brief["staples"]:
         lines.append("")
         lines.append("Staples assumed available: " + ", ".join(brief["staples"]) + ".")
+
+    allergies = brief.get("allergies") or []
+    preferences = brief.get("preferences") or []
+    if allergies:
+        lines.append("")
+        lines.append(
+            "ALLERGIES — ABSOLUTE, NON-NEGOTIABLE. Neither recipe may contain these, "
+            "or anything derived from or containing them, in any form: "
+            + ", ".join(allergies) + "."
+        )
+    if preferences:
+        lines.append("")
+        lines.append(
+            "Dietary preferences (lean this way where you sensibly can): "
+            + ", ".join(preferences) + "."
+        )
 
     lines.append("")
     cuisine = brief["cuisine"]

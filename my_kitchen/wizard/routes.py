@@ -1,12 +1,12 @@
 from flask import (
     Blueprint, render_template, request, redirect, url_for, session,
-    current_app, abort,
+    current_app, abort, flash,
 )
 from flask_login import current_user
 
 from ..extensions import db
-from ..models import Category, Ingredient, Generation, Recipe, SECTION_CHOICES
-from ..llm.service import run_generation
+from ..models import Category, Ingredient, Generation, Recipe, User, SECTION_CHOICES
+from ..llm.service import run_generation, combined_dietary
 
 wizard_bp = Blueprint("wizard", __name__, url_prefix="/cook")
 
@@ -16,7 +16,19 @@ SECTIONS = SECTION_CHOICES
 
 
 def fresh_wizard():
-    return {"selected_ingredient_ids": [], "cuisine": "Surprise me", "time_band": "quick", "servings": 2}
+    return {
+        "selected_ingredient_ids": [],
+        "cuisine": "Surprise me",
+        "time_band": "quick",
+        "cooking_for_user_ids": [],
+        "guest_count": 0,
+    }
+
+
+def derived_servings(w):
+    """Servings = selected household members + guests. Tolerant of old-shape
+    sessions (pre-CP2) that lack the cooking-for keys: they read as 0."""
+    return len(w.get("cooking_for_user_ids") or []) + int(w.get("guest_count") or 0)
 
 
 def get_wizard():
@@ -86,22 +98,42 @@ def step_time():
         choice = request.form.get("time_band", "quick")
         w["time_band"] = choice if choice in dict(TIME_BANDS) else "quick"
         save_wizard(w)
-        return redirect(url_for("wizard.step_servings"))
+        return redirect(url_for("wizard.step_cooking_for"))
     return render_template("wizard/step_time.html", time_bands=TIME_BANDS, current=w["time_band"])
 
 
-@wizard_bp.route("/servings", methods=["GET", "POST"])
-def step_servings():
+@wizard_bp.route("/cooking-for", methods=["GET", "POST"])
+def step_cooking_for():
     w = get_wizard()
     if request.method == "POST":
+        raw_ids = [int(x) for x in request.form.getlist("cooking_for_user_ids") if x.isdigit()]
+        # Only currently-active users are valid covers; silently drop any id that
+        # isn't active (e.g. retired between page-load and submit).
+        active_ids = {u.id for u in User.query.filter_by(is_active=True).all()}
+        user_ids = [i for i in raw_ids if i in active_ids]
         try:
-            servings = int(request.form.get("servings", 2))
+            guests = int(request.form.get("guest_count", 0))
         except (TypeError, ValueError):
-            servings = 2
-        w["servings"] = max(1, min(servings, 20))
+            guests = 0
+        guests = max(0, guests)
+        total = len(user_ids) + guests
+        if total < 1:
+            flash("Choose at least one person, or add a guest or two.", "error")
+            return redirect(url_for("wizard.step_cooking_for"))
+        if total > 20:  # match the old servings ceiling; trim guests, keep people
+            guests = max(0, 20 - len(user_ids))
+        w["cooking_for_user_ids"] = user_ids
+        w["guest_count"] = guests
         save_wizard(w)
         return redirect(url_for("wizard.review"))
-    return render_template("wizard/step_servings.html", current=w["servings"])
+
+    active_users = User.query.filter_by(is_active=True).order_by(db.func.lower(User.name)).all()
+    return render_template(
+        "wizard/step_cooking_for.html",
+        users=active_users,
+        selected=set(w.get("cooking_for_user_ids") or []),
+        guest_count=w.get("guest_count") or 0,
+    )
 
 
 @wizard_bp.route("/review")
@@ -110,13 +142,30 @@ def review():
     ids = w["selected_ingredient_ids"] or [0]
     selected = Ingredient.query.filter(Ingredient.id.in_(ids)).all()
     time_label = dict(TIME_BANDS).get(w["time_band"], w["time_band"])
-    return render_template("wizard/review.html", selected=selected,
-                           cuisine=w["cuisine"], time_label=time_label, servings=w["servings"])
+    cooking_for_ids = w.get("cooking_for_user_ids") or []
+    cooking_for_users = (
+        User.query.filter(User.id.in_(cooking_for_ids)).order_by(db.func.lower(User.name)).all()
+        if cooking_for_ids else []
+    )
+    guests = int(w.get("guest_count") or 0)
+    allergies, preferences = combined_dietary(cooking_for_ids)
+    return render_template(
+        "wizard/review.html",
+        selected=selected, cuisine=w["cuisine"], time_label=time_label,
+        servings=len(cooking_for_ids) + guests,
+        cooking_for_users=cooking_for_users, guest_count=guests,
+        allergies=allergies, preferences=preferences,
+    )
 
 
 @wizard_bp.route("/generate", methods=["POST"])
 def generate():
     w = get_wizard()
+    if derived_servings(w) < 1:
+        # Old-shape session, or someone reached /generate without the cooking-for
+        # step. Send them to pick who's eating rather than generate for nobody.
+        flash("Let me know who's eating before I cook.", "error")
+        return redirect(url_for("wizard.step_cooking_for"))
     time_label = dict(TIME_BANDS).get(w["time_band"], w["time_band"])
     # The login gate guarantees an authenticated user here.
     gen, error = run_generation(current_app.config, w, time_label, user_id=current_user.id)
