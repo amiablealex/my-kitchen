@@ -2,8 +2,26 @@
 {% block title %}History — My Kitchen{% endblock %}
 {% block content %}
   <h1>History</h1>
+  <p><a href="{{ url_for('history.favourites') }}">★ Favourites</a></p>
+
+  <form method="get" action="{{ url_for('history.index') }}">
+    <label>Cook:
+      <select name="user" onchange="this.form.submit()">
+        <option value="">All cooks</option>
+        {% for u in users %}
+          <option value="{{ u.id }}" {% if u.id == selected_user_id %}selected{% endif %}>{{ u.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <noscript><button type="submit">Filter</button></noscript>
+  </form>
+
   {% if not rows %}
-    <p>Nothing cooked yet. <a href="{{ url_for('wizard.start') }}">Let's cook →</a></p>
+    {% if selected_user_id %}
+      <p>Nothing cooked by this person yet. <a href="{{ url_for('history.index') }}">Show all</a>.</p>
+    {% else %}
+      <p>Nothing cooked yet. <a href="{{ url_for('wizard.start') }}">Let's cook →</a></p>
+    {% endif %}
   {% else %}
     <ul>
       {% for row in rows %}
@@ -15,10 +33,11 @@
           {% if row.status == "chosen" %}
             <br>Chosen:
             <a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a>
+            {% if row.chosen.is_favourite %} ★{% endif %}
           {% elif row.status == "unchosen" %}
             <br>Generated (none chosen):
             {% for r in row.recipes %}
-              <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if not loop.last %} · {% endif %}
+              <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if r.is_favourite %} ★{% endif %}{% if not loop.last %} · {% endif %}
             {% endfor %}
             — <a href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">choose one</a>
           {% else %}

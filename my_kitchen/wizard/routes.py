@@ -199,3 +199,14 @@ def recipe(recipe_id):
     if recipe is None:
         abort(404)
     return render_template("wizard/recipe.html", recipe=recipe)
+
+
+@wizard_bp.route("/recipe/<int:recipe_id>/favourite", methods=["POST"])
+def toggle_favourite(recipe_id):
+    recipe = db.session.get(Recipe, recipe_id)
+    if recipe is None:
+        abort(404)
+    recipe.is_favourite = not recipe.is_favourite
+    db.session.commit()
+    flash("Added to favourites." if recipe.is_favourite else "Removed from favourites.", "success")
+    return redirect(url_for("wizard.recipe", recipe_id=recipe.id))

@@ -31,5 +31,11 @@
     {% endfor %}
   </ol>
 
+  <p>
+    <form method="post" action="{{ url_for('wizard.toggle_favourite', recipe_id=recipe.id) }}" style="display:inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit">{% if recipe.is_favourite %}★ Remove from favourites{% else %}☆ Add to favourites{% endif %}</button>
+    </form>
+  </p>
   <p><a href="{{ url_for('wizard.start') }}">Cook something else</a></p>
 {% endblock %}

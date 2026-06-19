@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Favourites — My Kitchen{% endblock %}
+{% block content %}
+  <h1>Favourites</h1>
+  <p><a href="{{ url_for('history.index') }}">&larr; History</a></p>
+  {% if not recipes %}
+    <p>No favourites yet. Open a recipe and star it to keep it here.</p>
+  {% else %}
+    <ul>
+      {% for r in recipes %}
+        <li>
+          <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>
+          {% if r.blurb %} — <em>{{ r.blurb }}</em>{% endif %}
+          <br><small>{{ r.created_at.strftime("%Y-%m-%d %H:%M") }} UTC
+            — cooked by {{ r.generation.created_by.name if r.generation.created_by else "unknown" }}</small>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}
