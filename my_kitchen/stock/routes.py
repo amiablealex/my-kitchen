@@ -1,39 +1,28 @@
 from flask import Blueprint, render_template, request, jsonify, abort
 
 from ..extensions import db
-from ..models import Category, Ingredient
+from ..models import Ingredient
+from .service import in_stock_groups
 
 stock_bp = Blueprint("stock", __name__, url_prefix="/stock")
 
 
 @stock_bp.route("/")
 def index():
-    """Stock list grouped by category. Core items shown per the spec;
-    staples gathered into a separate collapsible section."""
-    categories = Category.query.order_by(Category.display_order).all()
-    core_groups = []
-    staple_groups = []
-    for cat in categories:
-        items = sorted([i for i in cat.ingredients if i.is_active], key=lambda i: i.name.lower())
-        core = [i for i in items if not i.is_staple]
-        staples = [i for i in items if i.is_staple]
-        if core:
-            core_groups.append((cat, core))
-        if staples:
-            staple_groups.append((cat, staples))
-    return render_template(
-        "stock/index.html",
-        core_groups=core_groups,
-        staple_groups=staple_groups,
-    )
+    """Standalone pantry view: in-stock items only, grouped by category.
+    The editing UI/logic lives in the shared stock/_editor.html partial."""
+    return render_template("stock/index.html", groups=in_stock_groups())
 
 
-@stock_bp.route("/<int:ingredient_id>/toggle", methods=["POST"])
-def toggle(ingredient_id):
+@stock_bp.route("/<int:ingredient_id>/remove", methods=["POST"])
+def remove(ingredient_id):
+    """Take an item out of stock (in_stock = False). Idempotent: removing an
+    already-out item is a harmless no-op. Replaces the old flip-style toggle —
+    on a pantry list 'remove' is never ambiguous about which way it goes."""
     ing = db.session.get(Ingredient, ingredient_id)
     if ing is None:
         abort(404)
-    ing.in_stock = not ing.in_stock
+    ing.in_stock = False
     db.session.commit()
     return jsonify(id=ing.id, in_stock=ing.in_stock)
 

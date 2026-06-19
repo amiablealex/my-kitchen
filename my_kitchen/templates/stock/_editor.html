@@ -1,0 +1,34 @@
+{# Shared stock-editing component. Included by /stock and the wizard's
+   /cook/stock step — the SAME markup + JS on both surfaces.
+
+   Shows only in-stock, active, non-staple ingredients, grouped by category.
+   Expects `groups` in context: [(category, [ingredients]) ...] from
+   stock.service.in_stock_groups(). Behaviour lives in static/stock.js.
+
+   (Search-to-add and the "add a new ingredient" hand-off arrive in CP2 and
+   slot in below the pantry, inside this same partial.) #}
+<div id="pantry">
+  {% for cat, ingredients in groups %}
+    <section class="stock-group" data-category-id="{{ cat.id }}">
+      <h2>{{ cat.name }}</h2>
+      <ul>
+        {% for ing in ingredients %}
+          <li class="stock-item" data-ingredient-id="{{ ing.id }}">
+            <span class="stock-item-name">{{ ing.name }}</span>
+            <input type="text" class="stock-note"
+                   placeholder="note (e.g. 1 large, needs using)"
+                   value="{{ ing.note or '' }}"
+                   data-note-url="{{ url_for('stock.note', ingredient_id=ing.id) }}">
+            <button type="button" class="stock-remove"
+                    data-remove-url="{{ url_for('stock.remove', ingredient_id=ing.id) }}">
+              Remove
+            </button>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endfor %}
+  <p class="pantry-empty"{% if groups %} hidden{% endif %}>
+    <em>Nothing in stock right now.</em>
+  </p>
+</div>

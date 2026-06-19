@@ -2,56 +2,9 @@
 {% block title %}Stock — My Kitchen{% endblock %}
 {% block content %}
   <h1>Stock</h1>
-  <p>Tap an item to toggle in/out of stock. Notes save when you click away.</p>
+  <p>What you've got in. Edit a note, or remove anything you've run out of.</p>
 
-  {% for cat, ingredients in core_groups %}
-    <h2>{{ cat.name }}</h2>
-    <ul>
-      {% for ing in ingredients %}
-        <li>
-          <label>
-            <input type="checkbox"
-                   class="stock-toggle"
-                   data-toggle-url="{{ url_for('stock.toggle', ingredient_id=ing.id) }}"
-                   {% if ing.in_stock %}checked{% endif %}>
-            {{ ing.name }}
-          </label>
-          <input type="text"
-                 class="stock-note"
-                 placeholder="note (e.g. 1 large, needs using)"
-                 value="{{ ing.note or '' }}"
-                 data-note-url="{{ url_for('stock.note', ingredient_id=ing.id) }}">
-        </li>
-      {% endfor %}
-    </ul>
-  {% endfor %}
-
-  {% if staple_groups %}
-    <details>
-      <summary>Staples (assumed always available)</summary>
-      {% for cat, ingredients in staple_groups %}
-        <h3>{{ cat.name }}</h3>
-        <ul>
-          {% for ing in ingredients %}
-            <li>
-              <label>
-                <input type="checkbox"
-                       class="stock-toggle"
-                       data-toggle-url="{{ url_for('stock.toggle', ingredient_id=ing.id) }}"
-                       {% if ing.in_stock %}checked{% endif %}>
-                {{ ing.name }}
-              </label>
-              <input type="text"
-                     class="stock-note"
-                     placeholder="note"
-                     value="{{ ing.note or '' }}"
-                     data-note-url="{{ url_for('stock.note', ingredient_id=ing.id) }}">
-            </li>
-          {% endfor %}
-        </ul>
-      {% endfor %}
-    </details>
-  {% endif %}
+  {% include "stock/_editor.html" %}
 {% endblock %}
 
 {% block scripts %}
