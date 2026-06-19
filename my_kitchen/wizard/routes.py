@@ -7,7 +7,6 @@ from flask_login import current_user
 from ..extensions import db
 from ..models import Ingredient, Generation, Recipe, User, SECTION_CHOICES
 from ..llm.service import run_generation, combined_dietary
-from ..stock.service import in_stock_groups
 
 wizard_bp = Blueprint("wizard", __name__, url_prefix="/cook")
 
@@ -27,8 +26,6 @@ def fresh_wizard():
 
 
 def derived_servings(w):
-    """Servings = selected household members + guests. Tolerant of old-shape
-    sessions (pre-CP2) that lack the cooking-for keys: they read as 0."""
     return len(w.get("cooking_for_user_ids") or []) + int(w.get("guest_count") or 0)
 
 
@@ -49,16 +46,7 @@ def save_wizard(w):
 def start():
     session["wizard"] = fresh_wizard()
     session.modified = True
-    return redirect(url_for("wizard.step_stock"))
-
-
-@wizard_bp.route("/stock")
-def step_stock():
-    # Ensure the wizard session dict exists (tolerant of old-shape sessions).
-    get_wizard()
-    # Same shared pantry view as /stock: in-stock, active, non-staple items only,
-    # with remove + search-to-add. The wizard just wraps it in step chrome below.
-    return render_template("wizard/step_stock.html", groups=in_stock_groups())
+    return redirect(url_for("wizard.step_ingredients"))
 
 
 @wizard_bp.route("/ingredients", methods=["GET", "POST"])
@@ -70,12 +58,18 @@ def step_ingredients():
         save_wizard(w)
         return redirect(url_for("wizard.step_cuisine"))
 
+    # Live read of current stock on every render, so a round-trip to /stock
+    # (via the "Stock not right?" link) is reflected the moment they return.
     in_stock = Ingredient.query.filter_by(in_stock=True, is_staple=False, is_active=True).all()
     lanes = []
     for section_key, section_label in SECTIONS:
         items = sorted([i for i in in_stock if i.category.section == section_key], key=lambda i: i.name.lower())
         lanes.append((section_label, items))
-    return render_template("wizard/step_ingredients.html", lanes=lanes, selected=set(w["selected_ingredient_ids"]))
+    return render_template(
+        "wizard/step_ingredients.html",
+        lanes=lanes, selected=set(w["selected_ingredient_ids"]),
+        any_in_stock=bool(in_stock),
+    )
 
 
 @wizard_bp.route("/cuisine", methods=["GET", "POST"])
@@ -105,8 +99,6 @@ def step_cooking_for():
     w = get_wizard()
     if request.method == "POST":
         raw_ids = [int(x) for x in request.form.getlist("cooking_for_user_ids") if x.isdigit()]
-        # Only currently-active users are valid covers; silently drop any id that
-        # isn't active (e.g. retired between page-load and submit).
         active_ids = {u.id for u in User.query.filter_by(is_active=True).all()}
         user_ids = [i for i in raw_ids if i in active_ids]
         try:
@@ -118,7 +110,7 @@ def step_cooking_for():
         if total < 1:
             flash("Choose at least one person, or add a guest or two.", "error")
             return redirect(url_for("wizard.step_cooking_for"))
-        if total > 20:  # match the old servings ceiling; trim guests, keep people
+        if total > 20:
             guests = max(0, 20 - len(user_ids))
         w["cooking_for_user_ids"] = user_ids
         w["guest_count"] = guests
@@ -160,12 +152,9 @@ def review():
 def generate():
     w = get_wizard()
     if derived_servings(w) < 1:
-        # Old-shape session, or someone reached /generate without the cooking-for
-        # step. Send them to pick who's eating rather than generate for nobody.
         flash("Let me know who's eating before I cook.", "error")
         return redirect(url_for("wizard.step_cooking_for"))
     time_label = dict(TIME_BANDS).get(w["time_band"], w["time_band"])
-    # The login gate guarantees an authenticated user here.
     gen, error = run_generation(current_app.config, w, time_label, user_id=current_user.id)
     if error:
         return render_template("wizard/error.html", error=error)
@@ -205,7 +194,6 @@ def toggle_favourite(recipe_id):
     recipe = db.session.get(Recipe, recipe_id)
     if recipe is None:
         abort(404)
-    # Per-user: toggle this recipe in/out of the current user's favourites only.
     if recipe in current_user.favourite_recipes:
         current_user.favourite_recipes.remove(recipe)
         msg = "Removed from favourites."
