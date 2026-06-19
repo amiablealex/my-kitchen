@@ -13,7 +13,10 @@ from flask import (
 from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
-from ..models import Category, Ingredient, Equipment, SECTION_CHOICES, SECTION_KEYS
+from ..models import (
+    Category, Ingredient, Equipment, DietaryTag,
+    SECTION_CHOICES, SECTION_KEYS, TAG_TYPE_CHOICES, TAG_TYPE_KEYS,
+)
 
 manage_bp = Blueprint("manage", __name__, url_prefix="/manage")
 
@@ -336,3 +339,100 @@ def equipment_delete(equipment_id):
     db.session.commit()
     flash(f'Deleted "{name}".', "success")
     return redirect(url_for("manage.equipment"))
+
+# -------------------------------------------------------------- dietary tags
+
+def _tag_name_taken(name, exclude_id=None):
+    """Case-insensitive duplicate check, consistent with ingredients/categories
+    and the users name guard."""
+    q = DietaryTag.query.filter(db.func.lower(DietaryTag.name) == name.lower())
+    if exclude_id is not None:
+        q = q.filter(DietaryTag.id != exclude_id)
+    return q.first() is not None
+
+
+def _parse_tag_form():
+    """Pull + validate the shared add/edit fields. Returns (data, error)."""
+    name = (request.form.get("name") or "").strip()
+    type_ = (request.form.get("type") or "").strip()
+    if not name:
+        return None, "Name is required."
+    if type_ not in TAG_TYPE_KEYS:
+        return None, "Please choose a valid type."
+    return {"name": name, "type": type_}, None
+
+
+@manage_bp.route("/dietary-tags")
+def dietary_tags():
+    tags = DietaryTag.query.order_by(DietaryTag.type, db.func.lower(DietaryTag.name)).all()
+    # how many users each tag is assigned to — drives the delete confirmation
+    counts = {t.id: len(t.users) for t in tags}
+    return render_template(
+        "manage/dietary_tags.html",
+        tags=tags, counts=counts, types=TAG_TYPE_CHOICES,
+    )
+
+
+@manage_bp.route("/dietary-tags/add", methods=["POST"])
+def dietary_tag_add():
+    data, error = _parse_tag_form()
+    if error:
+        flash(error, "error")
+        return redirect(url_for("manage.dietary_tags"))
+    if _tag_name_taken(data["name"]):
+        flash(f'"{data["name"]}" already exists.', "error")
+        return redirect(url_for("manage.dietary_tags"))
+    db.session.add(DietaryTag(**data))
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash(f'"{data["name"]}" already exists.', "error")
+        return redirect(url_for("manage.dietary_tags"))
+    flash(f'Added "{data["name"]}".', "success")
+    return redirect(url_for("manage.dietary_tags"))
+
+
+@manage_bp.route("/dietary-tags/<int:tag_id>/edit", methods=["GET", "POST"])
+def dietary_tag_edit(tag_id):
+    tag = db.session.get(DietaryTag, tag_id)
+    if tag is None:
+        abort(404)
+    if request.method == "POST":
+        data, error = _parse_tag_form()
+        if error:
+            flash(error, "error")
+            return redirect(url_for("manage.dietary_tag_edit", tag_id=tag.id))
+        if _tag_name_taken(data["name"], exclude_id=tag.id):
+            flash(f'"{data["name"]}" already exists.', "error")
+            return redirect(url_for("manage.dietary_tag_edit", tag_id=tag.id))
+        tag.name = data["name"]
+        tag.type = data["type"]
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash(f'"{data["name"]}" already exists.', "error")
+            return redirect(url_for("manage.dietary_tag_edit", tag_id=tag.id))
+        flash(f'Saved "{tag.name}".', "success")
+        return redirect(url_for("manage.dietary_tags"))
+    return render_template(
+        "manage/dietary_tag_edit.html",
+        tag=tag, types=TAG_TYPE_CHOICES, user_count=len(tag.users),
+    )
+
+
+@manage_bp.route("/dietary-tags/<int:tag_id>/delete", methods=["POST"])
+def dietary_tag_delete(tag_id):
+    tag = db.session.get(DietaryTag, tag_id)
+    if tag is None:
+        abort(404)
+    # Unlike categories (NOT NULL FK) and users (history attribution), a tag has
+    # no immutable historical dependency: generations store user ids, not a tag
+    # snapshot. So hard delete is safe — SQLAlchemy clears the user_dietary_tags
+    # join rows for us as the tag is removed.
+    name = tag.name
+    db.session.delete(tag)
+    db.session.commit()
+    flash(f'Deleted "{name}".', "success")
+    return redirect(url_for("manage.dietary_tags"))

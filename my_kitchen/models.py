@@ -16,6 +16,14 @@ SECTION_CHOICES = [
 ]
 SECTION_KEYS = {key for key, _ in SECTION_CHOICES}
 
+# Dietary tag types (spec section 3): an allergy is a hard, must-never-include
+# exclusion; a preference is a soft steer. Single source of truth, shared by the
+# tag manager form and the brief-building split. Mirrors SECTION_CHOICES.
+TAG_TYPE_CHOICES = [
+    ("allergy", "Allergy (hard exclusion)"),
+    ("preference", "Preference (soft steer)"),
+]
+TAG_TYPE_KEYS = {key for key, _ in TAG_TYPE_CHOICES}
 
 def utcnow():
     """Timezone-aware UTC now; works on 3.11 and avoids the 3.12 utcnow() deprecation."""

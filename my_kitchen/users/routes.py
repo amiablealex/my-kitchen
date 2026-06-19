@@ -18,7 +18,7 @@ from flask_login import current_user
 from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
-from ..models import User
+from ..models import User, DietaryTag, TAG_TYPE_CHOICES
 
 users_bp = Blueprint("users", __name__, url_prefix="/users")
 
@@ -108,6 +108,37 @@ def edit(user_id):
             return redirect(url_for("users.edit", user_id=user.id))
         flash(f'Saved "{user.name}".', "success")
         return redirect(url_for("users.index"))
+    # Tags grouped by type for the assignment UI (active users only — controls
+    # are hidden for retired users, who show their tags read-only).
+    tags_by_type = [
+        (label, DietaryTag.query.filter_by(type=key)
+                                .order_by(db.func.lower(DietaryTag.name)).all())
+        for key, label in TAG_TYPE_CHOICES
+    ]
+    assigned_ids = {t.id for t in user.dietary_tags}
+    return render_template(
+        "users/edit.html",
+        user=user, tags_by_type=tags_by_type, assigned_ids=assigned_ids,
+    )
+
+
+@users_bp.route("/<int:user_id>/tags", methods=["POST"])
+def set_tags(user_id):
+    user = db.session.get(User, user_id)
+    if user is None:
+        abort(404)
+    # Tag assignment is only meaningful for people who can be cooked for, i.e.
+    # active users. Retired users show their tags read-only (no form to submit),
+    # but guard the route too in case of a stale page.
+    if not user.is_active:
+        flash("Reactivate this user before changing their dietary tags.", "error")
+        return redirect(url_for("users.edit", user_id=user.id))
+    ids = [int(x) for x in request.form.getlist("tag_ids") if x.isdigit()]
+    user.dietary_tags = DietaryTag.query.filter(DietaryTag.id.in_(ids)).all() if ids else []
+    db.session.commit()
+    flash(f'Updated dietary tags for "{user.name}".', "success")
+    return redirect(url_for("users.edit", user_id=user.id))
+
     return render_template("users/edit.html", user=user)
 
 

@@ -21,6 +21,37 @@
     <button type="submit">Set password</button>
   </form>
 
+  <h2>Dietary tags</h2>
+  {% set has_tags = tags_by_type | map(attribute=1) | map('length') | sum %}
+  {% if not has_tags %}
+    <p><em>No dietary tags exist yet. Create some on the
+       <a href="{{ url_for('manage.dietary_tags') }}">Dietary tags</a> page first.</em></p>
+  {% elif user.is_active %}
+    <form method="post" action="{{ url_for('users.set_tags', user_id=user.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% for label, tags in tags_by_type %}
+        {% if tags %}
+          <h3>{{ label }}</h3>
+          {% for t in tags %}
+            <label>
+              <input type="checkbox" name="tag_ids" value="{{ t.id }}"
+                     {% if t.id in assigned_ids %}checked{% endif %}>
+              {{ t.name }}
+            </label><br>
+          {% endfor %}
+        {% endif %}
+      {% endfor %}
+      <p><button type="submit">Save dietary tags</button></p>
+    </form>
+  {% else %}
+    {% if user.dietary_tags %}
+      <p>This retired user has: {{ user.dietary_tags | map(attribute='name') | join(', ') }}.</p>
+    {% else %}
+      <p><em>No dietary tags assigned.</em></p>
+    {% endif %}
+    <p><small>Reactivate this user to change their dietary tags.</small></p>
+  {% endif %}
+
   <p><small>Status: {{ "active" if user.is_active else "retired" }}.
      {% if user.password_hash %}A password is set.{% else %}No password set yet — this user can't log in until one is.{% endif %}</small></p>
 {% endblock %}
