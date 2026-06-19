@@ -2,29 +2,18 @@
 {% block title %}Cook — Stock check{% endblock %}
 {% block content %}
   <h1>Step 1: Is your stock up to date?</h1>
-  <p>Tick what you have in; edit notes if needed. Continue when it looks right.</p>
+  <p>This is what you've got in. Remove anything you've run out of, or search to
+     add something you now have. Continue when it looks right.</p>
 
-  {% for cat, ingredients in core_groups %}
-    <h2>{{ cat.name }}</h2>
-    <ul>
-      {% for ing in ingredients %}
-        <li>
-          <label>
-            <input type="checkbox" class="stock-toggle"
-                   data-toggle-url="{{ url_for('stock.toggle', ingredient_id=ing.id) }}"
-                   {% if ing.in_stock %}checked{% endif %}>
-            {{ ing.name }}
-          </label>
-          <input type="text" class="stock-note" placeholder="note"
-                 value="{{ ing.note or '' }}"
-                 data-note-url="{{ url_for('stock.note', ingredient_id=ing.id) }}">
-        </li>
-      {% endfor %}
-    </ul>
-  {% endfor %}
+  {# Same shared stock-editing component as the /stock page. The wizard only
+     adds its step heading above and the Continue link below; all the editing
+     behaviour (remove / note / search-to-add) is the shared partial + stock.js,
+     posting to the stock blueprint regardless of which surface it's on. #}
+  {% include "stock/_editor.html" %}
 
   <p><a href="{{ url_for('wizard.step_ingredients') }}">Continue →</a></p>
 {% endblock %}
+
 {% block scripts %}
   <script src="{{ url_for('static', filename='stock.js') }}"></script>
 {% endblock %}

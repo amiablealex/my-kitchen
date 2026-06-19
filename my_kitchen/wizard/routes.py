@@ -5,8 +5,9 @@ from flask import (
 from flask_login import current_user
 
 from ..extensions import db
-from ..models import Category, Ingredient, Generation, Recipe, User, SECTION_CHOICES
+from ..models import Ingredient, Generation, Recipe, User, SECTION_CHOICES
 from ..llm.service import run_generation, combined_dietary
+from ..stock.service import in_stock_groups
 
 wizard_bp = Blueprint("wizard", __name__, url_prefix="/cook")
 
@@ -53,14 +54,11 @@ def start():
 
 @wizard_bp.route("/stock")
 def step_stock():
+    # Ensure the wizard session dict exists (tolerant of old-shape sessions).
     get_wizard()
-    categories = Category.query.order_by(Category.display_order).all()
-    core_groups = []
-    for cat in categories:
-        items = sorted([i for i in cat.ingredients if not i.is_staple and i.is_active], key=lambda i: i.name.lower())
-        if items:
-            core_groups.append((cat, items))
-    return render_template("wizard/step_stock.html", core_groups=core_groups)
+    # Same shared pantry view as /stock: in-stock, active, non-staple items only,
+    # with remove + search-to-add. The wizard just wraps it in step chrome below.
+    return render_template("wizard/step_stock.html", groups=in_stock_groups())
 
 
 @wizard_bp.route("/ingredients", methods=["GET", "POST"])
