@@ -37,6 +37,16 @@ user_dietary_tags = db.Table(
     db.Column("tag_id", db.Integer, db.ForeignKey("dietary_tags.id"), primary_key=True),
 )
 
+# --- association table for users <-> favourited recipes ---
+# Favourites are per-user: recipes are shared objects (two per generation, either
+# viewable by anyone), so a flag on the recipe can't say *who* favourited it.
+# This join is the relationship — mirrors user_dietary_tags.
+recipe_favourites = db.Table(
+    "recipe_favourites",
+    db.Column("user_id", db.Integer, db.ForeignKey("users.id"), primary_key=True),
+    db.Column("recipe_id", db.Integer, db.ForeignKey("recipes.id"), primary_key=True),
+)
+
 
 class User(db.Model, UserMixin):
     __tablename__ = "users"
@@ -48,6 +58,12 @@ class User(db.Model, UserMixin):
 
     dietary_tags = db.relationship(
         "DietaryTag", secondary=user_dietary_tags, backref="users"
+    )
+
+    # Per-user favourites. backref gives Recipe.favourited_by (the users who
+    # favourited that recipe), used to render the star state per logged-in user.
+    favourite_recipes = db.relationship(
+        "Recipe", secondary=recipe_favourites, backref="favourited_by"
     )
 
     # UserMixin supplies is_authenticated / is_anonymous / get_id(). Our own
@@ -138,6 +154,5 @@ class Recipe(db.Model):
     prep_steps_json = db.Column(db.JSON, nullable=True)
     cook_steps_json = db.Column(db.JSON, nullable=True)
     was_chosen = db.Column(db.Boolean, default=False, nullable=False)
-    is_favourite = db.Column(db.Boolean, default=False, nullable=False)
     raw_response = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)

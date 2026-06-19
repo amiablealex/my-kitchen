@@ -33,11 +33,11 @@
           {% if row.status == "chosen" %}
             <br>Chosen:
             <a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a>
-            {% if row.chosen.is_favourite %} ★{% endif %}
+            {% if row.chosen.id in fav_ids %} ★{% endif %}
           {% elif row.status == "unchosen" %}
             <br>Generated (none chosen):
             {% for r in row.recipes %}
-              <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if r.is_favourite %} ★{% endif %}{% if not loop.last %} · {% endif %}
+              <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if r.id in fav_ids %} ★{% endif %}{% if not loop.last %} · {% endif %}
             {% endfor %}
             — <a href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">choose one</a>
           {% else %}
