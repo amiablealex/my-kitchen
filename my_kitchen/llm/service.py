@@ -1,8 +1,9 @@
 from ..extensions import db
-from ..models import Ingredient, Generation, Recipe, User
+from ..models import Ingredient, Equipment, Generation, Recipe, User
 from .prompt import SYSTEM_PROMPT, build_user_prompt
 from .schema import extract_json, validate_and_normalize
 from .providers import get_provider, ProviderError
+from .seeds import pick_seed
 
 MAX_ATTEMPTS = 2  # initial call + one retry on malformed output, per the spec
 
@@ -30,19 +31,78 @@ def combined_dietary(user_ids):
     return sorted(allergies), sorted(preferences)
 
 
-def build_brief(wizard_state, time_label):
+def recent_recipe_titles(limit):
+    """The most recent recipe titles across the whole household, de-duplicated
+    case-insensitively, newest first. Feeds the anti-repetition steer. Both
+    recipes of each generation count (either could be cooked again)."""
+    if not limit or limit <= 0:
+        return []
+    rows = (
+        Recipe.query
+        .order_by(Recipe.created_at.desc(), Recipe.id.desc())
+        .limit(limit * 4)  # over-fetch so de-dup still yields up to `limit`
+        .all()
+    )
+    seen, titles = set(), []
+    for r in rows:
+        key = (r.title or "").strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        titles.append(r.title)
+        if len(titles) >= limit:
+            break
+    return titles
+
+
+def build_brief(wizard_state, time_label, app_config):
+    # MUST-USE: the wizard-selected ingredients, with notes. Retired items are
+    # dropped (a retired ingredient shouldn't appear anywhere); an out-of-stock
+    # selection is KEPT — an explicit choice wins over its stock state.
     selected_ids = wizard_state.get("selected_ingredient_ids") or []
-    selected = []
+    must_use, must_use_ids = [], set()
     if selected_ids:
-        rows = Ingredient.query.filter(Ingredient.id.in_(selected_ids)).all()
-        selected = [{"name": r.name, "note": r.note} for r in rows]
-    staples = [r.name for r in Ingredient.query.filter_by(is_staple=True, in_stock=True, is_active=True).all()]
+        rows = (
+            Ingredient.query
+            .filter(Ingredient.id.in_(selected_ids), Ingredient.is_active.is_(True))
+            .all()
+        )
+        must_use = [{"name": r.name, "note": r.note} for r in rows]
+        must_use_ids = {r.id for r in rows}
+
+    # AVAILABLE: everything else in stock (active, non-staple) that ISN'T already
+    # must-use — passed every time so the model can round out the meal. This is
+    # the key change: previously only the selected items were fed.
+    available_rows = Ingredient.query.filter_by(
+        in_stock=True, is_staple=False, is_active=True
+    ).all()
+    available = [
+        {"name": r.name, "note": r.note}
+        for r in available_rows if r.id not in must_use_ids
+    ]
+
+    # STAPLES: active, in-stock staples, assumed available and used freely.
+    staples = [
+        r.name for r in Ingredient.query.filter_by(
+            is_staple=True, in_stock=True, is_active=True
+        ).all()
+    ]
+
+    # EQUIPMENT: only what's currently available (is_available = true).
+    equipment = [
+        e.name for e in Equipment.query.filter_by(is_available=True)
+        .order_by(db.func.lower(Equipment.name)).all()
+    ]
+
     cooking_for_ids = wizard_state.get("cooking_for_user_ids") or []
     guest_count = int(wizard_state.get("guest_count") or 0)
     allergies, preferences = combined_dietary(cooking_for_ids)
+
     return {
-        "ingredients": selected,
+        "must_use": must_use,
+        "available": available,
         "staples": staples,
+        "equipment": equipment,
         "cuisine": wizard_state.get("cuisine", "Surprise me"),
         "time_band": wizard_state.get("time_band", "quick"),
         "time_label": time_label,
@@ -51,12 +111,16 @@ def build_brief(wizard_state, time_label):
         "guest_count": guest_count,
         "allergies": allergies,
         "preferences": preferences,
+        "recent_titles": recent_recipe_titles(
+            int(app_config.get("LLM_RECENT_TITLES_N", 10))
+        ),
+        "creative_seed": pick_seed(),
     }
 
 
 def run_generation(app_config, wizard_state, time_label, user_id=None):
     """Returns (generation, error_msg). error_msg is None on success."""
-    brief = build_brief(wizard_state, time_label)
+    brief = build_brief(wizard_state, time_label, app_config)
     user_prompt = build_user_prompt(brief)
 
     gen = Generation(
@@ -67,7 +131,7 @@ def run_generation(app_config, wizard_state, time_label, user_id=None):
         cooking_for_user_ids=brief["cooking_for_user_ids"],
         guest_count=brief["guest_count"],
         selected_ingredient_ids=wizard_state.get("selected_ingredient_ids") or [],
-        creative_seed="",  # MVP: no creative seed yet
+        creative_seed=brief["creative_seed"],
         raw_prompt=user_prompt,
     )
 

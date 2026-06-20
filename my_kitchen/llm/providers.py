@@ -93,17 +93,22 @@ def get_provider(config):
 
 def _mock_payload(brief):
     """Two distinct recipes that reference the actual brief, so the mock
-    exercises the display realistically."""
-    selected = [i["name"] for i in brief.get("ingredients", [])]
+    exercises the display realistically. Tier-aware (must-use + available) and
+    surfaces the creative seed so the CP1 wiring is visible offline."""
+    must_use = [i["name"] for i in brief.get("must_use", [])]
+    available = [i["name"] for i in brief.get("available", [])]
+    pool = must_use + available
     servings = brief.get("servings", 2)
     cuisine = brief.get("cuisine", "Surprise me")
-    hero = selected[0] if selected else "seasonal veg"
-    second = selected[1] if len(selected) > 1 else "onion"
+    seed = brief.get("creative_seed")
+    hero = pool[0] if pool else "seasonal veg"
+    second = pool[1] if len(pool) > 1 else "onion"
     prefix = "" if cuisine.lower() == "surprise me" else f"{cuisine} "
 
     traybake = {
         "title": f"{prefix}{hero} traybake",
-        "blurb": f"A simple one-tray dinner built around {hero}.",
+        "blurb": (f"A simple one-tray dinner built around {hero}"
+                  + (f"; angle: {seed}." if seed else ".")),
         "servings": servings,
         "ingredients": [
             {"item": hero, "amount": servings, "unit": "portions", "to_buy": False},
