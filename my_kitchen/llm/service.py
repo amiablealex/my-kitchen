@@ -12,6 +12,13 @@ def default_user_id():
     return u.id if u else None
 
 
+def _is_truncated(finish_reason):
+    """True when the model stopped because it hit the token ceiling. Handles
+    Anthropic 'max_tokens' and Gemini 'FinishReason.MAX_TOKENS' shapes."""
+    s = str(finish_reason).lower()
+    return "max_token" in s or "length" in s
+
+
 def combined_dietary(user_ids):
     """Union of the selected users' dietary tags, de-duplicated, split into
     (allergies, preferences) name lists. The single source of truth for the
@@ -150,6 +157,16 @@ def run_generation(app_config, wizard_state, time_label, user_id=None):
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             last_raw = provider.generate(SYSTEM_PROMPT, user_prompt, brief=brief)
+            finish = getattr(provider, "last_finish_reason", None)
+            if finish is not None and _is_truncated(finish):
+                # Output hit the token ceiling — retrying won't help; the recipe
+                # is just longer than max_tokens allows. Fail honestly instead of
+                # letting the half-finished JSON surface as a parser error.
+                last_error = (
+                    "The recipes came back longer than the current limit and got "
+                    "cut off. Try again, or raise LLM_MAX_TOKENS."
+                )
+                break
             normalized = validate_and_normalize(extract_json(last_raw))
             break
         except ProviderError as e:
@@ -159,8 +176,6 @@ def run_generation(app_config, wizard_state, time_label, user_id=None):
             last_error = f"Malformed output (attempt {attempt}): {e}"
             continue  # retry on bad JSON / schema
         except Exception as e:  # last-resort safety net
-            # Anything unexpected becomes a stored, friendly error rather than a
-            # 500 — generation should never crash the request.
             last_error = f"Unexpected generation error (attempt {attempt}): {e}"
             break
 

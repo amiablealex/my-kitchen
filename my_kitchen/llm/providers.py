@@ -3,11 +3,11 @@ import json
 
 DEFAULT_MODELS = {
     "anthropic": "claude-sonnet-4-6",
-    "gemini": "gemini-2.5-flash",  # override via LLM_MODEL, e.g. gemini-3.5-flash
+    "gemini": "gemini-3.5-flash",  # 3.5 reasons + writes noticeably better than 2.5-flash for this task
 }
 
 DEFAULT_TEMPERATURE = 0.8
-DEFAULT_MAX_TOKENS = 4000
+DEFAULT_MAX_TOKENS = 8000
 
 
 class ProviderError(RuntimeError):
