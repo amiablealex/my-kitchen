@@ -30,3 +30,10 @@ class Config:
 
     # Anti-repetition (wired in a later phase)
     LLM_RECENT_TITLES_N = int(os.environ.get("LLM_RECENT_TITLES_N", "10"))
+
+    # Generation tuning (Phase 4b). Temperature kept moderate on purpose: variety
+    # comes from the creative seed + anti-repetition (§5.3), not from cranking heat.
+    LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0.8"))
+    # The richer intro/steps/tips output is longer — give it headroom so a good
+    # response isn't truncated mid-recipe.
+    LLM_MAX_TOKENS = int(os.environ.get("LLM_MAX_TOKENS", "4000"))

@@ -177,10 +177,12 @@ def run_generation(app_config, wizard_state, time_label, user_id=None):
             generation_id=gen.id,
             title=r["title"],
             blurb=r["blurb"],
+            intro=r["intro"],
             servings=r["servings"] or brief["servings"],
             ingredients_json=r["ingredients"],
             prep_steps_json=r["prep"],
             cook_steps_json=r["cook"],
+            tips_json=r["tips"],
             raw_response=last_raw,
         ))
     db.session.commit()

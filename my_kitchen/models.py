@@ -147,12 +147,18 @@ class Recipe(db.Model):
     generation_id = db.Column(db.Integer, db.ForeignKey("generations.id"), nullable=False)
     title = db.Column(db.String, nullable=False)
     blurb = db.Column(db.String, nullable=True)
+    # intro: energetic context paragraph (the why / culinary framing). Phase 4b.
+    intro = db.Column(db.Text, nullable=True)
+    servings = db.Column(db.Integer, nullable=True)
     servings = db.Column(db.Integer, nullable=True)
     # ingredients_json: [{item, amount, unit, to_buy}]
     ingredients_json = db.Column(db.JSON, nullable=True)
     # prep_steps_json / cook_steps_json: [{title, text, timer_minutes}]
     prep_steps_json = db.Column(db.JSON, nullable=True)
     cook_steps_json = db.Column(db.JSON, nullable=True)
+    # tips_json: optional [{title, text}] — finishing touches / serving / troubleshooting. Phase 4b.
+    tips_json = db.Column(db.JSON, nullable=True)
+    was_chosen = db.Column(db.Boolean, default=False, nullable=False)
     was_chosen = db.Column(db.Boolean, default=False, nullable=False)
     raw_response = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)

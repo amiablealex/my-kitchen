@@ -5,6 +5,10 @@
   <p><em>{{ recipe.blurb }}</em></p>
   <p>Serves {{ recipe.servings }}.</p>
 
+  {% if recipe.intro %}
+    <p class="recipe-intro">{{ recipe.intro }}</p>
+  {% endif %}
+
   {% if allergy_caveat %}
     <p class="allergy-caveat"><strong>Allergy note:</strong> this recipe was generated
        with an allergy in the brief, but an AI is not a safety guarantee — please
@@ -36,6 +40,15 @@
       <li>{% if step.title %}<strong>{{ step.title }}.</strong> {% endif %}{{ step.text }}{% if step.timer_minutes %} <em>({{ step.timer_minutes }} min)</em>{% endif %}</li>
     {% endfor %}
   </ol>
+
+  {% if recipe.tips_json %}
+  <h2>Tips</h2>
+  <ul>
+    {% for tip in recipe.tips_json %}
+      <li>{% if tip.title %}<strong>{{ tip.title }}.</strong> {% endif %}{{ tip.text }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
 
   <p>
     <form method="post" action="{{ url_for('wizard.toggle_favourite', recipe_id=recipe.id) }}" style="display:inline">

@@ -37,16 +37,6 @@ def _normalize_step(step):
     return {"title": str(step.get("title", "")).strip(), "text": text, "timer_minutes": timer}
 
 
-def _normalize_tip(tip):
-    """Tips are optional and non-essential: a malformed entry is skipped, never
-    fatal. Returns {title, text}, or None to drop the entry."""
-    if not isinstance(tip, dict):
-        return None
-    text = str(tip.get("text", "")).strip()
-    if not text:
-        return None
-    return {"title": str(tip.get("title", "")).strip(), "text": text}
-
 
 def _normalize_ingredient(ing):
     if not isinstance(ing, dict):
@@ -77,26 +67,13 @@ def _normalize_recipe(recipe):
     cook = [_normalize_step(s) for s in recipe["cook"]]
     if not cook:
         raise ValueError("recipe has no cook steps")
-
-    # intro: contract asks for it, but treated LENIENTLY — a missing/blank intro
-    # is stored empty rather than failing an otherwise-good two-recipe response.
-    intro = str(recipe.get("intro", "")).strip()
-
-    # tips: optional. A list; malformed entries dropped; absent/empty -> [].
-    tips_raw = recipe.get("tips")
-    tips = []
-    if isinstance(tips_raw, list):
-        tips = [t for t in (_normalize_tip(x) for x in tips_raw) if t]
-
     return {
         "title": title,
         "blurb": str(recipe.get("blurb", "")).strip(),
-        "intro": intro,
         "servings": _coerce_int(recipe.get("servings", 0), 0),
         "ingredients": ingredients,
         "prep": [_normalize_step(s) for s in recipe["prep"]],
         "cook": cook,
-        "tips": tips,
     }
 
 
