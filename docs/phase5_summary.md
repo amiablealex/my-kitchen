@@ -57,3 +57,32 @@ now share one editing component instead of `/cook/stock` being a near-copy.
   batch-cook.
 
 2026-06-19
+
+## Follow-on cleanup (same phase): removed the in-wizard stock step
+
+After the stock surfaces were consolidated, we removed the wizard's first step
+(`/cook/stock`) entirely. That step embedded the destructive pantry editor inside
+a "pick ingredients for this meal" flow, where a user thinking about *tonight*
+could remove an item from stock while only meaning "not this meal" — inadvertently
+mutating the master list. Stock maintenance and meal selection are now cleanly
+separated, matching the landing page's two distinct buttons (Update stock / Lets
+cook). The wizard opens directly at ingredient selection (now Step 1; cuisine/
+time/cooking-for renumbered to 2/3/4), `start()` redirects there, and the
+`step_stock` view + template were deleted. Application-code only, no schema change.
+
+Mid-wizard stock fixes still happen, via a persistent "Stock not right? Update →"
+link on the ingredient step that round-trips through the shared `/stock` editor
+and back. Since `/stock` is shared and can't know to return on its own, the link
+passes a `return_to` parameter; `/stock` validates it with an open-redirect guard
+(`_safe_return` — internal paths only, rejecting absolute and protocol-relative
+URLs, same spirit as the auth `next` check) and renders a "← Back to choosing
+ingredients" link. The wizard session is preserved throughout (nothing clears it
+but `/cook/` itself, which the round-trip avoids), and because add-to-stock
+reloads the current URL, `return_to` survives adds. The ingredient step already
+reads in-stock state live on every render, so changes made during the round-trip
+appear immediately on return. Finally, the empty-pantry case — now the wizard's
+first impression — shows an empty state pointing at "Update stock →" rather than a
+blank selection box, while still allowing Continue (a staples-only generation
+remains valid).
+
+2026-06-20
