@@ -158,6 +158,11 @@ def run_generation(app_config, wizard_state, time_label, user_id=None):
         except ValueError as e:
             last_error = f"Malformed output (attempt {attempt}): {e}"
             continue  # retry on bad JSON / schema
+        except Exception as e:  # last-resort safety net
+            # Anything unexpected becomes a stored, friendly error rather than a
+            # 500 — generation should never crash the request.
+            last_error = f"Unexpected generation error (attempt {attempt}): {e}"
+            break
 
     if normalized is None:
         gen.error = last_error or "Generation failed."

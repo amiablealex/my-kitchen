@@ -186,7 +186,14 @@ def recipe(recipe_id):
     if recipe is None:
         abort(404)
     favourited = recipe in current_user.favourite_recipes
-    return render_template("wizard/recipe.html", recipe=recipe, favourited=favourited)
+    # If an allergy was among the brief's combined dietary tags, show a caveat.
+    # Re-derived from current tags (no snapshot stored) — consistent with the
+    # spec's "an LLM is not a safety guarantee" honesty.
+    allergies, _ = combined_dietary(recipe.generation.cooking_for_user_ids or [])
+    return render_template(
+        "wizard/recipe.html", recipe=recipe, favourited=favourited,
+        allergy_caveat=bool(allergies),
+    )
 
 
 @wizard_bp.route("/recipe/<int:recipe_id>/favourite", methods=["POST"])

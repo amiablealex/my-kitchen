@@ -5,6 +5,12 @@
   <p><em>{{ recipe.blurb }}</em></p>
   <p>Serves {{ recipe.servings }}.</p>
 
+  {% if allergy_caveat %}
+    <p class="allergy-caveat"><strong>Allergy note:</strong> this recipe was generated
+       with an allergy in the brief, but an AI is not a safety guarantee — please
+       check the ingredients yourself before cooking.</p>
+  {% endif %}
+
   <h2>Ingredients</h2>
   <ul>
     {% for ing in recipe.ingredients_json %}
