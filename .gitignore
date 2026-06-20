@@ -9,3 +9,6 @@ venv/
 *.db-shm
 *.sqlite3
 .DS_Store
+
+# eval
+eval_runs/*

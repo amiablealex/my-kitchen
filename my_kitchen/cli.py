@@ -154,6 +154,21 @@ def register_cli(app):
         else:
             click.echo(f'Created "{name}". Set a password with:  flask set-password "{name}"')
 
+    @app.cli.command("eval-recipes")
+    @click.option("--provider", "provider_name", default=None,
+                  help="Override LLM_PROVIDER for this run (mock | anthropic | gemini). "
+                       "Defaults to the configured provider.")
+    @click.option("--temperature", type=float, default=None,
+                  help="Override temperature. Defaults to a low eval value (0.2) for "
+                       "tight, comparable diffs; pass --temperature 0.8 for a "
+                       "production sanity pass.")
+    @click.option("--only", default=None, help="Run a single golden brief by name.")
+    def eval_recipes(provider_name, temperature, only):
+        """Run the golden briefs through the provider; print + save PASS/FAIL + output."""
+        from .eval.harness import run_eval
+        run_eval(app.config, provider_name=provider_name,
+                 temperature=temperature, only=only, echo=click.echo)
+
     @app.shell_context_processor
     def shell_context():
         return {
