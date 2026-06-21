@@ -1,0 +1,444 @@
+/* ==========================================================================
+   My Kitchen — global stylesheet
+   Built in checkpoints: CP1 tokens + shell + nav + base; CP2 appends components.
+   Single dark-grape theme. Mobile-first; desktop adds the left rail.
+   Self-hosted fonts (../fonts) and inline-SVG icons — no CDN, sub-path safe.
+   ========================================================================== */
+
+/* ----------------------------------------------------------------- fonts -- */
+/* Variable woff2; url() is resolved relative to this file, so it stays correct
+   behind a reverse proxy / HA ingress sub-path (no url_for needed in CSS). */
+@font-face {
+  font-family: "Grandstander";
+  src: url("../fonts/grandstander-var.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Figtree";
+  src: url("../fonts/figtree-var.woff2") format("woff2");
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------------------------------------------------------------- tokens -- */
+:root {
+  /* palette (locked core + derived) */
+  --grape: #3B1058;
+  --surface: #4A1A6B;
+  --surface-2: #5A2A7E;
+  --text: #F5F0FA;
+  --text-muted: #C9B8DC;
+  --divider: rgba(255, 255, 255, 0.12);
+
+  --accent-1: #56D0BB; /* teal  — step 1 */
+  --accent-2: #B1E46D; /* lime  — step 2 */
+  --accent-3: #FE9B46; /* orange— step 3 */
+  --accent-4: #FF5F91; /* pink  — step 4 */
+
+  /* dark ink for text sitting ON a bright accent fill */
+  --on-accent: #2A0A40;
+
+  --success: var(--accent-2);
+  --warning: var(--accent-3);
+  --danger:  var(--accent-4);
+  --info:    var(--accent-1);
+
+  /* type */
+  --font-display: "Grandstander", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fs-display: clamp(2rem, 7vw, 3rem);
+  --fs-h1: 1.6rem;
+  --fs-h2: 1.25rem;
+  --fs-h3: 1.05rem;
+  --fs-body: 1rem;
+  --fs-small: 0.85rem;
+  --lh: 1.55;
+
+  /* shape & space */
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --touch: 48px;
+
+  /* elevation */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.38);
+
+  /* layout */
+  --rail-w: 244px;
+  --topbar-h: 56px;
+  --bottomnav-h: 66px;
+  --content-max: 880px;
+
+  /* the signature rainbow — warm→cool, anchored on the four accents */
+  --rainbow: linear-gradient(100deg,
+      #FF5F91 0%, #FE9B46 17%, #FFD24A 33%, #B1E46D 50%,
+      #56D0BB 67%, #5AB0FF 83%, #B488FF 100%);
+}
+
+/* ------------------------------------------------------------------ base -- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--grape);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0 0 var(--space-3);
+}
+h1 { font-size: var(--fs-h1); }
+h2 { font-size: var(--fs-h2); }
+h3 { font-size: var(--fs-h3); font-weight: 600; }
+
+p { margin: 0 0 var(--space-4); }
+small { font-size: var(--fs-small); color: var(--text-muted); }
+
+a { color: var(--accent-1); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+hr { border: 0; border-top: 1px solid var(--divider); margin: var(--space-5) 0; }
+
+:focus-visible {
+  outline: 3px solid var(--accent-1);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+img, svg { max-width: 100%; }
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--space-2);
+  background: var(--accent-1);
+  color: var(--on-accent);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  z-index: 100;
+}
+.skip-link:focus { left: var(--space-2); }
+
+/* ----------------------------------------------------------------- icons -- */
+.icon {
+  width: 1.35em;
+  height: 1.35em;
+  fill: currentColor;
+  flex: none;
+  vertical-align: -0.18em;
+}
+
+/* --------------------------------------------------------- rainbow / logo - */
+/* The one signature: large display text only. Falls back to --text if the
+   browser can't clip a gradient to text. */
+.rainbow, .display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--text);
+}
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .rainbow, .display {
+    background: var(--rainbow);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+}
+.display { font-size: var(--fs-display); margin: 0 0 var(--space-4); }
+
+/* ============================================================ app shell === */
+.app { min-height: 100dvh; }
+
+/* --- top bar (page title + mobile menu button) --- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--topbar-h);
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  border-bottom: 1px solid var(--divider);
+}
+.topbar-title {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- nav rail (desktop) / drawer (mobile) --- */
+.nav-rail {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(86vw, 300px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-3);
+  background: var(--surface);
+  border-right: 1px solid var(--divider);
+  transform: translateX(-100%);
+  transition: transform 0.22s ease;
+  overflow-y: auto;
+}
+.app.nav-open .nav-rail { transform: translateX(0); box-shadow: var(--shadow-2); }
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+.brand-logo {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+.brand-logo:hover { text-decoration: none; }
+
+.nav-links { display: flex; flex-direction: column; gap: 2px; }
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-weight: 600;
+  text-decoration: none;
+}
+.nav-link .icon { width: 1.5em; height: 1.5em; }
+.nav-link:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
+.nav-link.is-active {
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: inset 3px 0 0 var(--accent-1);
+}
+
+.nav-foot {
+  margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--divider);
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+}
+.nav-foot .who { display: block; margin-bottom: var(--space-2); }
+
+/* --- scrim behind the mobile drawer --- */
+.nav-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.5);
+  border: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+.app.nav-open .nav-scrim { opacity: 1; pointer-events: auto; }
+
+/* --- content --- */
+.app-body { display: flex; flex-direction: column; min-height: 100dvh; }
+.content {
+  flex: 1;
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4);
+  padding-bottom: calc(var(--bottomnav-h) + var(--space-5));
+}
+
+/* --- bottom nav (mobile only) --- */
+.bottom-nav {
+  position: fixed;
+  z-index: 35;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--bottomnav-h);
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--divider);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.bn-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--touch);
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+.bn-item .icon { width: 1.55em; height: 1.55em; }
+.bn-item:hover { color: var(--text); text-decoration: none; }
+.bn-item.is-active { color: var(--accent-1); }
+
+/* --- icon button (topbar menu etc.) --- */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch);
+  height: var(--touch);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.icon-btn:hover { background: var(--surface-2); }
+.nav-toggle { margin-left: calc(var(--space-2) * -1); }
+
+/* ----- desktop: rail becomes permanent, bottom nav + hamburger vanish ----- */
+@media (min-width: 880px) {
+  .nav-rail { transform: none; box-shadow: none; }
+  .nav-scrim { display: none; }
+  .app-body { margin-left: var(--rail-w); }
+  .nav-rail { width: var(--rail-w); }
+  .nav-toggle { display: none; }
+  .bottom-nav { display: none; }
+  .content { padding-bottom: var(--space-6); }
+}
+
+/* ======================================================= base controls === */
+/* Element-level baselines so screens look coherent before CP2 component
+   classes land; .btn variants below layer on top with low specificity. */
+
+button,
+input[type="submit"],
+input[type="button"] {
+  font-family: inherit;
+}
+
+.btn,
+button:not(.icon-btn):not(.bn-item):not(.nav-toggle) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: filter 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+}
+.btn:hover,
+button:not(.icon-btn):not(.bn-item):not(.nav-toggle):hover { filter: brightness(1.08); text-decoration: none; }
+.btn:disabled, button:disabled { opacity: 0.55; cursor: not-allowed; filter: none; }
+
+.btn--primary { background: var(--accent-1); border-color: transparent; color: var(--on-accent); }
+.btn--secondary { background: transparent; border-color: var(--accent-1); color: var(--text); }
+.btn--danger { background: transparent; border-color: var(--danger); color: var(--text); }
+.btn--block { width: 100%; }
+
+/* inputs */
+input[type="text"],
+input[type="search"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+  font-family: inherit;
+  font-size: var(--fs-body);
+  color: var(--text);
+  background: var(--grape);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.7rem;
+  min-height: 44px;
+  max-width: 100%;
+}
+input::placeholder { color: var(--text-muted); opacity: 0.8; }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent-1);
+  box-shadow: 0 0 0 3px rgba(86, 208, 187, 0.35);
+}
+label { display: inline-block; }
+
+/* legacy tables — readable interim styling until CP3 swaps them for list-rows */
+table { border-collapse: collapse; width: 100%; margin: var(--space-3) 0; }
+table[border] { border: 0; }
+th, td {
+  border: 1px solid var(--divider) !important;
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  vertical-align: top;
+}
+th { color: var(--text-muted); font-weight: 600; }
+
+/* --------------------------------------------------------------- flashes -- */
+.flashes { list-style: none; margin: 0 0 var(--space-4); padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.flash {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  border-left: 4px solid var(--info);
+  background: var(--surface);
+  color: var(--text);
+}
+.flash-success { border-left-color: var(--success); }
+.flash-error   { border-left-color: var(--danger); }
+.flash-warning { border-left-color: var(--warning); }
+
+/* --------------------------------------------------------------- motion --- */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* ==========================================================================
+   Components (cards, list-rows, wizard step-dots, pantry, choice cards,
+   recipe display, generating overlay, empty states) are appended in CP2.
+   ========================================================================== */
