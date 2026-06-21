@@ -1,3 +1,6 @@
+from datetime import timezone
+from zoneinfo import ZoneInfo
+
 from flask import Flask, request, redirect, url_for, flash, jsonify
 from flask_wtf.csrf import CSRFError
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -40,6 +43,22 @@ def create_app(config_class=Config):
     # CLI: flask init-db / flask seed / flask shell context
     from .cli import register_cli
     register_cli(app)
+
+    # Jinja filter: render stored datetimes in the configured local zone.
+    # Timestamps are stored as UTC; SQLite hands them back naive, so we treat a
+    # naive value as UTC before converting. Default Europe/London — zoneinfo
+    # handles the GMT/BST switch automatically. Configurable via APP_TIMEZONE.
+    @app.template_filter("localdt")
+    def localdt(value, fmt="%d %b %Y, %H:%M"):
+        if value is None:
+            return ""
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        try:
+            tz = ZoneInfo(app.config.get("APP_TIMEZONE", "Europe/London"))
+        except Exception:
+            tz = timezone.utc
+        return value.astimezone(tz).strftime(fmt)
 
     # Auth first so its before_app_request gate registers up front.
     from .auth.routes import auth_bp

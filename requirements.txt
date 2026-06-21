@@ -6,3 +6,4 @@ python-dotenv>=1.0
 Flask-Migrate>=4.0
 Flask-WTF
 Flask-Login
+tzdata

@@ -21,7 +21,7 @@
           </div>
           {% if r.blurb %}<div class="muted">{{ r.blurb }}</div>{% endif %}
           <div class="row-meta" style="margin-top:var(--space-2)">
-            {{ r.created_at.strftime("%Y-%m-%d %H:%M") }} UTC
+            {{ r.created_at | localdt }}
             — cooked by {{ r.generation.created_by.name if r.generation.created_by else "unknown" }}
           </div>
         </li>

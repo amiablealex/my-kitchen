@@ -22,6 +22,9 @@ class Config:
     HOST = os.environ.get("MY_KITCHEN_HOST", "0.0.0.0")
     PORT = int(os.environ.get("MY_KITCHEN_PORT", "8000"))
 
+    # IANA timezone for displaying stored UTC timestamps locally (zoneinfo handles BST).
+    APP_TIMEZONE = os.environ.get("APP_TIMEZONE", "Europe/London")
+
     # --- LLM provider adapter (built out in Checkpoint 5) ---
     LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "mock")  # mock | anthropic | gemini
     LLM_MODEL = os.environ.get("LLM_MODEL", "")            # blank -> provider default

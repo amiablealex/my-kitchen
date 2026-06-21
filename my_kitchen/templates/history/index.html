@@ -31,7 +31,7 @@
       {% for row in rows %}
         <li class="card">
           <div class="row-meta">
-            {{ row.gen.created_at.strftime("%Y-%m-%d %H:%M") }} UTC
+            {{ row.gen.created_at | localdt }}
             — {{ row.gen.cuisine }}, {{ row.gen.time_band }}, serves {{ row.gen.servings }}
             — cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }}
           </div>
