@@ -1,70 +1,76 @@
 {% extends "base.html" %}
-{% block title %}Users — My Kitchen{% endblock %}
+{% from "_icons.html" import icon %}
+{% block title %}Household — My Kitchen{% endblock %}
+{% block page_title %}Household{% endblock %}
 {% block content %}
-  <h1>Users</h1>
-  <p>The people who can log in. Users are retired rather than deleted, so their
-     cooking history stays intact. (Assigning dietary tags comes in the next pass.)</p>
+  <h1>Household</h1>
+  <p class="lead">The people who can log in. Users are retired rather than deleted, so their
+     cooking history stays intact.</p>
 
-  <h2>Add a user</h2>
-  <form method="post" action="{{ url_for('users.add') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>Name: <input type="text" name="name" required></label>
-    <label>Password: <input type="password" name="password"></label>
-    <label>Confirm: <input type="password" name="password_confirm"></label>
-    <button type="submit">Add</button>
-  </form>
-  <p><small>Leave the password blank to create the user now and set it later.</small></p>
+  <section class="section">
+    <h2>Add a user</h2>
+    <form class="form" method="post" action="{{ url_for('users.add') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Name <input type="text" name="name" required></label>
+      <label>Password <input type="password" name="password"></label>
+      <label>Confirm <input type="password" name="password_confirm"></label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">{{ icon('add') }} Add</button>
+      </div>
+    </form>
+    <p class="help">Leave the password blank to create the user now and set it later.</p>
+  </section>
 
-  <h2>Active ({{ active|length }})</h2>
-  {% if active %}
-    <table border="1" cellpadding="4">
-      <thead><tr><th>Name</th><th>Password set</th><th>Actions</th></tr></thead>
-      <tbody>
-      {% for u in active %}
-        <tr>
-          <td>{{ u.name }}{% if u.id == current_user.id %} <em>(you)</em>{% endif %}</td>
-          <td>{{ "yes" if u.password_hash else "no" }}</td>
-          <td>
-            <a href="{{ url_for('users.edit', user_id=u.id) }}">Edit / password</a>
-            {% if u.id != current_user.id %}
-              <form method="post" action="{{ url_for('users.retire', user_id=u.id) }}" style="display:inline"
-                    onsubmit="return confirm('Retire \u201c{{ u.name }}\u201d? They won\u2019t be able to log in until reactivated.');">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit">Retire</button>
-              </form>
-            {% else %}
-              <span><small>(can't retire yourself)</small></span>
-            {% endif %}
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p><em>No active users.</em></p>
-  {% endif %}
+  <section class="section">
+    <h2>Active ({{ active|length }})</h2>
+    {% if active %}
+      <ul class="rows">
+        {% for u in active %}
+          <li class="row">
+            <div class="row-main">
+              <div class="row-title">{{ u.name }}{% if u.id == current_user.id %} <span class="badge badge--muted">you</span>{% endif %}</div>
+              <div class="row-badges">{% if not u.password_hash %}<span class="badge badge--warn">no password</span>{% endif %}</div>
+            </div>
+            <div class="row-actions">
+              <a class="btn btn--sm btn--secondary" href="{{ url_for('users.edit', user_id=u.id) }}">{{ icon('edit') }} Edit / password</a>
+              {% if u.id != current_user.id %}
+                <form method="post" action="{{ url_for('users.retire', user_id=u.id) }}"
+                      onsubmit="return confirm('Retire \u201c{{ u.name }}\u201d? They won\u2019t be able to log in until reactivated.');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn--sm">Retire</button>
+                </form>
+              {% else %}
+                <span class="help">can't retire yourself</span>
+              {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No active users.</p>
+    {% endif %}
+  </section>
 
   {% if retired %}
-    <details>
+    <details class="section">
       <summary>Retired ({{ retired|length }})</summary>
-      <table border="1" cellpadding="4">
-        <thead><tr><th>Name</th><th>Password set</th><th>Actions</th></tr></thead>
-        <tbody>
+      <ul class="rows" style="margin-top:var(--space-3)">
         {% for u in retired %}
-          <tr>
-            <td>{{ u.name }}</td>
-            <td>{{ "yes" if u.password_hash else "no" }}</td>
-            <td>
-              <a href="{{ url_for('users.edit', user_id=u.id) }}">Edit / password</a>
-              <form method="post" action="{{ url_for('users.activate', user_id=u.id) }}" style="display:inline">
+          <li class="row">
+            <div class="row-main">
+              <div class="row-title">{{ u.name }}</div>
+              <div class="row-badges"><span class="badge badge--muted">retired</span>{% if not u.password_hash %}<span class="badge badge--warn">no password</span>{% endif %}</div>
+            </div>
+            <div class="row-actions">
+              <a class="btn btn--sm btn--secondary" href="{{ url_for('users.edit', user_id=u.id) }}">{{ icon('edit') }} Edit / password</a>
+              <form method="post" action="{{ url_for('users.activate', user_id=u.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit">Reactivate</button>
+                <button type="submit" class="btn btn--sm">Reactivate</button>
               </form>
-            </td>
-          </tr>
+            </div>
+          </li>
         {% endfor %}
-        </tbody>
-      </table>
+      </ul>
     </details>
   {% endif %}
 {% endblock %}

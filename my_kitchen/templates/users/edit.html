@@ -1,57 +1,67 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Edit {{ user.name }} — My Kitchen{% endblock %}
+{% block page_title %}Edit user{% endblock %}
 {% block content %}
+  <a class="back-link" href="{{ url_for('users.index') }}">{{ icon('arrow_back') }} Household</a>
   <h1>Edit user</h1>
-  <p><a href="{{ url_for('users.index') }}">&larr; Users</a></p>
 
-  <h2>Name</h2>
-  <form method="post" action="{{ url_for('users.edit', user_id=user.id) }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>Name: <input type="text" name="name" value="{{ user.name }}" required></label>
-    <button type="submit">Save name</button>
-  </form>
-  <p><small>Renaming keeps all of this user's existing cooking history attributed
-     to them — the link is by id, not name.</small></p>
-
-  <h2>Password</h2>
-  <form method="post" action="{{ url_for('users.set_password', user_id=user.id) }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>New password: <input type="password" name="password" required></label>
-    <label>Confirm: <input type="password" name="password_confirm" required></label>
-    <button type="submit">Set password</button>
-  </form>
-
-  <h2>Dietary tags</h2>
-  {% set has_tags = tags_by_type | map(attribute=1) | map('length') | sum %}
-  {% if not has_tags %}
-    <p><em>No dietary tags exist yet. Create some on the
-       <a href="{{ url_for('manage.dietary_tags') }}">Dietary tags</a> page first.</em></p>
-  {% elif user.is_active %}
-    <form method="post" action="{{ url_for('users.set_tags', user_id=user.id) }}">
+  <section class="section">
+    <h2>Name</h2>
+    <form class="form" method="post" action="{{ url_for('users.edit', user_id=user.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      {% for label, tags in tags_by_type %}
-        {% if tags %}
-          <h3>{{ label }}</h3>
-          {% for t in tags %}
-            <label>
-              <input type="checkbox" name="tag_ids" value="{{ t.id }}"
-                     {% if t.id in assigned_ids %}checked{% endif %}>
-              {{ t.name }}
-            </label><br>
-          {% endfor %}
-        {% endif %}
-      {% endfor %}
-      <p><button type="submit">Save dietary tags</button></p>
+      <label>Name <input type="text" name="name" value="{{ user.name }}" required></label>
+      <div class="form-actions"><button type="submit" class="btn btn--primary">Save name</button></div>
     </form>
-  {% else %}
-    {% if user.dietary_tags %}
-      <p>This retired user has: {{ user.dietary_tags | map(attribute='name') | join(', ') }}.</p>
-    {% else %}
-      <p><em>No dietary tags assigned.</em></p>
-    {% endif %}
-    <p><small>Reactivate this user to change their dietary tags.</small></p>
-  {% endif %}
+    <p class="help">Renaming keeps all of this user's existing cooking history attributed
+       to them — the link is by id, not name.</p>
+  </section>
 
-  <p><small>Status: {{ "active" if user.is_active else "retired" }}.
-     {% if user.password_hash %}A password is set.{% else %}No password set yet — this user can't log in until one is.{% endif %}</small></p>
+  <section class="section">
+    <h2>Password</h2>
+    <form class="form" method="post" action="{{ url_for('users.set_password', user_id=user.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>New password <input type="password" name="password" required></label>
+      <label>Confirm <input type="password" name="password_confirm" required></label>
+      <div class="form-actions"><button type="submit" class="btn btn--primary">Set password</button></div>
+    </form>
+  </section>
+
+  <section class="section">
+    <h2>Dietary tags</h2>
+    {% set has_tags = tags_by_type | map(attribute=1) | map('length') | sum %}
+    {% if not has_tags %}
+      <p class="muted">No dietary tags exist yet. Create some on the
+         <a href="{{ url_for('manage.dietary_tags') }}">Dietary tags</a> page first.</p>
+    {% elif user.is_active %}
+      <form class="form" method="post" action="{{ url_for('users.set_tags', user_id=user.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% for label, tags in tags_by_type %}
+          {% if tags %}
+            <h3>{{ label }}</h3>
+            <div class="options">
+              {% for t in tags %}
+                <label class="option">
+                  <input type="checkbox" name="tag_ids" value="{{ t.id }}"
+                         {% if t.id in assigned_ids %}checked{% endif %}>
+                  <span>{{ t.name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endfor %}
+        <div class="form-actions"><button type="submit" class="btn btn--primary">Save dietary tags</button></div>
+      </form>
+    {% else %}
+      {% if user.dietary_tags %}
+        <p>This retired user has: {{ user.dietary_tags | map(attribute='name') | join(', ') }}.</p>
+      {% else %}
+        <p class="muted">No dietary tags assigned.</p>
+      {% endif %}
+      <p class="help">Reactivate this user to change their dietary tags.</p>
+    {% endif %}
+  </section>
+
+  <p class="help">Status: {{ "active" if user.is_active else "retired" }}.
+     {% if user.password_hash %}A password is set.{% else %}No password set yet — this user can't log in until one is.{% endif %}</p>
 {% endblock %}

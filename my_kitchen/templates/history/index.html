@@ -1,11 +1,13 @@
 {% extends "base.html" %}
-{% block title %}History — My Kitchen{% endblock %}
+{% from "_icons.html" import icon %}
+{% block title %}Recipes — My Kitchen{% endblock %}
+{% block page_title %}Recipes{% endblock %}
 {% block content %}
-  <h1>History</h1>
-  <p><a href="{{ url_for('history.favourites') }}">★ Favourites</a></p>
+  <h1>Recipes</h1>
+  <p><a class="back-link" href="{{ url_for('history.favourites') }}">{{ icon('star') }} Favourites</a></p>
 
-  <form method="get" action="{{ url_for('history.index') }}">
-    <label>Cook:
+  <form method="get" action="{{ url_for('history.index') }}" class="form" style="margin-bottom:var(--space-4)">
+    <label>Cook
       <select name="user" onchange="this.form.submit()">
         <option value="">All cooks</option>
         {% for u in users %}
@@ -13,35 +15,42 @@
         {% endfor %}
       </select>
     </label>
-    <noscript><button type="submit">Filter</button></noscript>
+    <noscript><button type="submit" class="btn btn--secondary btn--sm">Filter</button></noscript>
   </form>
 
   {% if not rows %}
     {% if selected_user_id %}
-      <p>Nothing cooked by this person yet. <a href="{{ url_for('history.index') }}">Show all</a>.</p>
+      <div class="empty">{{ icon('menu_book') }}<p>Nothing cooked by this person yet.</p>
+        <a class="btn btn--secondary" href="{{ url_for('history.index') }}">Show all</a></div>
     {% else %}
-      <p>Nothing cooked yet. <a href="{{ url_for('wizard.start') }}">Let's cook →</a></p>
+      <div class="empty">{{ icon('menu_book') }}<p>Nothing cooked yet.</p>
+        <a class="btn btn--primary" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Lets cook</a></div>
     {% endif %}
   {% else %}
-    <ul>
+    <ul class="rows">
       {% for row in rows %}
-        <li>
-          <strong>{{ row.gen.created_at.strftime("%Y-%m-%d %H:%M") }}</strong> UTC
-          — {{ row.gen.cuisine }}, {{ row.gen.time_band }}, serves {{ row.gen.servings }}
-          — cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }}
+        <li class="card">
+          <div class="row-meta">
+            {{ row.gen.created_at.strftime("%Y-%m-%d %H:%M") }} UTC
+            — {{ row.gen.cuisine }}, {{ row.gen.time_band }}, serves {{ row.gen.servings }}
+            — cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }}
+          </div>
 
           {% if row.status == "chosen" %}
-            <br>Chosen:
-            <a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a>
-            {% if row.chosen.id in fav_ids %} ★{% endif %}
+            <div class="row-title" style="margin-top:var(--space-2)">
+              <a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a>
+              {% if row.chosen.id in fav_ids %} <span style="color:var(--accent-2)">{{ icon('star_fill') }}</span>{% endif %}
+            </div>
           {% elif row.status == "unchosen" %}
-            <br>Generated (none chosen):
-            {% for r in row.recipes %}
-              <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if r.id in fav_ids %} ★{% endif %}{% if not loop.last %} · {% endif %}
-            {% endfor %}
-            — <a href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">choose one</a>
+            <div style="margin-top:var(--space-2)">
+              <span class="muted">Generated (none chosen):</span>
+              {% for r in row.recipes %}
+                <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if r.id in fav_ids %} <span style="color:var(--accent-2)">{{ icon('star_fill') }}</span>{% endif %}{% if not loop.last %} · {% endif %}
+              {% endfor %}
+              — <a href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">choose one</a>
+            </div>
           {% else %}
-            <br><em>Generation failed{% if row.gen.error %}: {{ row.gen.error }}{% endif %}</em>
+            <div class="muted" style="margin-top:var(--space-2)"><em>Generation failed{% if row.gen.error %}: {{ row.gen.error }}{% endif %}</em></div>
           {% endif %}
         </li>
       {% endfor %}

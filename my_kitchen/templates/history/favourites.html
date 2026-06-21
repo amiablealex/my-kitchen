@@ -1,18 +1,29 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Favourites — My Kitchen{% endblock %}
+{% block page_title %}Favourites{% endblock %}
 {% block content %}
   <h1>Favourites</h1>
-  <p><a href="{{ url_for('history.index') }}">&larr; History</a></p>
+  <p><a class="back-link" href="{{ url_for('history.index') }}">{{ icon('arrow_back') }} Recipes</a></p>
   {% if not recipes %}
-    <p>No favourites yet. Open a recipe and star it to keep it here.</p>
+    <div class="empty">
+      {{ icon('star') }}
+      <p>No favourites yet. Open a recipe and star it to keep it here.</p>
+      <a class="btn btn--primary" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Lets cook</a>
+    </div>
   {% else %}
-    <ul>
+    <ul class="rows">
       {% for r in recipes %}
-        <li>
-          <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>
-          {% if r.blurb %} — <em>{{ r.blurb }}</em>{% endif %}
-          <br><small>{{ r.created_at.strftime("%Y-%m-%d %H:%M") }} UTC
-            — cooked by {{ r.generation.created_by.name if r.generation.created_by else "unknown" }}</small>
+        <li class="card">
+          <div class="row-title">
+            <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>
+            <span style="color:var(--accent-2)">{{ icon('star_fill') }}</span>
+          </div>
+          {% if r.blurb %}<div class="muted">{{ r.blurb }}</div>{% endif %}
+          <div class="row-meta" style="margin-top:var(--space-2)">
+            {{ r.created_at.strftime("%Y-%m-%d %H:%M") }} UTC
+            — cooked by {{ r.generation.created_by.name if r.generation.created_by else "unknown" }}
+          </div>
         </li>
       {% endfor %}
     </ul>
