@@ -1,82 +1,92 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Manage ingredients — My Kitchen{% endblock %}
+{% block page_title %}Ingredients{% endblock %}
 {% block content %}
+  <a class="back-link" href="{{ url_for('manage.index') }}">{{ icon('arrow_back') }} Manage</a>
   <h1>Ingredients</h1>
-  <p><a href="{{ url_for('manage.index') }}">&larr; Manage</a></p>
 
-  <h2>Add an ingredient</h2>
-  <form method="post" action="{{ url_for('manage.ingredient_add') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>Name: <input type="text" name="name"
-           value="{{ prefill_name|default('', true) }}"
-           {% if prefill_name|default('', true) %}autofocus{% endif %} required></label>
-    <label>Category:
-      <select name="category_id" required>
-        {% for c in categories %}
-          <option value="{{ c.id }}">{{ c.name }} ({{ c.section }})</option>
+  <section class="section">
+    <h2>Add an ingredient</h2>
+    <form class="form" method="post" action="{{ url_for('manage.ingredient_add') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Name
+        <input type="text" name="name"
+               value="{{ prefill_name|default('', true) }}"
+               {% if prefill_name|default('', true) %}autofocus{% endif %} required>
+      </label>
+      <label>Category
+        <select name="category_id" required>
+          {% for c in categories %}
+            <option value="{{ c.id }}">{{ c.name }} ({{ c.section }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label><input type="checkbox" name="is_staple"> Staple (assumed always available)</label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">{{ icon('add') }} Add</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="section">
+    <h2>Active ({{ active|length }})</h2>
+    {% if active %}
+      <ul class="rows">
+        {% for ing in active %}
+          <li class="row">
+            <div class="row-main">
+              <div class="row-title">{{ ing.name }}</div>
+              <div class="row-badges">
+                <span class="badge">{{ ing.category.name }}</span>
+                {% if ing.is_staple %}<span class="badge badge--staple">staple</span>{% endif %}
+                {% if ing.in_stock %}<span class="badge badge--ok">in stock</span>{% endif %}
+              </div>
+            </div>
+            <div class="row-actions">
+              <a class="btn btn--sm btn--secondary" href="{{ url_for('manage.ingredient_edit', ingredient_id=ing.id) }}">{{ icon('edit') }} Edit</a>
+              <form method="post" action="{{ url_for('manage.ingredient_retire', ingredient_id=ing.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn--sm">Retire</button>
+              </form>
+              <form method="post" action="{{ url_for('manage.ingredient_delete', ingredient_id=ing.id) }}"
+                    onsubmit="return confirm('Permanently delete \u201c{{ ing.name }}\u201d? This cannot be undone. (Retire instead to keep it in history.)');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn--sm btn--danger">{{ icon('delete') }} Delete</button>
+              </form>
+            </div>
+          </li>
         {% endfor %}
-      </select>
-    </label>
-    <label><input type="checkbox" name="is_staple"> Staple (assumed always available)</label>
-    <button type="submit">Add</button>
-  </form>
-
-  <h2>Active ({{ active|length }})</h2>
-  {% if active %}
-    <table border="1" cellpadding="4">
-      <thead><tr><th>Name</th><th>Category</th><th>Staple</th><th>In stock</th><th>Actions</th></tr></thead>
-      <tbody>
-      {% for ing in active %}
-        <tr>
-          <td>{{ ing.name }}</td>
-          <td>{{ ing.category.name }}</td>
-          <td>{{ "yes" if ing.is_staple else "no" }}</td>
-          <td>{{ "yes" if ing.in_stock else "no" }}</td>
-          <td>
-            <a href="{{ url_for('manage.ingredient_edit', ingredient_id=ing.id) }}">Edit</a>
-            <form method="post" action="{{ url_for('manage.ingredient_retire', ingredient_id=ing.id) }}" style="display:inline">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit">Retire</button>
-            </form>
-            <form method="post" action="{{ url_for('manage.ingredient_delete', ingredient_id=ing.id) }}" style="display:inline"
-                  onsubmit="return confirm('Permanently delete \u201c{{ ing.name }}\u201d? This cannot be undone. (Retire instead to keep it in history.)');">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit">Delete</button>
-            </form>
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p><em>No active ingredients yet — add one above.</em></p>
-  {% endif %}
+      </ul>
+    {% else %}
+      <p class="muted">No active ingredients yet — add one above.</p>
+    {% endif %}
+  </section>
 
   {% if retired %}
-    <details>
+    <details class="section">
       <summary>Retired ({{ retired|length }})</summary>
-      <table border="1" cellpadding="4">
-        <thead><tr><th>Name</th><th>Category</th><th>Actions</th></tr></thead>
-        <tbody>
+      <ul class="rows" style="margin-top:var(--space-3)">
         {% for ing in retired %}
-          <tr>
-            <td>{{ ing.name }}</td>
-            <td>{{ ing.category.name }}</td>
-            <td>
-              <form method="post" action="{{ url_for('manage.ingredient_activate', ingredient_id=ing.id) }}" style="display:inline">
+          <li class="row">
+            <div class="row-main">
+              <div class="row-title">{{ ing.name }}</div>
+              <div class="row-badges"><span class="badge">{{ ing.category.name }}</span><span class="badge badge--muted">retired</span></div>
+            </div>
+            <div class="row-actions">
+              <form method="post" action="{{ url_for('manage.ingredient_activate', ingredient_id=ing.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit">Reactivate</button>
+                <button type="submit" class="btn btn--sm btn--secondary">Reactivate</button>
               </form>
-              <form method="post" action="{{ url_for('manage.ingredient_delete', ingredient_id=ing.id) }}" style="display:inline"
+              <form method="post" action="{{ url_for('manage.ingredient_delete', ingredient_id=ing.id) }}"
                     onsubmit="return confirm('Permanently delete \u201c{{ ing.name }}\u201d? This cannot be undone.');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit">Delete</button>
+                <button type="submit" class="btn btn--sm btn--danger">{{ icon('delete') }} Delete</button>
               </form>
-            </td>
-          </tr>
+            </div>
+          </li>
         {% endfor %}
-        </tbody>
-      </table>
+      </ul>
     </details>
   {% endif %}
 {% endblock %}

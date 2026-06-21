@@ -1,49 +1,58 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Manage dietary tags — My Kitchen{% endblock %}
+{% block page_title %}Dietary tags{% endblock %}
 {% block content %}
+  <a class="back-link" href="{{ url_for('manage.index') }}">{{ icon('arrow_back') }} Manage</a>
   <h1>Dietary tags</h1>
-  <p><a href="{{ url_for('manage.index') }}">&larr; Manage</a></p>
-  <p>Tags you can assign to people on the <a href="{{ url_for('users.index') }}">Users</a> page.
+  <p class="lead">Tags you can assign to people on the <a href="{{ url_for('users.index') }}">Household</a> page.
      An <strong>allergy</strong> is a hard rule the recipe generator must never break;
      a <strong>preference</strong> is a gentle steer.</p>
 
-  <h2>Add a tag</h2>
-  <form method="post" action="{{ url_for('manage.dietary_tag_add') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>Name: <input type="text" name="name" placeholder="e.g. Vegetarian, Peanut allergy" required></label>
-    <label>Type:
-      <select name="type" required>
-        {% for key, label in types %}
-          <option value="{{ key }}">{{ label }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <button type="submit">Add</button>
-  </form>
+  <section class="section">
+    <h2>Add a tag</h2>
+    <form class="form" method="post" action="{{ url_for('manage.dietary_tag_add') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Name <input type="text" name="name" placeholder="e.g. Vegetarian, Peanut allergy" required></label>
+      <label>Type
+        <select name="type" required>
+          {% for key, label in types %}
+            <option value="{{ key }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">{{ icon('add') }} Add</button>
+      </div>
+    </form>
+  </section>
 
-  <h2>All tags ({{ tags|length }})</h2>
-  {% if tags %}
-    <table border="1" cellpadding="4">
-      <thead><tr><th>Name</th><th>Type</th><th>Assigned to</th><th>Actions</th></tr></thead>
-      <tbody>
-      {% for t in tags %}
-        <tr>
-          <td>{{ t.name }}</td>
-          <td>{{ "allergy" if t.type == "allergy" else "preference" }}</td>
-          <td>{{ counts[t.id] }} user{{ "s" if counts[t.id] != 1 else "" }}</td>
-          <td>
-            <a href="{{ url_for('manage.dietary_tag_edit', tag_id=t.id) }}">Edit</a>
-            <form method="post" action="{{ url_for('manage.dietary_tag_delete', tag_id=t.id) }}" style="display:inline"
-                  onsubmit="return confirm('Delete \u201c{{ t.name }}\u201d?{% if counts[t.id] %} It\u2019s assigned to {{ counts[t.id] }} user(s) \u2014 they\u2019ll be unassigned.{% endif %}');">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit">Delete</button>
-            </form>
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p><em>No dietary tags yet — add one above.</em></p>
-  {% endif %}
+  <section class="section">
+    <h2>All tags ({{ tags|length }})</h2>
+    {% if tags %}
+      <ul class="rows rows--grid">
+        {% for t in tags %}
+          <li class="row">
+            <div class="row-main">
+              <div class="row-title">{{ t.name }}</div>
+              <div class="row-badges">
+                {% if t.type == "allergy" %}<span class="badge badge--allergy">allergy</span>{% else %}<span class="badge badge--pref">preference</span>{% endif %}
+                <span class="badge badge--muted">{{ counts[t.id] }} user{{ "s" if counts[t.id] != 1 else "" }}</span>
+              </div>
+            </div>
+            <div class="row-actions">
+              <a class="btn btn--sm btn--secondary" href="{{ url_for('manage.dietary_tag_edit', tag_id=t.id) }}">{{ icon('edit') }} Edit</a>
+              <form method="post" action="{{ url_for('manage.dietary_tag_delete', tag_id=t.id) }}"
+                    onsubmit="return confirm('Delete \u201c{{ t.name }}\u201d?{% if counts[t.id] %} It\u2019s assigned to {{ counts[t.id] }} user(s) \u2014 they\u2019ll be unassigned.{% endif %}');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn--sm btn--danger">{{ icon('delete') }} Delete</button>
+              </form>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No dietary tags yet — add one above.</p>
+    {% endif %}
+  </section>
 {% endblock %}

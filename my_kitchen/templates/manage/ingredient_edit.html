@@ -1,12 +1,14 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Edit {{ ing.name }} — My Kitchen{% endblock %}
+{% block page_title %}Edit ingredient{% endblock %}
 {% block content %}
+  <a class="back-link" href="{{ url_for('manage.ingredients') }}">{{ icon('arrow_back') }} Ingredients</a>
   <h1>Edit ingredient</h1>
-  <p><a href="{{ url_for('manage.ingredients') }}">&larr; Ingredients</a></p>
-  <form method="post" action="{{ url_for('manage.ingredient_edit', ingredient_id=ing.id) }}">
+  <form class="form" method="post" action="{{ url_for('manage.ingredient_edit', ingredient_id=ing.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>Name: <input type="text" name="name" value="{{ ing.name }}" required></label>
-    <label>Category:
+    <label>Name <input type="text" name="name" value="{{ ing.name }}" required></label>
+    <label>Category
       <select name="category_id" required>
         {% for c in categories %}
           <option value="{{ c.id }}" {% if c.id == ing.category_id %}selected{% endif %}>{{ c.name }} ({{ c.section }})</option>
@@ -14,11 +16,11 @@
       </select>
     </label>
     <label><input type="checkbox" name="is_staple" {% if ing.is_staple %}checked{% endif %}> Staple (assumed always available)</label>
-    <p>
-      <a href="{{ url_for('manage.ingredients') }}">Cancel</a>
-      <button type="submit">Save</button>
-    </p>
+    <div class="form-actions">
+      <a class="btn btn--secondary" href="{{ url_for('manage.ingredients') }}">Cancel</a>
+      <button type="submit" class="btn btn--primary">Save</button>
+    </div>
   </form>
-  <p><small>Status: {{ "active" if ing.is_active else "retired" }}.
-     In stock and notes are managed on the <a href="{{ url_for('stock.index') }}">Stock</a> page.</small></p>
+  <p class="help">Status: {{ "active" if ing.is_active else "retired" }}.
+     In stock and notes are managed on the <a href="{{ url_for('stock.index') }}">Stock</a> page.</p>
 {% endblock %}

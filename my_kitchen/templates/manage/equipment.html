@@ -1,46 +1,54 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Manage equipment — My Kitchen{% endblock %}
+{% block page_title %}Equipment{% endblock %}
 {% block content %}
+  <a class="back-link" href="{{ url_for('manage.index') }}">{{ icon('arrow_back') }} Manage</a>
   <h1>Equipment</h1>
-  <p><a href="{{ url_for('manage.index') }}">&larr; Manage</a></p>
-  <p>What you've got to cook with. Mark something unavailable when it's broken or
-     lent out — it stays in the list. (Equipment isn't fed to the recipe generator
-     yet; that comes in a later phase.)</p>
+  <p class="lead">What you've got to cook with. Mark something unavailable when it's broken or
+     lent out — it stays in the list.</p>
 
-  <h2>Add equipment</h2>
-  <form method="post" action="{{ url_for('manage.equipment_add') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>Name: <input type="text" name="name" placeholder="e.g. air fryer, wok, large baking dish" required></label>
-    <label><input type="checkbox" name="is_available" checked> Available</label>
-    <button type="submit">Add</button>
-  </form>
+  <section class="section">
+    <h2>Add equipment</h2>
+    <form class="form" method="post" action="{{ url_for('manage.equipment_add') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Name <input type="text" name="name" placeholder="e.g. air fryer, wok, large baking dish" required></label>
+      <label><input type="checkbox" name="is_available" checked> Available</label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">{{ icon('add') }} Add</button>
+      </div>
+    </form>
+  </section>
 
-  <h2>All equipment ({{ items|length }})</h2>
-  {% if items %}
-    <table border="1" cellpadding="4">
-      <thead><tr><th>Name</th><th>Status</th><th>Actions</th></tr></thead>
-      <tbody>
-      {% for item in items %}
-        <tr>
-          <td>{{ item.name }}</td>
-          <td>{{ "available" if item.is_available else "unavailable" }}</td>
-          <td>
-            <a href="{{ url_for('manage.equipment_edit', equipment_id=item.id) }}">Edit</a>
-            <form method="post" action="{{ url_for('manage.equipment_toggle', equipment_id=item.id) }}" style="display:inline">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit">{{ "Mark unavailable" if item.is_available else "Mark available" }}</button>
-            </form>
-            <form method="post" action="{{ url_for('manage.equipment_delete', equipment_id=item.id) }}" style="display:inline"
-                  onsubmit="return confirm('Delete \u201c{{ item.name }}\u201d from your equipment?');">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit">Delete</button>
-            </form>
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p><em>No equipment yet — add your first item above.</em></p>
-  {% endif %}
+  <section class="section">
+    <h2>All equipment ({{ items|length }})</h2>
+    {% if items %}
+      <ul class="rows rows--grid">
+        {% for item in items %}
+          <li class="row">
+            <div class="row-main">
+              <div class="row-title">{{ item.name }}</div>
+              <div class="row-badges">
+                {% if item.is_available %}<span class="badge badge--ok">available</span>{% else %}<span class="badge badge--warn">unavailable</span>{% endif %}
+              </div>
+            </div>
+            <div class="row-actions">
+              <a class="btn btn--sm btn--secondary" href="{{ url_for('manage.equipment_edit', equipment_id=item.id) }}">{{ icon('edit') }} Edit</a>
+              <form method="post" action="{{ url_for('manage.equipment_toggle', equipment_id=item.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn--sm">{{ "Mark unavailable" if item.is_available else "Mark available" }}</button>
+              </form>
+              <form method="post" action="{{ url_for('manage.equipment_delete', equipment_id=item.id) }}"
+                    onsubmit="return confirm('Delete \u201c{{ item.name }}\u201d from your equipment?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn--sm btn--danger">{{ icon('delete') }} Delete</button>
+              </form>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No equipment yet — add your first item above.</p>
+    {% endif %}
+  </section>
 {% endblock %}

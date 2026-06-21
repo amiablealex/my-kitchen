@@ -1,13 +1,17 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Manage — My Kitchen{% endblock %}
+{% block page_title %}Manage{% endblock %}
 {% block content %}
   <h1>Manage catalogue</h1>
-  <p>Set up your kitchen here: what ingredients exist, the categories they sit in,
-     and your equipment. (Stock in/out and notes live on the <a href="{{ url_for('stock.index') }}">Stock</a> page.)</p>
-  <ul>
-    <li><a href="{{ url_for('manage.ingredients') }}">Ingredients</a></li>
-    <li><a href="{{ url_for('manage.categories') }}">Categories</a></li>
-    <li><a href="{{ url_for('manage.equipment') }}">Equipment</a></li>
-    <li><a href="{{ url_for('manage.dietary_tags') }}">Dietary tags</a></li>
-  </ul>
+  <p class="lead">Set up your kitchen here: what ingredients exist, the categories they sit in,
+     and your equipment. (Stock in/out and notes live on the
+     <a href="{{ url_for('stock.index') }}">Stock</a> page.)</p>
+
+  <div class="card-grid">
+    <a class="card home-link" href="{{ url_for('manage.ingredients') }}">{{ icon('restaurant_menu') }}<span>Ingredients</span></a>
+    <a class="card home-link" href="{{ url_for('manage.categories') }}">{{ icon('tune') }}<span>Categories</span></a>
+    <a class="card home-link" href="{{ url_for('manage.equipment') }}">{{ icon('kitchen') }}<span>Equipment</span></a>
+    <a class="card home-link" href="{{ url_for('manage.dietary_tags') }}">{{ icon('info') }}<span>Dietary tags</span></a>
+  </div>
 {% endblock %}

@@ -1,24 +1,26 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Edit {{ tag.name }} — My Kitchen{% endblock %}
+{% block page_title %}Edit dietary tag{% endblock %}
 {% block content %}
+  <a class="back-link" href="{{ url_for('manage.dietary_tags') }}">{{ icon('arrow_back') }} Dietary tags</a>
   <h1>Edit dietary tag</h1>
-  <p><a href="{{ url_for('manage.dietary_tags') }}">&larr; Dietary tags</a></p>
-  <form method="post" action="{{ url_for('manage.dietary_tag_edit', tag_id=tag.id) }}">
+  <form class="form" method="post" action="{{ url_for('manage.dietary_tag_edit', tag_id=tag.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>Name: <input type="text" name="name" value="{{ tag.name }}" required></label>
-    <label>Type:
+    <label>Name <input type="text" name="name" value="{{ tag.name }}" required></label>
+    <label>Type
       <select name="type" required>
         {% for key, label in types %}
           <option value="{{ key }}" {% if key == tag.type %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
     </label>
-    <p>
-      <a href="{{ url_for('manage.dietary_tags') }}">Cancel</a>
-      <button type="submit">Save</button>
-    </p>
+    <div class="form-actions">
+      <a class="btn btn--secondary" href="{{ url_for('manage.dietary_tags') }}">Cancel</a>
+      <button type="submit" class="btn btn--primary">Save</button>
+    </div>
   </form>
-  <p><small>Currently assigned to {{ user_count }} user{{ "s" if user_count != 1 else "" }}.
+  <p class="help">Currently assigned to {{ user_count }} user{{ "s" if user_count != 1 else "" }}.
      Changing the type changes how it's treated in the recipe brief
-     (allergy = hard exclusion, preference = soft steer).</small></p>
+     (allergy = hard exclusion, preference = soft steer).</p>
 {% endblock %}

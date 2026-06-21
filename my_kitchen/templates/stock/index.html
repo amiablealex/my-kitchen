@@ -1,13 +1,14 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Stock — My Kitchen{% endblock %}
+{% block page_title %}Stock{% endblock %}
 {% block content %}
   <h1>Stock</h1>
   {% if return_to %}
-    {# Shown when reached mid-wizard via ?return_to=… so the user can hop back
-       to the ingredient step (the wizard session is preserved meanwhile). #}
-    <p><a href="{{ return_to }}">← Back to choosing ingredients</a></p>
+    {# Shown when reached mid-wizard via ?return_to=… so the user can hop back. #}
+    <p><a class="back-link" href="{{ return_to }}">{{ icon('arrow_back') }} Back to choosing ingredients</a></p>
   {% endif %}
-  <p>What you've got in. Edit a note, or remove anything you've run out of.</p>
+  <p class="lead">What you've got in. Edit a note, or remove anything you've run out of.</p>
 
   {% include "stock/_editor.html" %}
 {% endblock %}
