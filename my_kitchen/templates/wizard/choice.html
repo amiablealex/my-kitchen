@@ -1,17 +1,20 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Cook — Choose{% endblock %}
+{% block page_title %}Take your pick{% endblock %}
 {% block content %}
   <h1>Two recipes — take your pick</h1>
-  {% for r in recipes %}
-    <div>
-      <h2>{{ r.title }}</h2>
-      <p><em>{{ r.blurb }}</em></p>
-      <form method="post" action="{{ url_for('wizard.choose', recipe_id=r.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit">Choose this →</button>
-      </form>
-    </div>
-    <hr>
-  {% endfor %}
-  <p><a href="{{ url_for('wizard.start') }}">Start over</a></p>
+  <div class="choice-grid">
+    {% for r in recipes %}
+      <div class="choice-card">
+        <h2>{{ r.title }}</h2>
+        <p class="blurb">{{ r.blurb }}</p>
+        <form method="post" action="{{ url_for('wizard.choose', recipe_id=r.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn--primary btn--block">Choose this {{ icon('arrow_forward') }}</button>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+  <p><a class="back-link" href="{{ url_for('wizard.start') }}">{{ icon('arrow_back') }} Start over</a></p>
 {% endblock %}

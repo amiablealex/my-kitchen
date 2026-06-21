@@ -1,36 +1,49 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% from "_components.html" import step_dots %}
 {% block title %}Cook — Who's eating?{% endblock %}
+{% block page_title %}Lets Cook{% endblock %}
 {% block content %}
-  <h1>Step 4: Who's eating?</h1>
-  <p>Pick who this is for — servings and dietary needs come from your choices.
+  {{ step_dots(4) }}
+  <h1>Who's eating?</h1>
+  <p class="lead">Pick who this is for — servings and dietary needs come from your choices.
      Add guests for extra covers with no dietary data.</p>
+
   <form method="post" action="{{ url_for('wizard.step_cooking_for') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <h2>Household</h2>
-    {% if users %}
-      {% for u in users %}
-        <label>
-          <input type="checkbox" name="cooking_for_user_ids" value="{{ u.id }}"
-                 {% if u.id in selected %}checked{% endif %}>
-          {{ u.name }}
-          {% if u.dietary_tags %}
-            <small>({{ u.dietary_tags | map(attribute='name') | join(', ') }})</small>
-          {% endif %}
-        </label><br>
-      {% endfor %}
-    {% else %}
-      <p><em>No active users — add guests below.</em></p>
-    {% endif %}
+    <section class="section">
+      <h2>Household</h2>
+      {% if users %}
+        <div class="options">
+          {% for u in users %}
+            <label class="option">
+              <input type="checkbox" name="cooking_for_user_ids" value="{{ u.id }}"
+                     {% if u.id in selected %}checked{% endif %}>
+              <span>{{ u.name }}</span>
+              {% if u.dietary_tags %}
+                <span class="opt-meta">{{ u.dietary_tags | map(attribute='name') | join(', ') }}</span>
+              {% endif %}
+            </label>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted">No active users — add guests below.</p>
+      {% endif %}
+    </section>
 
-    <h2>Guests</h2>
-    <label>Extra covers (no dietary data):
-      <input type="number" name="guest_count" min="0" max="20" value="{{ guest_count }}" style="width:4em">
-    </label>
+    <section class="section">
+      <h2>Guests</h2>
+      <div class="form">
+        <label>Extra covers (no dietary data)
+          <input type="number" name="guest_count" min="0" max="20" value="{{ guest_count }}">
+        </label>
+      </div>
+    </section>
 
-    <p>
-      <a href="{{ url_for('wizard.step_time') }}">← Back</a>
-      <button type="submit">Continue →</button>
-    </p>
+    <div class="btn-row">
+      <a class="btn btn--secondary" href="{{ url_for('wizard.step_time') }}">{{ icon('arrow_back') }} Back</a>
+      <button type="submit" class="btn btn--primary">Continue {{ icon('arrow_forward') }}</button>
+    </div>
   </form>
 {% endblock %}

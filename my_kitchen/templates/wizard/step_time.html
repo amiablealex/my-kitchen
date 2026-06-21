@@ -1,18 +1,24 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% from "_components.html" import step_dots %}
 {% block title %}Cook — Time{% endblock %}
+{% block page_title %}Lets Cook{% endblock %}
 {% block content %}
-  <h1>Step 3: How much time?</h1>
+  {{ step_dots(3) }}
+  <h1>How much time?</h1>
   <form method="post" action="{{ url_for('wizard.step_time') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    {% for value, label in time_bands %}
-      <label>
-        <input type="radio" name="time_band" value="{{ value }}" {% if value == current %}checked{% endif %}>
-        {{ label }}
-      </label><br>
-    {% endfor %}
-    <p>
-      <a href="{{ url_for('wizard.step_cuisine') }}">← Back</a>
-      <button type="submit">Continue →</button>
-    </p>
+    <div class="options">
+      {% for value, label in time_bands %}
+        <label class="option">
+          <input type="radio" name="time_band" value="{{ value }}" {% if value == current %}checked{% endif %}>
+          <span>{{ label }}</span>
+        </label>
+      {% endfor %}
+    </div>
+    <div class="btn-row">
+      <a class="btn btn--secondary" href="{{ url_for('wizard.step_cuisine') }}">{{ icon('arrow_back') }} Back</a>
+      <button type="submit" class="btn btn--primary">Continue {{ icon('arrow_forward') }}</button>
+    </div>
   </form>
 {% endblock %}

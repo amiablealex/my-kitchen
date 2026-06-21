@@ -1,8 +1,15 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Cook — Something went wrong{% endblock %}
+{% block page_title %}Lets Cook{% endblock %}
 {% block content %}
   <h1>Couldn't generate recipes</h1>
-  <p>The kitchen had a wobble — your choices are still saved, so you can try again.</p>
-  <p><small>Details: {{ error }}</small></p>
-  <p><a href="{{ url_for('wizard.review') }}">← Back to review and try again</a></p>
+  <div class="notice notice--warn">
+    {{ icon('info') }}
+    <div class="notice-body">
+      The kitchen had a wobble — your choices are still saved, so you can try again.
+      <br><span class="help">Details: {{ error }}</span>
+    </div>
+  </div>
+  <p><a class="btn btn--primary" href="{{ url_for('wizard.review') }}">{{ icon('arrow_back') }} Back to review and try again</a></p>
 {% endblock %}

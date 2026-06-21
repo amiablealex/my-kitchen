@@ -1,18 +1,24 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% from "_components.html" import step_dots %}
 {% block title %}Cook — Cuisine{% endblock %}
+{% block page_title %}Lets Cook{% endblock %}
 {% block content %}
-  <h1>Step 2: Cuisine</h1>
+  {{ step_dots(2) }}
+  <h1>Pick a cuisine</h1>
   <form method="post" action="{{ url_for('wizard.step_cuisine') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    {% for c in cuisines %}
-      <label>
-        <input type="radio" name="cuisine" value="{{ c }}" {% if c == current %}checked{% endif %}>
-        {{ c }}
-      </label><br>
-    {% endfor %}
-    <p>
-      <a href="{{ url_for('wizard.step_ingredients') }}">← Back</a>
-      <button type="submit">Continue →</button>
-    </p>
+    <div class="options">
+      {% for c in cuisines %}
+        <label class="option">
+          <input type="radio" name="cuisine" value="{{ c }}" {% if c == current %}checked{% endif %}>
+          <span>{{ c }}</span>
+        </label>
+      {% endfor %}
+    </div>
+    <div class="btn-row">
+      <a class="btn btn--secondary" href="{{ url_for('wizard.step_ingredients') }}">{{ icon('arrow_back') }} Back</a>
+      <button type="submit" class="btn btn--primary">Continue {{ icon('arrow_forward') }}</button>
+    </div>
   </form>
 {% endblock %}

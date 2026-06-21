@@ -1,60 +1,77 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}{{ recipe.title }} — My Kitchen{% endblock %}
+{% block page_title %}Recipe{% endblock %}
 {% block content %}
-  <h1>{{ recipe.title }}</h1>
-  <p><em>{{ recipe.blurb }}</em></p>
-  <p>Serves {{ recipe.servings }}.</p>
+  <h1 class="display recipe-title">{{ recipe.title }}</h1>
+  <p class="recipe-blurb">{{ recipe.blurb }}</p>
+  <p class="recipe-serves">Serves {{ recipe.servings }}.</p>
 
   {% if recipe.intro %}
     <p class="recipe-intro">{{ recipe.intro }}</p>
   {% endif %}
 
   {% if allergy_caveat %}
-    <p class="allergy-caveat"><strong>Allergy note:</strong> this recipe was generated
-       with an allergy in the brief, but an AI is not a safety guarantee — please
-       check the ingredients yourself before cooking.</p>
+    <div class="notice notice--warn">
+      {{ icon('info') }}
+      <div class="notice-body">
+        <strong>Allergy note:</strong> this recipe was generated with an allergy in the brief,
+        but an AI is not a safety guarantee — please check the ingredients yourself before cooking.
+      </div>
+    </div>
   {% endif %}
 
-  <h2>Ingredients</h2>
-  <ul>
-    {% for ing in recipe.ingredients_json %}
-      <li>
-        {% if ing.amount not in (none, '') %}{{ ing.amount }} {% endif %}{{ ing.unit }} {{ ing.item }}
-        {% if ing.to_buy %} <strong>(you may need to buy)</strong>{% endif %}
-      </li>
-    {% endfor %}
-  </ul>
+  <section class="recipe-section">
+    <h2>Ingredients</h2>
+    <ul class="ingredient-list">
+      {% for ing in recipe.ingredients_json %}
+        <li>
+          {% if ing.amount not in (none, '') %}{{ ing.amount }} {% endif %}{{ ing.unit }} {{ ing.item }}
+          {% if ing.to_buy %} <span class="to-buy">(you may need to buy)</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
 
   {% if recipe.prep_steps_json %}
-  <h2>Prep</h2>
-  <ol>
-    {% for step in recipe.prep_steps_json %}
-      <li>{% if step.title %}<strong>{{ step.title }}.</strong> {% endif %}{{ step.text }}{% if step.timer_minutes %} <em>({{ step.timer_minutes }} min)</em>{% endif %}</li>
-    {% endfor %}
-  </ol>
+  <section class="recipe-section">
+    <h2>Prep</h2>
+    <ol class="method">
+      {% for step in recipe.prep_steps_json %}
+        <li>{% if step.title %}<span class="step-title">{{ step.title }}.</span> {% endif %}{{ step.text }}{% if step.timer_minutes %} <span class="timer">{{ step.timer_minutes }} min</span>{% endif %}</li>
+      {% endfor %}
+    </ol>
+  </section>
   {% endif %}
 
-  <h2>Cook</h2>
-  <ol>
-    {% for step in recipe.cook_steps_json %}
-      <li>{% if step.title %}<strong>{{ step.title }}.</strong> {% endif %}{{ step.text }}{% if step.timer_minutes %} <em>({{ step.timer_minutes }} min)</em>{% endif %}</li>
-    {% endfor %}
-  </ol>
+  <section class="recipe-section">
+    <h2>Cook</h2>
+    <ol class="method">
+      {% for step in recipe.cook_steps_json %}
+        <li>{% if step.title %}<span class="step-title">{{ step.title }}.</span> {% endif %}{{ step.text }}{% if step.timer_minutes %} <span class="timer">{{ step.timer_minutes }} min</span>{% endif %}</li>
+      {% endfor %}
+    </ol>
+  </section>
 
   {% if recipe.tips_json %}
-  <h2>Tips</h2>
-  <ul>
-    {% for tip in recipe.tips_json %}
-      <li>{% if tip.title %}<strong>{{ tip.title }}.</strong> {% endif %}{{ tip.text }}</li>
-    {% endfor %}
-  </ul>
+  <section class="recipe-section">
+    <h2>Tips</h2>
+    <ul class="tips-list">
+      {% for tip in recipe.tips_json %}
+        <li>{% if tip.title %}<span class="step-title">{{ tip.title }}.</span> {% endif %}{{ tip.text }}</li>
+      {% endfor %}
+    </ul>
+  </section>
   {% endif %}
 
-  <p>
-    <form method="post" action="{{ url_for('wizard.toggle_favourite', recipe_id=recipe.id) }}" style="display:inline">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit">{% if favourited %}★ Remove from favourites{% else %}☆ Add to favourites{% endif %}</button>
-    </form>
-  </p>
-  <p><a href="{{ url_for('wizard.start') }}">Cook something else</a></p>
+  <form method="post" action="{{ url_for('wizard.toggle_favourite', recipe_id=recipe.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if favourited %}
+      <button type="submit" class="btn btn--secondary">{{ icon('star_fill') }} Remove from favourites</button>
+    {% else %}
+      <button type="submit" class="btn btn--secondary">{{ icon('star') }} Add to favourites</button>
+    {% endif %}
+  </form>
+
+  <p style="margin-top:var(--space-4)"><a class="back-link" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Cook something else</a></p>
 {% endblock %}

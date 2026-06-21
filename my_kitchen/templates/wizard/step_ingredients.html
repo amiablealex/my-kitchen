@@ -1,51 +1,53 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% from "_components.html" import step_dots %}
 {% block title %}Cook — Choose ingredients{% endblock %}
+{% block page_title %}Lets Cook{% endblock %}
 {% block content %}
-  <h1>Step 1: Choose ingredients to use up</h1>
-  <p>Pick the in-stock items to build the meal around. Staples (oil, salt, spices)
-     are assumed — no need to choose them.</p>
+  {{ step_dots(1) }}
+  <h1>Choose ingredients to use up</h1>
+  <p class="lead">Pick the in-stock items to build the meal around. Staples (oil, salt,
+     spices) are assumed — no need to choose them.</p>
 
-  {# Persistent hand-off to stock maintenance, round-tripping back to this step.
-     Keeps "fix my pantry" a separate intent from "pick for this meal". #}
+  {# Persistent hand-off to stock maintenance, round-tripping back to this step. #}
   <p>
-    <a href="{{ url_for('stock.index', return_to=url_for('wizard.step_ingredients')) }}">Stock not right? Update →</a>
+    <a class="btn btn--secondary btn--sm" href="{{ url_for('stock.index', return_to=url_for('wizard.step_ingredients')) }}">
+      {{ icon('shelves') }} Stock not right? Update
+    </a>
   </p>
 
   <form method="post" action="{{ url_for('wizard.step_ingredients') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if any_in_stock %}
       {% for section_label, items in lanes %}
-        <h2>{{ section_label }}</h2>
-        {% if items %}
-          <ul>
-            {% for ing in items %}
-              <li>
-                <label>
+        <section class="section">
+          <h2>{{ section_label }}</h2>
+          {% if items %}
+            <div class="options options--grid">
+              {% for ing in items %}
+                <label class="option">
                   <input type="checkbox" name="ingredient_ids" value="{{ ing.id }}"
                          {% if ing.id in selected %}checked{% endif %}>
-                  {{ ing.name }}{% if ing.note %} <em>({{ ing.note }})</em>{% endif %}
+                  <span>{{ ing.name }}</span>
+                  {% if ing.note %}<span class="opt-meta">{{ ing.note }}</span>{% endif %}
                 </label>
-              </li>
-            {% endfor %}
-          </ul>
-        {% else %}
-          <p><em>Nothing in stock in this lane.</em></p>
-        {% endif %}
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="muted">Nothing in stock in this lane.</p>
+          {% endif %}
+        </section>
       {% endfor %}
+      <p><button type="submit" class="btn btn--primary">Continue {{ icon('arrow_forward') }}</button></p>
     {% else %}
-      {# Empty pantry — this is now the wizard's first impression, so point at
-         stock maintenance rather than showing a blank selection box. #}
-      <p><em>Nothing's in stock yet.</em></p>
-      <p>
-        <a href="{{ url_for('stock.index', return_to=url_for('wizard.step_ingredients')) }}">Update stock →</a>
-        to add what you've got in, then come back here.
-      </p>
-      <p>Or continue anyway — recipes will lean on staples and a couple of
-         suggested extras.</p>
+      {# Empty pantry — the wizard's first impression; point at stock. #}
+      <div class="empty">
+        {{ icon('shelves') }}
+        <p>Nothing's in stock yet.</p>
+        <a class="btn btn--primary" href="{{ url_for('stock.index', return_to=url_for('wizard.step_ingredients')) }}">Update stock</a>
+        <p class="help">Or continue anyway — recipes will lean on staples and a couple of suggested extras.</p>
+      </div>
+      <p><button type="submit" class="btn btn--secondary">Continue without choosing {{ icon('arrow_forward') }}</button></p>
     {% endif %}
-
-    <p>
-      <button type="submit">Continue →</button>
-    </p>
   </form>
 {% endblock %}
