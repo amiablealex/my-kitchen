@@ -1,0 +1,13 @@
+{# Shared component macros. Import with: {% from "_components.html" import step_dots %} #}
+
+{# Four connected dots in accents 1→4 for the wizard input steps
+   (1 ingredients · 2 cuisine · 3 time · 4 cooking-for). `current` is 1–4.
+   Decorative — each step screen already has a "Step N: …" heading. #}
+{% macro step_dots(current) %}
+<div class="steps" aria-hidden="true">
+  {% for i in range(1, 5) %}
+    {% if not loop.first %}<span class="step-bar{% if i <= current %} is-done{% endif %}"></span>{% endif %}
+    <span class="step-dot s{{ i }} {% if i == current %}is-current{% elif i < current %}is-done{% else %}is-upcoming{% endif %}"></span>
+  {% endfor %}
+</div>
+{% endmacro %}

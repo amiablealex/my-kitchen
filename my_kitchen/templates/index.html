@@ -1,11 +1,17 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}My Kitchen{% endblock %}
+{% block page_title %}Home{% endblock %}
 {% block content %}
-  <h1>My Kitchen</h1>
-  <p>What's for dinner?</p>
-  <p><a href="{{ url_for('wizard.start') }}">Let's cook →</a></p>
-  <p>
-    <a href="{{ url_for('stock.index') }}">Update stock</a> ·
-    <a href="{{ url_for('history.index') }}">History</a>
-  </p>
+  <section class="home-hero">
+    <p class="home-eyebrow">What's for dinner?</p>
+    <h1 class="display home-title">My Kitchen</h1>
+    <a class="btn btn--cta" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Lets Cook</a>
+  </section>
+
+  <div class="card-grid">
+    <a class="card home-link" href="{{ url_for('stock.index') }}">{{ icon('shelves') }}<span>Update stock</span></a>
+    <a class="card home-link" href="{{ url_for('history.index') }}">{{ icon('menu_book') }}<span>Recipes</span></a>
+    <a class="card home-link" href="{{ url_for('history.favourites') }}">{{ icon('star') }}<span>Favourites</span></a>
+  </div>
 {% endblock %}
