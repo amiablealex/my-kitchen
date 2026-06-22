@@ -5,7 +5,7 @@ FROM python:3.12-slim
 # an unprivileged user. zoneinfo data comes from the pip `tzdata` package, so no
 # apt tzdata is needed.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gosu \
+    && apt-get install -y --no-install-recommends gosu sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Unprivileged runtime user.
