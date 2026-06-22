@@ -3,6 +3,7 @@ __pycache__/
 .venv/
 venv/
 .env
+*.env
 *.db
 *.db*
 *.db-wal

@@ -1,0 +1,14 @@
+services:
+  my-kitchen:
+    build: .
+    image: my-kitchen:latest
+    container_name: my-kitchen
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      # host:container — both driven by MY_KITCHEN_PORT so they stay in sync.
+      - "${MY_KITCHEN_PORT:-8000}:${MY_KITCHEN_PORT:-8000}"
+    volumes:
+      # Bind mount: the SQLite DB lives in ./data on the Pi, visible for backup.
+      # The container path matches MY_KITCHEN_DB_PATH's directory (/data).
+      - ./data:/data
