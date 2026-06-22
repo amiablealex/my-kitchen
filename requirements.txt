@@ -7,3 +7,5 @@ Flask-Migrate>=4.0
 Flask-WTF
 Flask-Login
 tzdata
+google-genai==2.8.0
+anthropic
