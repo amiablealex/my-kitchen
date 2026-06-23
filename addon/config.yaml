@@ -1,0 +1,41 @@
+name: My Kitchen
+version: "0.7.0"
+slug: my_kitchen
+description: Self-hosted household recipe generator (LLM-powered).
+url: https://github.com/amiablealex/my-kitchen
+arch:
+  - aarch64        # your Pi — the one you'll actually build/test
+  - amd64          # listed for x86 HA boxes; untested by you so far
+startup: application
+boot: auto
+
+# Checkpoint A: reach the app directly on the host port. Ingress is added in B.
+ports:
+  8000/tcp: 8000
+ports_description:
+  8000/tcp: Direct LAN access (plain HTTP; the PWA needs the HTTPS ingress URL)
+webui: "http://[HOST]:[PORT:8000]/"
+
+options:
+  llm_provider: gemini
+  llm_model: ""
+  gemini_api_key: ""
+  anthropic_api_key: ""
+  llm_temperature: 0.8
+  llm_max_tokens: 8000
+  llm_recent_titles_n: 10
+  app_timezone: Europe/London
+  gunicorn_workers: 2
+  gunicorn_threads: 4
+
+schema:
+  llm_provider: "list(mock|gemini|anthropic)"
+  llm_model: "str?"
+  gemini_api_key: "password?"
+  anthropic_api_key: "password?"
+  llm_temperature: "float(0,2)"
+  llm_max_tokens: "int(256,32000)"
+  llm_recent_titles_n: "int(0,50)"
+  app_timezone: "str"
+  gunicorn_workers: "int(1,8)"
+  gunicorn_threads: "int(1,16)"

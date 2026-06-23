@@ -3,26 +3,38 @@ set -e
 
 DB_PATH="${MY_KITCHEN_DB_PATH:-/data/my_kitchen.db}"
 DATA_DIR=$(dirname "$DB_PATH")
-
-# Start as root only to make a freshly-mounted volume writable by the app user
-# (compose bind mount now, HA /data later), then drop privileges for everything.
 mkdir -p "$DATA_DIR"
+
+# --- Home Assistant add-on bootstrap (no-op for standalone compose) --------
+# HA writes the user's settings to /data/options.json. Translate them into the
+# env vars the app consumes, and generate+persist a stable SECRET_KEY. Runs as
+# root (pre-drop) so it can write /data/secret_key before we chown.
+if [ -f /data/options.json ]; then
+    echo "Home Assistant add-on detected — applying options.json..."
+    ENV_EXPORTS="$(python3 /app/scripts/ha_bootstrap.py)" || { echo "ha_bootstrap failed"; exit 1; }
+    eval "$ENV_EXPORTS"
+fi
+# --------------------------------------------------------------------------
+
+# Make the freshly-mounted volume (incl. any secret_key just written) owned by
+# the unprivileged app user before we drop to it.
 chown -R appuser:appuser "$DATA_DIR"
 
-# Non-fatal warning: a stable SECRET_KEY is load-bearing — sessions and CSRF
-# tokens break across restarts without one.
 if [ -z "${SECRET_KEY}" ] || [ "${SECRET_KEY}" = "dev-only-change-me" ]; then
     echo "WARNING: SECRET_KEY is unset or the insecure dev default."
     echo "         Set a stable SECRET_KEY or logins/CSRF will break on restart."
 fi
 
-# Migrations run ONCE, before any workers start. Fresh volume -> builds the whole
-# schema from baseline; existing volume -> applies pending upgrades; up-to-date -> no-op.
 echo "Running database migrations..."
 gosu appuser flask db upgrade
 
-# I/O-bound generation -> gthread soaks the 30-60s waits cheaply. Modest counts
-# keep memory low on a 1GB Pi. Everything env-tunable.
+# First-run seed (HA path sets AUTO_SEED=1). Idempotent: seeds catalogue + one
+# user with a generated password ONLY when there are no users yet, and logs the
+# temp credentials. Never re-fires once a user exists, so it's safe every boot.
+if [ "${AUTO_SEED}" = "1" ]; then
+    gosu appuser flask first-run-seed
+fi
+
 echo "Starting gunicorn on 0.0.0.0:${MY_KITCHEN_PORT:-8000}..."
 exec gosu appuser gunicorn wsgi:app \
     --bind "0.0.0.0:${MY_KITCHEN_PORT:-8000}" \
