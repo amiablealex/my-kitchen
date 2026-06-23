@@ -1,20 +1,26 @@
 name: My Kitchen
-version: "0.7.0"
+version: "0.7.1"
 slug: my_kitchen
 description: Self-hosted household recipe generator (LLM-powered).
 url: https://github.com/amiablealex/my-kitchen
 arch:
-  - aarch64        # your Pi — the one you'll actually build/test
-  - amd64          # listed for x86 HA boxes; untested by you so far
+  - aarch64
+  - amd64
 startup: application
 boot: auto
 
-# Checkpoint A: reach the app directly on the host port. Ingress is added in B.
+# Primary access is HA ingress (HTTPS, sidebar panel, no exposed port needed).
+ingress: true
+ingress_port: 8000            # the internal port gunicorn listens on
+panel_icon: mdi:pot-steam     # on-brand-ish; swap for any Material Design icon
+panel_title: My Kitchen
+
+# Optional direct-LAN access (plain HTTP; reach it by typing host:port). The PWA
+# only fully comes alive over the HTTPS ingress URL, not here.
 ports:
   8000/tcp: 8000
 ports_description:
-  8000/tcp: Direct LAN access (plain HTTP; the PWA needs the HTTPS ingress URL)
-webui: "http://[HOST]:[PORT:8000]/"
+  8000/tcp: Direct LAN access (plain HTTP; PWA needs the HTTPS ingress URL)
 
 options:
   llm_provider: gemini

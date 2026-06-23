@@ -13,8 +13,27 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Behave correctly behind a reverse proxy / sub-path (HA ingress).
-    # Honours X-Forwarded-* so url_for() and relative assets resolve right.
+    # Behind HA ingress, the base path arrives as the X-Ingress-Path header
+    # (e.g. /api/hassio_ingress/<token>). ProxyFix keys off X-Forwarded-* and
+    # won't see it, so a tiny middleware promotes it to SCRIPT_NAME — which
+    # url_for() and static URLs respect. No header (direct LAN / standalone) =>
+    # SCRIPT_NAME stays empty and the app serves at root, exactly as before.
+    class _IngressMiddleware:
+        def __init__(self, wsgi_app):
+            self.wsgi_app = wsgi_app
+
+        def __call__(self, environ, start_response):
+            ingress_path = environ.get("HTTP_X_INGRESS_PATH")
+            if ingress_path:
+                environ["SCRIPT_NAME"] = ingress_path
+            return self.wsgi_app(environ, start_response)
+
+    # Order matters. The ingress middleware is applied first so it sits closest
+    # to the app and has the FINAL say on SCRIPT_NAME. ProxyFix wraps it to
+    # honour X-Forwarded-* (proto/host/for) from the ingress proxy. HA ingress
+    # doesn't send X-Forwarded-Prefix, so ProxyFix never clobbers the value the
+    # ingress middleware set.
+    app.wsgi_app = _IngressMiddleware(app.wsgi_app)
     app.wsgi_app = ProxyFix(
         app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
     )
