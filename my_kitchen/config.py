@@ -12,6 +12,14 @@ class Config:
     # page left open on the kitchen tablet doesn't start rejecting toggles after
     # an hour. Token is still bound to the session (cleared on logout/restart).
     WTF_CSRF_TIME_LIMIT = None
+    # Flask-WTF enforces a strict Referer-vs-Host check on HTTPS POSTs
+    # (WTF_CSRF_SSL_STRICT, default True). Behind HA ingress via the Nabu Casa
+    # cloud relay the app doesn't see the public host as its own, so that check
+    # rejects logins ("form expired") even though the CSRF token is valid. The
+    # token-based protection (session token vs form token) is unaffected and
+    # stays active, so this only drops a redundant layer — fine for an app that
+    # already sits behind HA's auth + ingress.
+    WTF_CSRF_SSL_STRICT = False
 
     # --- Database (path configurable for the Pi / HA add-on later) ---
     _db_path = os.environ.get("MY_KITCHEN_DB_PATH", str(BASE_DIR / "my_kitchen.db"))
