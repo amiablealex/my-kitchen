@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.4
+- dummy version bump to test if data persists
+
+## 0.7.3
+- sidebar no longer requires user to be admin
+
+## 0.7.2 
+- Csrf fix
+
+## 0.7.1
+- Ingress and path handling
+
 ## 0.7.0
 - Initial Home Assistant add-on packaging (pass 7b).
 - Reuses the standalone container recipe; app fetched from `main` at build.
