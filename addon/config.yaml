@@ -1,5 +1,5 @@
 name: My Kitchen
-version: "0.7.1"
+version: "0.7.2"
 slug: my_kitchen
 description: Self-hosted household recipe generator (LLM-powered).
 url: https://github.com/amiablealex/my-kitchen
