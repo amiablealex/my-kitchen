@@ -1,5 +1,5 @@
 from ..extensions import db
-from ..models import Ingredient, Equipment, Generation, Recipe, User
+from ..models import Ingredient, Equipment, Generation, Recipe, User, DEFAULT_MEAL_TYPE, meal_type_takes_cuisine
 from .prompt import SYSTEM_PROMPT, build_user_prompt
 from .schema import extract_json, validate_and_normalize
 from .providers import get_provider, ProviderError
@@ -105,12 +105,22 @@ def build_brief(wizard_state, time_label, app_config):
     guest_count = int(wizard_state.get("guest_count") or 0)
     allergies, preferences = combined_dietary(cooking_for_ids)
 
+    # Meal type (Phase 11) + defensive cuisine suppression. The wizard's step-2
+    # POST already nulls cuisine for non-cuisine meal types; we re-assert it here
+    # so the brief is correct even if the session value is stale. The server is
+    # authoritative — the wizard's JS show/hide is cosmetic only.
+    meal_type = wizard_state.get("meal_type", DEFAULT_MEAL_TYPE)
+    cuisine = wizard_state.get("cuisine", "Surprise me")
+    if not meal_type_takes_cuisine(meal_type):
+        cuisine = None
+
     return {
         "must_use": must_use,
         "available": available,
         "staples": staples,
         "equipment": equipment,
-        "cuisine": wizard_state.get("cuisine", "Surprise me"),
+        "meal_type": meal_type,
+        "cuisine": cuisine,
         "time_band": wizard_state.get("time_band", "quick"),
         "time_label": time_label,
         "servings": len(cooking_for_ids) + guest_count,
@@ -133,6 +143,7 @@ def run_generation(app_config, wizard_state, time_label, user_id=None):
     gen = Generation(
         created_by_user_id=user_id,
         cuisine=brief["cuisine"],
+        meal_type=brief["meal_type"],
         time_band=brief["time_band"],
         servings=brief["servings"],
         cooking_for_user_ids=brief["cooking_for_user_ids"],

@@ -132,13 +132,22 @@ def build_user_prompt(brief):
             + ", ".join(preferences) + "."
         )
 
-    # --- CUISINE / TIME / SERVINGS ---
+    # --- MEAL TYPE / CUISINE / TIME / SERVINGS ---
     lines.append("")
-    cuisine = brief["cuisine"]
-    if cuisine and cuisine.lower() != "surprise me":
-        lines.append(f"Cuisine: {cuisine}.")
-    else:
+    # Meal type: emit ONLY for non-Dinner picks. Dinner (the default) emits
+    # nothing, so today's behaviour and the existing goldens are unchanged.
+    meal_type = brief.get("meal_type")
+    if meal_type and meal_type != "Dinner":
+        lines.append(f"Meal type: {meal_type}.")
+    # Cuisine: three cases. None -> emit NOTHING (non-cuisine meal types);
+    # "Surprise me" -> the open-choice line; anything else -> name it.
+    cuisine = brief.get("cuisine")
+    if cuisine is None:
+        pass
+    elif cuisine.lower() == "surprise me":
         lines.append("Cuisine: your choice — surprise me.")
+    else:
+        lines.append(f"Cuisine: {cuisine}.")
     lines.append(f"Time available: {brief['time_label']}.")
     lines.append(f"Servings: {brief['servings']}.")
 

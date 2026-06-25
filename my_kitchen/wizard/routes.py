@@ -5,7 +5,7 @@ from flask import (
 from flask_login import current_user
 
 from ..extensions import db
-from ..models import Ingredient, Generation, Recipe, User, SECTION_CHOICES
+from ..models import Ingredient, Generation, Recipe, User, SECTION_CHOICES, DEFAULT_MEAL_TYPE
 from ..llm.service import run_generation, combined_dietary
 
 wizard_bp = Blueprint("wizard", __name__, url_prefix="/cook")
@@ -18,6 +18,7 @@ SECTIONS = SECTION_CHOICES
 def fresh_wizard():
     return {
         "selected_ingredient_ids": [],
+        "meal_type": DEFAULT_MEAL_TYPE,
         "cuisine": "Surprise me",
         "time_band": "quick",
         "cooking_for_user_ids": [],

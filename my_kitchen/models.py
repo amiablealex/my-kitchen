@@ -25,6 +25,34 @@ TAG_TYPE_CHOICES = [
 ]
 TAG_TYPE_KEYS = {key for key, _ in TAG_TYPE_CHOICES}
 
+# Meal types for the cook wizard (Phase 11). Hardcoded single source of truth —
+# the DB-backed configurable version is deferred to the keystone phase. Each
+# entry carries a `takes_cuisine` flag: cuisine-bearing types show the cuisine
+# control and feed a cuisine line into the brief; non-cuisine types hide it and
+# force cuisine to None (so a future "meal-type + cuisine" query stays clean).
+# Lives here (not in wizard/routes.py) so llm/service.py can import the flag
+# without a circular import — same pattern as SECTION_CHOICES above.
+MEAL_TYPES = [
+    ("Breakfast", True),
+    ("Lunch", True),
+    ("Dinner", True),
+    ("Snack", True),
+    ("Side dish", True),
+    ("Dessert", False),
+    ("Baking", False),
+    ("Sauce or dressing", False),
+]
+MEAL_TYPE_NAMES = [name for name, _ in MEAL_TYPES]
+DEFAULT_MEAL_TYPE = "Dinner"
+_MEAL_TYPE_TAKES_CUISINE = {name: takes for name, takes in MEAL_TYPES}
+
+
+def meal_type_takes_cuisine(name):
+    """True if the meal type carries a cuisine. Unknown names default to True
+    (never accidentally suppress cuisine for an unrecognised value — callers
+    validate the name against MEAL_TYPE_NAMES separately)."""
+    return _MEAL_TYPE_TAKES_CUISINE.get(name, True)
+
 def utcnow():
     """Timezone-aware UTC now; works on 3.11 and avoids the 3.12 utcnow() deprecation."""
     return datetime.now(timezone.utc)
@@ -124,6 +152,10 @@ class Generation(db.Model):
     created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     cuisine = db.Column(db.String, nullable=True)
+    # meal_type: e.g. "Dinner" (default) or "Dessert". Nullable parallel to
+    # cuisine (Phase 11). recipes.meal_type belongs to the later keystone
+    # migration — NOT here.
+    meal_type = db.Column(db.String, nullable=True)
     # time_band: "quick" | "relaxed"
     time_band = db.Column(db.String, nullable=True)
     servings = db.Column(db.Integer, nullable=True)
