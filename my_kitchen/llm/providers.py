@@ -130,7 +130,9 @@ def _mock_payload(brief):
     available = [i["name"] for i in brief.get("available", [])]
     pool = must_use + available
     servings = brief.get("servings", 2)
-    cuisine = brief.get("cuisine", "Surprise me")
+    # `or` (not a .get default) because the key can now be present-but-None for
+    # non-cuisine meal types (Phase 11); .get's default only fires on a MISSING key.
+    cuisine = brief.get("cuisine") or "Surprise me"
     seed = brief.get("creative_seed")
     hero = pool[0] if pool else "seasonal veg"
     second = pool[1] if len(pool) > 1 else "onion"

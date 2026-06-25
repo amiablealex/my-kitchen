@@ -181,4 +181,24 @@ GOLDEN_BRIEFS = [
         },
         "assert": {"required": [], "forbidden": ["peanut", "satay"], "max_to_buy": 2},
     },
+    {
+        "name": "dessert_no_cuisine",
+        "note": "Meal type = Dessert with NO cuisine (cuisine omitted from the brief "
+                "entirely). Chocolate + eggs must-use -> an indulgent dessert "
+                "(mousse / fondant / brownie). Exercises the meal-type line AND the "
+                "cuisine-omission path in one test; both recipes should read as "
+                "desserts, never savoury.",
+        "brief": {
+            "must_use": [_ing("dark chocolate", "100g bar"), _ing("eggs", "3 large")],
+            "available": [_ing("butter"), _ing("caster sugar"), _ing("double cream"),
+                          _ing("vanilla extract"), _ing("milk"), _ing("strawberries")],
+            "staples": STAPLES, "equipment": ["oven", "saucepan", "whisk"],
+            "allergies": [], "preferences": [],
+            "meal_type": "Dessert", "cuisine": None,
+            "time_band": RELAXED[0], "time_label": RELAXED[1],
+            "servings": 4, "recent_titles": [],
+            "creative_seed": "play a warm element against a cool, creamy one",
+        },
+        "assert": {"required": ["chocolate", "egg"], "forbidden": [], "max_to_buy": 2},
+    },
 ]
