@@ -1,24 +1,59 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
 {% from "_components.html" import step_dots %}
-{% block title %}Cook — Cuisine{% endblock %}
+{% block title %}Cook — Meal type & cuisine{% endblock %}
 {% block page_title %}Lets Cook{% endblock %}
 {% block content %}
   {{ step_dots(2) }}
-  <h1>Pick a cuisine</h1>
+  <h1>What are you making?</h1>
   <form method="post" action="{{ url_for('wizard.step_cuisine') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <h2 class="card-title">Meal type</h2>
     <div class="options">
-      {% for c in cuisines %}
+      {% for name, takes in meal_types %}
         <label class="option">
-          <input type="radio" name="cuisine" value="{{ c }}" {% if c == current %}checked{% endif %}>
-          <span>{{ c }}</span>
+          <input type="radio" name="meal_type" value="{{ name }}"
+                 data-takes-cuisine="{{ 'true' if takes else 'false' }}"
+                 {% if name == current_meal_type %}checked{% endif %}>
+          <span>{{ name }}</span>
         </label>
       {% endfor %}
     </div>
+
+    <div id="cuisine-block">
+      <h2 class="card-title">Cuisine</h2>
+      <div class="options">
+        {% for c in cuisines %}
+          <label class="option">
+            <input type="radio" name="cuisine" value="{{ c }}" {% if c == current_cuisine %}checked{% endif %}>
+            <span>{{ c }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+
     <div class="btn-row">
       <a class="btn btn--secondary" href="{{ url_for('wizard.step_ingredients') }}">{{ icon('arrow_back') }} Back</a>
       <button type="submit" class="btn btn--primary">Continue {{ icon('arrow_forward') }}</button>
     </div>
   </form>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    // Cosmetic show/hide only — the server is authoritative on cuisine
+    // suppression (a non-cuisine meal type is stored as NULL regardless).
+    (function () {
+      var cuisineBlock = document.getElementById("cuisine-block");
+      var radios = document.querySelectorAll('input[name="meal_type"]');
+      function sync() {
+        var sel = document.querySelector('input[name="meal_type"]:checked');
+        var takes = sel ? sel.dataset.takesCuisine === "true" : true;
+        cuisineBlock.hidden = !takes;
+      }
+      radios.forEach(function (r) { r.addEventListener("change", sync); });
+      sync();  // set initial visibility (e.g. returning to the step with Dessert)
+    })();
+  </script>
 {% endblock %}

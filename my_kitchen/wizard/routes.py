@@ -5,7 +5,10 @@ from flask import (
 from flask_login import current_user
 
 from ..extensions import db
-from ..models import Ingredient, Generation, Recipe, User, SECTION_CHOICES, DEFAULT_MEAL_TYPE
+from ..models import (
+    Ingredient, Generation, Recipe, User, SECTION_CHOICES,
+    DEFAULT_MEAL_TYPE, MEAL_TYPES, MEAL_TYPE_NAMES, meal_type_takes_cuisine,
+)
 from ..llm.service import run_generation, combined_dietary
 
 wizard_bp = Blueprint("wizard", __name__, url_prefix="/cook")
@@ -77,11 +80,27 @@ def step_ingredients():
 def step_cuisine():
     w = get_wizard()
     if request.method == "POST":
-        choice = request.form.get("cuisine", "Surprise me")
-        w["cuisine"] = choice if choice in CUISINES else "Surprise me"
+        meal_type = request.form.get("meal_type", DEFAULT_MEAL_TYPE)
+        if meal_type not in MEAL_TYPE_NAMES:
+            meal_type = DEFAULT_MEAL_TYPE
+        w["meal_type"] = meal_type
+        # Server is authoritative on cuisine. A non-cuisine meal type forces
+        # cuisine to None (stored NULL) no matter what the cosmetically-hidden
+        # cuisine radios submitted; a cuisine-bearing type takes the choice.
+        if meal_type_takes_cuisine(meal_type):
+            choice = request.form.get("cuisine", "Surprise me")
+            w["cuisine"] = choice if choice in CUISINES else "Surprise me"
+        else:
+            w["cuisine"] = None
         save_wizard(w)
         return redirect(url_for("wizard.step_time"))
-    return render_template("wizard/step_cuisine.html", cuisines=CUISINES, current=w["cuisine"])
+    return render_template(
+        "wizard/step_cuisine.html",
+        meal_types=MEAL_TYPES,
+        current_meal_type=w.get("meal_type", DEFAULT_MEAL_TYPE),
+        cuisines=CUISINES,
+        current_cuisine=w.get("cuisine") or "Surprise me",
+    )
 
 
 @wizard_bp.route("/time", methods=["GET", "POST"])
@@ -142,7 +161,8 @@ def review():
     allergies, preferences = combined_dietary(cooking_for_ids)
     return render_template(
         "wizard/review.html",
-        selected=selected, cuisine=w["cuisine"], time_label=time_label,
+        selected=selected, meal_type=w.get("meal_type", DEFAULT_MEAL_TYPE),
+        cuisine=w["cuisine"], time_label=time_label,
         servings=len(cooking_for_ids) + guests,
         cooking_for_users=cooking_for_users, guest_count=guests,
         allergies=allergies, preferences=preferences,
