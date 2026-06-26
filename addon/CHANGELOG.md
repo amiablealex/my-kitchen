@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.0
+- Recipe generation now runs in the background. Generating no longer holds the
+  page open for the whole wait: the "Lets Cook" flow starts the job and shows a
+  "cooking up your recipes…" page that updates itself and jumps to your two
+  recipes the moment they're ready.
+- Fixes generations timing out when cooking remotely (over the Nabu Casa cloud
+  link) — the long wait no longer runs through the proxy in one request.
+- A double-tap on "Generate recipes" now resumes the same wait instead of
+  starting a second generation.
+- If a generation gets stuck or takes too long, the page shows a clear message
+  and a way to try again, rather than hanging.
+- Additive migration: new nullable `generations.status` column; existing
+  recipes and history are unaffected. The generation prompt is unchanged.
+
 ## 0.8.0
 - Add a "meal type" selector to the Lets Cook wizard (Breakfast, Lunch, Dinner,
   Snack, Side dish, Dessert, Baking, Sauce or dressing). It sits on the cuisine
