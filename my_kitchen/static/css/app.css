@@ -490,7 +490,14 @@ th { color: var(--text-muted); font-weight: 600; }
 .home-link:hover { background: var(--surface-2); text-decoration: none; }
 .home-link .icon { color: var(--accent-1); width: 1.6em; height: 1.6em; }
 
-/* --- generating overlay (synchronous wait) --- */
+/* --- generating wait (Phase 12: its own page; the overlay was relocated here
+   from review.html). .gen-overlay below is retained for the legacy full-screen
+   treatment but is no longer used by any template. --- */
+.gen-page {
+  min-height: 55vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
 .gen-overlay {
   position: fixed; inset: 0; z-index: 80;
   display: none; align-items: center; justify-content: center;

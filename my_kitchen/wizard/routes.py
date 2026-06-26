@@ -203,11 +203,25 @@ def generate():
         flash("Let me know who's eating before I cook.", "error")
         return redirect(url_for("wizard.step_cooking_for"))
 
+    # Session idempotency. A double-submit (despite the disabled button) resumes
+    # the SAME wait rather than starting a second generation. Only a still-running,
+    # non-stale generation from this session is resumed; a finished, failed, or
+    # stale one falls through to a fresh start.
+    existing_id = session.get("active_generation_id")
+    if existing_id is not None:
+        existing = db.session.get(Generation, existing_id)
+        if (existing is not None
+                and (existing.status or "done") == "running"
+                and not _is_stale(existing)):
+            return redirect(url_for("wizard.generating", generation_id=existing.id))
+
     time_label = dict(TIME_BANDS).get(w["time_band"], w["time_band"])
     # Capture the real app object for the thread's app-context push — never let
     # the background thread reach for current_app / the request session.
     app = current_app._get_current_object()
     generation_id = start_generation(app, w, time_label, user_id=current_user.id)
+    session["active_generation_id"] = generation_id
+    session.modified = True
     return redirect(url_for("wizard.generating", generation_id=generation_id))
 
 

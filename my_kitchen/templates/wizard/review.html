@@ -54,25 +54,18 @@
       <button type="submit" class="btn btn--primary" id="generate-btn">{{ icon('cooking') }} Generate recipes</button>
     </div>
   </form>
-
-  {# Full-screen wait shown on submit. Generation is synchronous (Phase 6 makes
-     it async); this just covers the wait and doubles as the double-submit guard. #}
-  <div class="gen-overlay" id="gen-overlay" role="status" aria-live="polite">
-    <div class="gen-card">
-      <div class="gen-spinner"></div>
-      <p class="gen-title">Cooking up your recipes…</p>
-      <p class="gen-sub">This can take up to a minute.</p>
-    </div>
-  </div>
 {% endblock %}
 
 {% block scripts %}
   <script>
+    // Disable-on-submit guard. The POST is now fast (it starts the background
+    // job and redirects to the generating page, where the wait UI lives). This
+    // prevents a visible double-tap before the redirect; the server's session
+    // idempotency is the real backstop — a resubmit resumes the same wait.
     document.getElementById("generate-form").addEventListener("submit", function () {
       var btn = document.getElementById("generate-btn");
       btn.disabled = true;
-      btn.textContent = "Generating…";
-      document.getElementById("gen-overlay").classList.add("is-open");
+      btn.textContent = "Starting…";
     });
   </script>
 {% endblock %}

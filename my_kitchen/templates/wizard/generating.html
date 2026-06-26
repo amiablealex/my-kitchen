@@ -3,24 +3,26 @@
 {% block title %}Cook — Cooking up your recipes{% endblock %}
 {% block page_title %}Lets Cook{% endblock %}
 {% block content %}
-  {# The wait now lives on its own page (Phase 12). It polls the status endpoint
+  {# The wait lives on its own page now (Phase 12). It polls the status endpoint
      and navigates to the choice screen when the background generation finishes.
-     status_url is injected server-side via url_for so the fetch works under the
-     HA ingress sub-path — never hardcode "/cook/status/...". #}
-  <div class="gen-card" id="gen-cooking" role="status" aria-live="polite">
-    <div class="gen-spinner"></div>
-    <p class="gen-title">Cooking up your recipes…</p>
-    <p class="gen-sub">This usually takes under a minute.</p>
-  </div>
+     status_url is injected server-side via url_for so the fetch resolves under
+     the HA ingress sub-path — the JS must never hardcode "/cook/status/...". #}
+  <div class="gen-page">
+    <div class="gen-card" id="gen-cooking" role="status" aria-live="polite">
+      <div class="gen-spinner"></div>
+      <p class="gen-title">Cooking up your recipes…</p>
+      <p class="gen-sub" id="gen-sub">This usually takes under a minute.</p>
+    </div>
 
-  <div class="gen-card" id="gen-error" hidden role="alert">
-    <p class="gen-title">The kitchen had a wobble</p>
-    <p class="gen-sub" id="gen-error-msg">Something went wrong — please try again.</p>
-    <p style="margin-top: var(--space-4);">
-      <a class="btn btn--primary" href="{{ url_for('wizard.review') }}">
-        {{ icon('arrow_back') }} Back to review and try again
-      </a>
-    </p>
+    <div class="gen-card" id="gen-error" hidden role="alert">
+      <p class="gen-title">The kitchen had a wobble</p>
+      <p class="gen-sub" id="gen-error-msg">Something went wrong — please try again.</p>
+      <p style="margin-top: var(--space-4);">
+        <a class="btn btn--primary" href="{{ url_for('wizard.review') }}">
+          {{ icon('arrow_back') }} Back to review and try again
+        </a>
+      </p>
+    </div>
   </div>
 {% endblock %}
 
@@ -29,8 +31,12 @@
     (function () {
       var STATUS_URL = "{{ status_url }}";
       var POLL_MS = 2000;
+      var SLOW_MS = 120000;          // after ~2 min, reassure but keep waiting
+      var startedAt = Date.now();
+      var slowShown = false;
 
       var cooking = document.getElementById("gen-cooking");
+      var sub = document.getElementById("gen-sub");
       var errBox = document.getElementById("gen-error");
       var errMsg = document.getElementById("gen-error-msg");
 
@@ -52,7 +58,13 @@
               showError(data.error);
               return;
             }
-            // still running — poll again
+            // Still running. Past the slow mark we reassure (the server's own
+            // stale guard is the real backstop); the retry only appears on a
+            // terminal error, never here.
+            if (!slowShown && (Date.now() - startedAt) > SLOW_MS) {
+              slowShown = true;
+              sub.textContent = "Taking longer than usual — still cooking, hang tight.";
+            }
             setTimeout(poll, POLL_MS);
           })
           .catch(function () {
