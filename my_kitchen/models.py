@@ -166,6 +166,13 @@ class Generation(db.Model):
     model = db.Column(db.String, nullable=True)
     raw_prompt = db.Column(db.Text, nullable=True)
     error = db.Column(db.Text, nullable=True)
+    # status: "running" | "done" | "error" (Phase 12, async generation). The
+    # Generation row IS the job — no separate jobs table. NULL means a legacy,
+    # pre-Phase-12 row: it predates async and is already complete, so every
+    # status branch MUST treat NULL as "done" (historical rows still render in
+    # history/choice). Set "running" by the synchronous starter, then "done" or
+    # "error" by the background thread (or by the poll's stale guard).
+    status = db.Column(db.String, nullable=True)
 
     recipes = db.relationship("Recipe", backref="generation")
     # Read-only link to the cook. The created_by_user_id FK column already

@@ -1,6 +1,8 @@
+from datetime import datetime, timezone
+
 from flask import (
     Blueprint, render_template, request, redirect, url_for, session,
-    current_app, abort, flash,
+    current_app, abort, flash, jsonify,
 )
 from flask_login import current_user
 
@@ -9,13 +11,17 @@ from ..models import (
     Ingredient, Generation, Recipe, User, SECTION_CHOICES,
     DEFAULT_MEAL_TYPE, MEAL_TYPES, MEAL_TYPE_NAMES, meal_type_takes_cuisine,
 )
-from ..llm.service import run_generation, combined_dietary
+from ..llm.service import start_generation, combined_dietary
 
 wizard_bp = Blueprint("wizard", __name__, url_prefix="/cook")
 
 CUISINES = ["Italian", "Mediterranean", "British", "Asian", "Surprise me"]
 TIME_BANDS = [("quick", "Quick (under 30 min)"), ("relaxed", "Relaxed (30–75 min)")]
 SECTIONS = SECTION_CHOICES
+
+# A running generation older than this is treated as dead (no reaper process —
+# the check lives in the poll + the idempotency guard). Phase 12.
+STALE_AFTER_SECONDS = 5 * 60
 
 
 def fresh_wizard():
@@ -31,6 +37,26 @@ def fresh_wizard():
 
 def derived_servings(w):
     return len(w.get("cooking_for_user_ids") or []) + int(w.get("guest_count") or 0)
+
+
+def _generation_age_seconds(gen):
+    """Seconds since the row was created. created_at is written by models.utcnow
+    (timezone-AWARE UTC), but SQLite hands DateTime columns back NAIVE (UTC
+    wall-clock) on re-query — and the thread + poll both re-query. So compare
+    against whichever clock matches the value we actually got, never assume one."""
+    created = gen.created_at
+    if created is None:
+        return 0.0
+    if created.tzinfo is None:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)  # naive UTC
+    else:
+        now = datetime.now(timezone.utc)                       # aware UTC
+    return (now - created).total_seconds()
+
+
+def _is_stale(gen):
+    """A still-"running" row older than the cap is treated as dead."""
+    return _generation_age_seconds(gen) > STALE_AFTER_SECONDS
 
 
 def get_wizard():
@@ -172,20 +198,86 @@ def review():
 @wizard_bp.route("/generate", methods=["POST"])
 def generate():
     w = get_wizard()
+    # Synchronous pre-flight guard — runs BEFORE any row is created.
     if derived_servings(w) < 1:
         flash("Let me know who's eating before I cook.", "error")
         return redirect(url_for("wizard.step_cooking_for"))
+
     time_label = dict(TIME_BANDS).get(w["time_band"], w["time_band"])
-    gen, error = run_generation(current_app.config, w, time_label, user_id=current_user.id)
-    if error:
-        return render_template("wizard/error.html", error=error)
-    return redirect(url_for("wizard.choice", generation_id=gen.id))
+    # Capture the real app object for the thread's app-context push — never let
+    # the background thread reach for current_app / the request session.
+    app = current_app._get_current_object()
+    generation_id = start_generation(app, w, time_label, user_id=current_user.id)
+    return redirect(url_for("wizard.generating", generation_id=generation_id))
+
+
+@wizard_bp.route("/generating/<int:generation_id>")
+def generating(generation_id):
+    gen = db.session.get(Generation, generation_id)
+    if gen is None:
+        abort(404)
+    # NULL status = legacy/complete; if already finished, skip the wait entirely.
+    if (gen.status or "done") == "done":
+        return redirect(url_for("wizard.choice", generation_id=gen.id))
+    # status_url + choice_url are built server-side so the polling JS works under
+    # the HA ingress sub-path (the JS must never hardcode "/cook/status/...").
+    return render_template(
+        "wizard/generating.html",
+        generation_id=gen.id,
+        status_url=url_for("wizard.status", generation_id=gen.id),
+    )
+
+
+@wizard_bp.route("/status/<int:generation_id>")
+def status(generation_id):
+    """JSON poll target. redirect_url is a server-built url_for value (ingress
+    safe). NULL status counts as done. Includes the stale-job guard: a row stuck
+    "running" past the cap is flipped to "error" here (no separate reaper)."""
+    gen = db.session.get(Generation, generation_id)
+    if gen is None:
+        return jsonify(
+            status="error",
+            error="That generation has gone missing — please try again.",
+            redirect_url=None,
+        ), 404
+
+    st = gen.status or "done"
+
+    if st == "running":
+        if _is_stale(gen):
+            # Persist the flip so history stays clean and the idempotency guard
+            # (CP2) sees it as not-running. A zombie thread that finishes later
+            # is harmless: it last-writes "done" with two real recipes.
+            gen.status = "error"
+            gen.error = gen.error or (
+                "That took longer than expected, so I stopped waiting. "
+                "Please try again."
+            )
+            db.session.commit()
+            return jsonify(status="error", error=gen.error, redirect_url=None)
+        return jsonify(status="running", error=None, redirect_url=None)
+
+    if st == "done":
+        return jsonify(
+            status="done",
+            error=None,
+            redirect_url=url_for("wizard.choice", generation_id=gen.id),
+        )
+
+    # error
+    return jsonify(status="error", error=gen.error or "Generation failed.", redirect_url=None)
 
 
 @wizard_bp.route("/choice/<int:generation_id>")
 def choice(generation_id):
     gen = db.session.get(Generation, generation_id)
-    if gen is None or len(gen.recipes) < 2:
+    if gen is None:
+        abort(404)
+    # A still-running, non-stale generation lands back on the wait page rather
+    # than 404-ing. Legacy NULL-status rows fall through (treated as done).
+    if (gen.status or "done") == "running" and not _is_stale(gen):
+        return redirect(url_for("wizard.generating", generation_id=gen.id))
+    if len(gen.recipes) < 2:
         abort(404)
     return render_template("wizard/choice.html", recipes=gen.recipes)
 

@@ -1,3 +1,5 @@
+import threading
+
 from ..extensions import db
 from ..models import Ingredient, Equipment, Generation, Recipe, User, DEFAULT_MEAL_TYPE, meal_type_takes_cuisine
 from .prompt import SYSTEM_PROMPT, build_user_prompt
@@ -135,9 +137,21 @@ def build_brief(wizard_state, time_label, app_config):
     }
 
 
-def run_generation(app_config, wizard_state, time_label, user_id=None):
-    """Returns (generation, error_msg). error_msg is None on success."""
-    brief = build_brief(wizard_state, time_label, app_config)
+def start_generation(app, wizard_state, time_label, user_id=None):
+    """Synchronous starter — runs INSIDE the request. Does only fast, reliable
+    work: build the brief (DB reads) + user_prompt (string assembly), create the
+    Generation row as status="running", commit, then hand the slow/fallible part
+    (the LLM call) to a background daemon thread. Returns the new generation_id.
+
+    The brief is built ONCE here and passed to the thread, so the stored
+    creative_seed matches what's actually used and stock is read at click time
+    (rebuilding it in the thread would re-roll the seed and re-read stock).
+
+    `app` is the real application object (current_app._get_current_object() from
+    the caller), passed so the thread can push its own app context — never rely
+    on current_app / the request session across the thread boundary.
+    """
+    brief = build_brief(wizard_state, time_label, app.config)
     user_prompt = build_user_prompt(brief)
 
     gen = Generation(
@@ -151,65 +165,109 @@ def run_generation(app_config, wizard_state, time_label, user_id=None):
         selected_ingredient_ids=wizard_state.get("selected_ingredient_ids") or [],
         creative_seed=brief["creative_seed"],
         raw_prompt=user_prompt,
+        status="running",
     )
-
-    try:
-        provider = get_provider(app_config)
-    except ProviderError as e:
-        gen.model = app_config.get("LLM_PROVIDER", "")
-        gen.error = str(e)
-        db.session.add(gen)
-        db.session.commit()
-        return gen, str(e)
-
-    gen.model = f"{provider.name}:{provider.model}"
-
-    last_error, last_raw, normalized = None, None, None
-    for attempt in range(1, MAX_ATTEMPTS + 1):
-        try:
-            last_raw = provider.generate(SYSTEM_PROMPT, user_prompt, brief=brief)
-            finish = getattr(provider, "last_finish_reason", None)
-            if finish is not None and _is_truncated(finish):
-                # Output hit the token ceiling — retrying won't help; the recipe
-                # is just longer than max_tokens allows. Fail honestly instead of
-                # letting the half-finished JSON surface as a parser error.
-                last_error = (
-                    "The recipes came back longer than the current limit and got "
-                    "cut off. Try again, or raise LLM_MAX_TOKENS."
-                )
-                break
-            normalized = validate_and_normalize(extract_json(last_raw))
-            break
-        except ProviderError as e:
-            last_error = f"Provider error: {e}"
-            break  # don't retry a hard API/key error
-        except ValueError as e:
-            last_error = f"Malformed output (attempt {attempt}): {e}"
-            continue  # retry on bad JSON / schema
-        except Exception as e:  # last-resort safety net
-            last_error = f"Unexpected generation error (attempt {attempt}): {e}"
-            break
-
-    if normalized is None:
-        gen.error = last_error or "Generation failed."
-        db.session.add(gen)
-        db.session.commit()
-        return gen, gen.error
-
     db.session.add(gen)
-    db.session.flush()  # assign gen.id before adding recipes
-    for r in normalized:
-        db.session.add(Recipe(
-            generation_id=gen.id,
-            title=r["title"],
-            blurb=r["blurb"],
-            intro=r["intro"],
-            servings=r["servings"] or brief["servings"],
-            ingredients_json=r["ingredients"],
-            prep_steps_json=r["prep"],
-            cook_steps_json=r["cook"],
-            tips_json=r["tips"],
-            raw_response=last_raw,
-        ))
-    db.session.commit()
-    return gen, None
+    db.session.commit()  # assigns gen.id and makes the running row visible to polls
+    generation_id = gen.id
+
+    # Pass only primitives across the boundary: the app object, the row id, the
+    # prompt string, and the plain-data brief dict. NO ORM objects, NO request
+    # session. The thread re-queries the row by id inside its own context.
+    thread = threading.Thread(
+        target=_run_generation_job,
+        args=(app, generation_id, user_prompt, brief),
+        daemon=True,
+    )
+    thread.start()
+    return generation_id
+
+
+def _run_generation_job(app, generation_id, user_prompt, brief):
+    """Background thread body — runs OUTSIDE any request. Pushes its own app
+    context, uses a FRESH db session, re-queries the Generation by id, and runs
+    only the genuinely slow/fallible part: provider call -> retry-once loop ->
+    validate/normalize -> write the two Recipe rows -> set status. Recipes and
+    status="done" are written in ONE commit, so a poll on the *other* gunicorn
+    worker never sees "done" before the recipes exist. Session is cleaned up in
+    a finally so the thread leaves no connection behind.
+    """
+    with app.app_context():
+        try:
+            gen = db.session.get(Generation, generation_id)
+            if gen is None:
+                return  # row vanished (deleted mid-flight) — nothing to do
+
+            try:
+                provider = get_provider(app.config)
+            except ProviderError as e:
+                gen.model = app.config.get("LLM_PROVIDER", "")
+                gen.error = str(e)
+                gen.status = "error"
+                db.session.commit()
+                return
+
+            gen.model = f"{provider.name}:{provider.model}"
+
+            last_error, last_raw, normalized = None, None, None
+            for attempt in range(1, MAX_ATTEMPTS + 1):
+                try:
+                    last_raw = provider.generate(SYSTEM_PROMPT, user_prompt, brief=brief)
+                    finish = getattr(provider, "last_finish_reason", None)
+                    if finish is not None and _is_truncated(finish):
+                        # Output hit the token ceiling — retrying won't help; the
+                        # recipe is just longer than max_tokens allows. Fail
+                        # honestly instead of letting the half-finished JSON
+                        # surface as a parser error.
+                        last_error = (
+                            "The recipes came back longer than the current limit "
+                            "and got cut off. Try again, or raise LLM_MAX_TOKENS."
+                        )
+                        break
+                    normalized = validate_and_normalize(extract_json(last_raw))
+                    break
+                except ProviderError as e:
+                    last_error = f"Provider error: {e}"
+                    break  # don't retry a hard API/key error
+                except ValueError as e:
+                    last_error = f"Malformed output (attempt {attempt}): {e}"
+                    continue  # retry on bad JSON / schema
+                except Exception as e:  # last-resort safety net
+                    last_error = f"Unexpected generation error (attempt {attempt}): {e}"
+                    break
+
+            if normalized is None:
+                gen.error = last_error or "Generation failed."
+                gen.status = "error"
+                db.session.commit()
+                return
+
+            for r in normalized:
+                db.session.add(Recipe(
+                    generation_id=gen.id,
+                    title=r["title"],
+                    blurb=r["blurb"],
+                    intro=r["intro"],
+                    servings=r["servings"] or brief["servings"],
+                    ingredients_json=r["ingredients"],
+                    prep_steps_json=r["prep"],
+                    cook_steps_json=r["cook"],
+                    tips_json=r["tips"],
+                    raw_response=last_raw,
+                ))
+            gen.status = "done"
+            db.session.commit()  # recipes + status="done" land together, atomically
+        except Exception as e:
+            # Truly unexpected (e.g. a DB error mid-write). Roll back the broken
+            # transaction, then record the failure on a freshly-fetched row.
+            db.session.rollback()
+            try:
+                gen = db.session.get(Generation, generation_id)
+                if gen is not None:
+                    gen.error = f"Unexpected generation error: {e}"
+                    gen.status = "error"
+                    db.session.commit()
+            except Exception:
+                db.session.rollback()
+        finally:
+            db.session.remove()
