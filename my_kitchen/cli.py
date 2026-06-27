@@ -143,6 +143,18 @@ def register_cli(app):
         run_eval(app.config, provider_name=provider_name,
                  temperature=temperature, only=only, echo=click.echo)
 
+    @app.cli.command("resolve-eval")
+    @click.option("--threshold", type=float, default=None,
+                  help="Override the fuzzy match threshold for this run. Defaults "
+                       "to the resolver's tuned FUZZY_THRESHOLD. Pure-function, "
+                       "DB-free eval — no provider or network needed.")
+    def resolve_eval(threshold):
+        """Run the ingredient resolver over the golden set; print + save match
+        rate, false-links (must be 0), misses, and the per-method breakdown."""
+        from .eval.resolver_harness import run_resolver_eval
+        ok = run_resolver_eval(threshold=threshold, echo=click.echo)
+        raise SystemExit(0 if ok else 1)
+
     @app.shell_context_processor
     def shell_context():
         return {

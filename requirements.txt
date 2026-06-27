@@ -9,3 +9,4 @@ Flask-Login
 tzdata
 google-genai==2.8.0
 anthropic
+rapidfuzz>=3.0

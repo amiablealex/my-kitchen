@@ -6,6 +6,19 @@ INJECTED, so it runs without an app/DB context — exactly like the prompt eval.
 not called anywhere in 3a. The resolver's only consumer this phase is the eval
 harness (``flask resolve-eval``).
 """
-from .core import ResolveResult, UNMATCHED, resolve
+from .core import (
+    ResolveResult,
+    UNMATCHED,
+    Index,
+    resolve,
+    resolve_with_index,
+    build_index,
+    norm_min,
+    norm_core,
+)
 
-__all__ = ["ResolveResult", "UNMATCHED", "resolve"]
+__all__ = [
+    "ResolveResult", "UNMATCHED", "Index",
+    "resolve", "resolve_with_index", "build_index",
+    "norm_min", "norm_core",
+]
