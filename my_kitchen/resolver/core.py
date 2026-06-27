@@ -73,6 +73,15 @@ UNITS = {
 # symmetrically (both sides) keeps that entry unique, so this is safe.
 CONNECTIVES = {"of", "a", "an", "the", "and", "with", "to", "plus", "or", "in", "into"}
 
+# Quantities written as words (digits are stripped separately). None is part of a
+# canonical name. Stripping these lets "two small red onions" reach an exact
+# "red onion" at norm_core instead of falling to a fuzzy tie. Safe at tier-1.
+NUMBER_WORDS = {
+    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+    "eleven", "twelve", "half", "quarter", "third", "dozen", "couple", "few",
+    "several", "some", "lots", "plenty",
+}
+
 # Removed only in norm_core (the second pass). DELIBERATELY excludes colour /
 # form / type words (sweet, red, green, black, white, new, spring, ground, dried,
 # smoked, double, single, sun) — those are load-bearing canonical-name parts and
@@ -128,7 +137,7 @@ def base_tokens(text: str) -> List[str]:
     s = re.sub(r"[^a-z\s]", " ", _deaccent(text.lower()))
     out = []
     for tok in s.split():
-        if tok in UNITS or tok in CONNECTIVES:
+        if tok in UNITS or tok in CONNECTIVES or tok in NUMBER_WORDS:
             continue
         out.append(_singular(tok))
     return out
@@ -218,10 +227,21 @@ def resolve_with_index(free_text: str, index: Index,
             return ResolveResult(hit[0], hit[1], 100.0, "alias")
 
     if index.fuzzy_choices:
-        best = process.extractOne(q_min, index.fuzzy_choices, scorer=FUZZY_SCORER)
-        if best is not None:
-            choice, score, idx = best
-            if score >= threshold:
+        # token_set_ratio scores BOTH a generic ("Onion") and a specific
+        # ("Red onion") entry 100 when the query is a superset of each — a tie
+        # that, left to first-wins, silently collapses to the generic and creates
+        # a false link. Among candidates at the top score, prefer the one sharing
+        # the MOST tokens with the query (then the longest name): the more
+        # specific match. This is a precision guard, not a recall lever.
+        results = process.extract(q_min, index.fuzzy_choices,
+                                  scorer=FUZZY_SCORER, limit=10)
+        if results:
+            top_score = results[0][1]
+            if top_score >= threshold:
+                qset = set(q_min.split())
+                tied = [r for r in results if r[1] == top_score]
+                choice, score, idx = max(
+                    tied, key=lambda r: (len(qset & set(r[0].split())), len(r[0])))
                 ing_id, name = index.fuzzy_targets[idx]
                 return ResolveResult(ing_id, name, float(score), "fuzzy")
     return UNMATCHED

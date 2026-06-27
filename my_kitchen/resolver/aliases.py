@@ -67,4 +67,10 @@ ALIASES = {
     "tuna": "Tuna (tinned)",
     "tinned tuna": "Tuna (tinned)",
     "tin of tuna": "Tuna (tinned)",
+
+    # --- added in 3a CP3 (frequent household terms, from examples.md) ---
+    # "brown onion" / "white onion" are just the standard onion; make them a
+    # deterministic alias rather than leaning on a fuzzy match.
+    "brown onion": "Onion",
+    "white onion": "Onion",
 }
