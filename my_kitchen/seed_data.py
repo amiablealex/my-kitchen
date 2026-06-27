@@ -1,66 +1,36 @@
 """Shared seed routines for the `seed` and `first-run-seed` CLI commands.
 
-Import-light (models only) so it runs in the HA add-on first-run path too.
+Import-light (models only) so it runs in the HA add-on first-run path too. The
+catalogue *data* lives in ``seed_catalogue.py`` (a zero-import pure-data module)
+so it can be the single source of truth for BOTH this seed and the DB-free
+resolver eval fixture — neither can drift from the other.
 """
 import secrets
 
 from .extensions import db
 from . import models
-
-# (name, section, display_order)
-_CATEGORIES = [
-    ("Protein", "protein", 1),
-    ("Carbohydrate", "carb", 2),
-    ("Vegetable", "veg", 3),
-    ("Dairy", "other", 4),
-    ("Spice", "other", 5),
-    ("Oil", "other", 6),
-    ("Pantry", "other", 7),
-]
-
-# (name, category, is_staple, in_stock)
-_INGREDIENTS = [
-    ("Chicken breast", "Protein", False, True),
-    ("Salmon fillet", "Protein", False, False),
-    ("Eggs", "Protein", False, True),
-    ("Tofu", "Protein", False, False),
-    ("Rice", "Carbohydrate", False, True),
-    ("Pasta", "Carbohydrate", False, True),
-    ("Potatoes", "Carbohydrate", False, True),
-    ("Onion", "Vegetable", False, True),
-    ("Carrot", "Vegetable", False, True),
-    ("Broccoli", "Vegetable", False, False),
-    ("Spinach", "Vegetable", False, False),
-    ("Tomato", "Vegetable", False, True),
-    ("Milk", "Dairy", False, True),
-    ("Cheddar cheese", "Dairy", False, True),
-    ("Butter", "Dairy", False, True),
-    ("Salt", "Spice", True, True),
-    ("Black pepper", "Spice", True, True),
-    ("Cumin", "Spice", True, True),
-    ("Paprika", "Spice", True, True),
-    ("Olive oil", "Oil", True, True),
-    ("Vegetable oil", "Oil", True, True),
-    ("Plain flour", "Pantry", True, True),
-    ("Stock cubes", "Pantry", True, True),
-]
+from .seed_catalogue import CATEGORIES, INGREDIENTS
 
 
 def seed_reference_data():
     """Idempotently seed starter categories + ingredients. Returns True if it
-    added anything, False if catalogue data was already present."""
+    added anything, False if catalogue data was already present.
+
+    in_stock is seeded to equal is_staple: staples are assumed always available;
+    core items start out-of-stock and the household toggles real stock in the UI.
+    """
     if models.Category.query.first() or models.Ingredient.query.first():
         return False
     cats = {}
-    for name, section, order in _CATEGORIES:
+    for name, section, order in CATEGORIES:
         c = models.Category(name=name, section=section, display_order=order)
         db.session.add(c)
         cats[name] = c
     db.session.flush()
-    for name, cat_name, staple, in_stock in _INGREDIENTS:
+    for name, cat_name, staple in INGREDIENTS:
         db.session.add(models.Ingredient(
             name=name, category=cats[cat_name],
-            is_staple=staple, in_stock=in_stock,
+            is_staple=staple, in_stock=staple,
         ))
     db.session.commit()
     return True
