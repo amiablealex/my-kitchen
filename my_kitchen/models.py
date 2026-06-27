@@ -183,14 +183,17 @@ class Generation(db.Model):
 class Recipe(db.Model):
     __tablename__ = "recipes"
     id = db.Column(db.Integer, primary_key=True)
-    generation_id = db.Column(db.Integer, db.ForeignKey("generations.id"), nullable=False)
+    # generation_id is NULLABLE from the keystone (Phase 3b): AI recipes carry one,
+    # but user-created and imported recipes (later phases) have no generation.
+    generation_id = db.Column(db.Integer, db.ForeignKey("generations.id"), nullable=True)
     title = db.Column(db.String, nullable=False)
     blurb = db.Column(db.String, nullable=True)
     # intro: energetic context paragraph (the why / culinary framing). Phase 4b.
     intro = db.Column(db.Text, nullable=True)
     servings = db.Column(db.Integer, nullable=True)
-    servings = db.Column(db.Integer, nullable=True)
-    # ingredients_json: [{item, amount, unit, to_buy}]
+    # ingredients_json: [{item, amount, unit, to_buy}]. Stays the DISPLAY source
+    # in 3b — the new recipe_ingredients rows are the structured/queryable mirror,
+    # not yet shown on the recipe page (that's the user-created-recipes phase).
     ingredients_json = db.Column(db.JSON, nullable=True)
     # prep_steps_json / cook_steps_json: [{title, text, timer_minutes}]
     prep_steps_json = db.Column(db.JSON, nullable=True)
@@ -198,6 +201,62 @@ class Recipe(db.Model):
     # tips_json: optional [{title, text}] — finishing touches / serving / troubleshooting. Phase 4b.
     tips_json = db.Column(db.JSON, nullable=True)
     was_chosen = db.Column(db.Boolean, default=False, nullable=False)
-    was_chosen = db.Column(db.Boolean, default=False, nullable=False)
     raw_response = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
+    # --- Keystone meta (Phase 3b) ---
+    # source: provenance — "ai" | "user" | "imported". NOT NULL; every recipe is
+    # "ai" this phase and the write path sets it explicitly. Added via the
+    # temp-server_default-then-drop Alembic pattern so the migration is safe on a
+    # populated table; the steady-state column carries no DB default, keeping the
+    # write path authoritative (an unset source fails loudly — desirable).
+    source = db.Column(db.String, nullable=False)
+    # meal_type: copied FORWARD from the generation at write time so post-3b
+    # recipes are suggestion-ready. Nullable (legacy generations; user/imported
+    # provenance later). recipes.meal_type is owned here, not on generations.
+    meal_type = db.Column(db.String, nullable=True)
+    # created_by_user_id: the recipe's author. For AI recipes = the generation's
+    # cook. Nullable FK (user/imported provenance comes later).
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    # Structured, catalogue-linked ingredient lines (Phase 3b). order_by position
+    # so the collection mirrors the recipe's ingredient order; delete-orphan so a
+    # deleted recipe takes its lines with it (recipe_id is NOT NULL — no orphans).
+    ingredients = db.relationship(
+        "RecipeIngredient",
+        backref="recipe",
+        order_by="RecipeIngredient.position",
+        cascade="all, delete-orphan",
+    )
+    # Read-only link to the author. The created_by_user_id FK column carries the
+    # value; this is ORM-level only, so it reports no schema diff.
+    author = db.relationship("User")
+
+
+class RecipeIngredient(db.Model):
+    """One ingredient line of a recipe, linked (when resolved) to the catalogue.
+
+    Keystone Phase 3b — the migration that makes ingredients a first-class,
+    joinable table. ``raw_text`` preserves the AI's original ingredient string for
+    display; ``ingredient_id`` is the resolver's catalogue link, NULL when
+    unmatched (off-catalogue, or a genuine catalogue gap — both degrade
+    gracefully). ``amount``/``unit``/``to_buy``/``position`` are copied verbatim
+    from the AI output. ``amount`` is stored as text on purpose: the model emits
+    it untouched (``"a splash"``, ``"½"``, ``2``), so a numeric column would lose
+    or reject those — ``raw_text`` plus a string amount/unit preserve display
+    fidelity. This table is the authoritative structured source the user-created
+    recipes phase makes editable, and the suggestions query later joins on
+    ``ingredient_id``.
+    """
+    __tablename__ = "recipe_ingredients"
+    id = db.Column(db.Integer, primary_key=True)
+    recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id"), nullable=False)
+    ingredient_id = db.Column(db.Integer, db.ForeignKey("ingredients.id"), nullable=True)
+    raw_text = db.Column(db.String, nullable=False)
+    amount = db.Column(db.String, nullable=True)
+    unit = db.Column(db.String, nullable=True)
+    to_buy = db.Column(db.Boolean, default=False, nullable=False)
+    position = db.Column(db.Integer, nullable=False)
+
+    # Read-only link to the catalogue ingredient (None when unmatched).
+    ingredient = db.relationship("Ingredient")

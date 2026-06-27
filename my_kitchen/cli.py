@@ -155,6 +155,16 @@ def register_cli(app):
         ok = run_resolver_eval(threshold=threshold, echo=click.echo)
         raise SystemExit(0 if ok else 1)
 
+    @app.cli.command("resolve-report")
+    def resolve_report():
+        """Match-rate report over the REAL recipe_ingredients rows (Phase 3b):
+        overall + by-to_buy match rate, per-method counts, and the distinct
+        unmatched raw_text values (catalogue-gap / alias candidates). This is
+        3b's validation in place of UI — it measures the resolver on real Gemini
+        output rather than the 28-case golden set."""
+        from .resolver.report import run_resolve_report
+        run_resolve_report(echo=click.echo)
+
     @app.shell_context_processor
     def shell_context():
         return {

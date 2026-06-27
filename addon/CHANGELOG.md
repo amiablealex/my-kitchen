@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.10.0
+- Groundwork for "what can I cook now?" suggestions: every new recipe's
+  ingredients are now linked to the shared ingredient catalogue behind the
+  scenes. No visible change — recipe pages and the generation prompt are exactly
+  as before.
+- Applied as a fresh rebuild onto the new, larger ingredient catalogue: saved
+  recipes, favourites and history are cleared, and a new login password is
+  generated (shown in the add-on log; set your own with `flask set-password`).
+  Back up /data first if you want a copy of the old data.
+- Additive schema: a new `recipe_ingredients` table plus provenance fields on
+  recipes (source / meal type / author). The generation prompt is unchanged.
+
 ## 0.9.0
 - Recipe generation now runs in the background. Generating no longer holds the
   page open for the whole wait: the "Lets Cook" flow starts the job and shows a

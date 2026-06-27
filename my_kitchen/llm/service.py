@@ -1,17 +1,39 @@
 import threading
 
 from ..extensions import db
-from ..models import Ingredient, Equipment, Generation, Recipe, User, DEFAULT_MEAL_TYPE, meal_type_takes_cuisine
+from ..models import (
+    Ingredient, Equipment, Generation, Recipe, RecipeIngredient, User,
+    DEFAULT_MEAL_TYPE, meal_type_takes_cuisine,
+)
 from .prompt import SYSTEM_PROMPT, build_user_prompt
 from .schema import extract_json, validate_and_normalize
 from .providers import get_provider, ProviderError
 from .seeds import pick_seed
+# Deterministic free-text -> catalogue resolver (Phase 3a), wired into the write
+# path here in 3b. build_index is built ONCE per generation and reused; the index
+# is plain data (no ORM objects), so it's safe to use across both recipes.
+from ..resolver import build_index, resolve_with_index
+from ..resolver.db import load_catalogue
+from ..resolver.aliases import ALIASES
 
 MAX_ATTEMPTS = 2  # initial call + one retry on malformed output, per the spec
 
 def default_user_id():
     u = User.query.first()
     return u.id if u else None
+
+
+def _text_or_none(value):
+    """Store an AI ingredient amount/unit verbatim as text. The model emits
+    `amount` untouched — it may be a number (2), a string ("a splash", "½"), or
+    empty — so we stringify and treat empty/whitespace as NULL. `unit` is already
+    a (possibly empty) string. raw_text carries the full display string anyway;
+    this just keeps the structured columns faithful without a numeric type that
+    would reject non-numeric amounts."""
+    if value is None:
+        return None
+    s = str(value).strip()
+    return s or None
 
 
 def _is_truncated(finish_reason):
@@ -242,21 +264,55 @@ def _run_generation_job(app, generation_id, user_prompt, brief):
                 db.session.commit()
                 return
 
+            # Build the resolver index ONCE for this generation, before the recipe
+            # loop. load_catalogue() hits the DB (active ingredients incl. staples,
+            # excl. retired); building the index per-ingredient would be needlessly
+            # slow. It's plain data, reused for both recipes. Runs inside this
+            # thread's app context + session (Phase 12), which load_catalogue()
+            # needs — already established here. Generation stays SEALED: this is a
+            # strictly post-hoc pass over the model's free-text output.
+            index = build_index(load_catalogue(), ALIASES)
+
             for r in normalized:
-                db.session.add(Recipe(
+                recipe = Recipe(
                     generation_id=gen.id,
                     title=r["title"],
                     blurb=r["blurb"],
                     intro=r["intro"],
                     servings=r["servings"] or brief["servings"],
-                    ingredients_json=r["ingredients"],
+                    ingredients_json=r["ingredients"],  # unchanged — still the display source this phase
                     prep_steps_json=r["prep"],
                     cook_steps_json=r["cook"],
                     tips_json=r["tips"],
                     raw_response=last_raw,
-                ))
+                    # Keystone meta (Phase 3b): provenance + forward-copied fields so
+                    # post-3b recipes are suggestion-ready.
+                    source="ai",
+                    meal_type=gen.meal_type,
+                    created_by_user_id=gen.created_by_user_id,
+                )
+                # Resolve each free-text ingredient to a catalogue id and write a
+                # structured recipe_ingredients row. Resolve the `item` STRING only;
+                # amount/unit/to_buy/position are preserved verbatim. to_buy items
+                # are resolved too — to_buy means not-in-stock, not off-catalogue, so
+                # many still link. Unmatched -> ingredient_id None (degrades
+                # gracefully). Appended via the relationship so the rows land in the
+                # SAME atomic commit as the recipe + status="done" below — a poll on
+                # the other gunicorn worker never sees a half-linked recipe.
+                for position, ing in enumerate(r["ingredients"]):
+                    item = ing.get("item", "")
+                    result = resolve_with_index(item, index)
+                    recipe.ingredients.append(RecipeIngredient(
+                        raw_text=item,
+                        amount=_text_or_none(ing.get("amount")),
+                        unit=_text_or_none(ing.get("unit")),
+                        to_buy=bool(ing.get("to_buy", False)),
+                        position=position,
+                        ingredient_id=result.ingredient_id,
+                    ))
+                db.session.add(recipe)
             gen.status = "done"
-            db.session.commit()  # recipes + status="done" land together, atomically
+            db.session.commit()  # recipes + recipe_ingredients + status="done" land together, atomically
         except Exception as e:
             # Truly unexpected (e.g. a DB error mid-write). Roll back the broken
             # transaction, then record the failure on a freshly-fetched row.
