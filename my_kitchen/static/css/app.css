@@ -579,3 +579,31 @@ th { color: var(--text-muted); font-weight: 600; }
   * { transition: none !important; animation: none !important; }
   .gen-spinner { border-top-color: var(--accent-3); }
 }
+
+/* ---- recipe create/edit form (Phase 4b) ---- */
+.rf-form label { display:block; margin-bottom:var(--space-3); }
+.rf-grid { display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3); }
+.rf-section { margin-top:var(--space-4); }
+.rf-ing-list, .rf-step-list { list-style:none; padding:0; margin:0 0 var(--space-2);
+  display:flex; flex-direction:column; gap:var(--space-2); }
+.rf-ing-row, .rf-step-row { background:var(--surface); border-radius:var(--radius); padding:var(--space-3); }
+.rf-ing-pick { display:flex; align-items:center; gap:var(--space-2); flex-wrap:wrap; }
+.rf-ing-chosen { font-weight:600; }
+.rf-ing-chosen--empty { color:var(--text-muted); font-weight:400; font-style:italic; }
+.rf-ing-fields { display:flex; align-items:center; gap:var(--space-2); margin-top:var(--space-2); flex-wrap:wrap; }
+.rf-ing-fields input[type="text"] { max-width:9rem; }
+.rf-step-row { display:flex; flex-direction:column; gap:var(--space-2); }
+.rf-step-row .rf-step-timer { max-width:9rem; }
+.rf-row-remove { margin-left:auto; background:none; border:none; color:var(--text-muted);
+  font-size:1.4rem; line-height:1; cursor:pointer; }
+.rf-picker { background:var(--surface-2); border-radius:var(--radius); padding:var(--space-3); margin-top:var(--space-2); }
+.rf-picker-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-2); }
+.rf-picker-results { list-style:none; padding:0; margin:var(--space-2) 0; max-height:14rem; overflow:auto; }
+.rf-result-btn { display:block; width:100%; text-align:left; background:none; border:none;
+  color:var(--text); padding:var(--space-2); border-radius:var(--radius-sm,8px); cursor:pointer; }
+.rf-result-btn:hover { background:var(--surface); }
+.rf-result-empty { color:var(--text-muted); padding:var(--space-2); }
+.rf-picker-add-body { display:flex; flex-direction:column; gap:var(--space-2); margin-top:var(--space-2); }
+.rf-add-error { color:var(--accent-4); }
+.rf-actions { display:flex; gap:var(--space-3); margin-top:var(--space-5); }
+@media (max-width:480px){ .rf-grid{ grid-template-columns:1fr; } }

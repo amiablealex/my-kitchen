@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% set is_edit = (mode == "edit") %}
+{% block title %}{{ "Edit recipe" if is_edit else "Create a recipe" }} — My Kitchen{% endblock %}
+{% block page_title %}{{ "Edit recipe" if is_edit else "Create a recipe" }}{% endblock %}
+{% block content %}
+  <h1 class="display">{{ "Edit recipe" if is_edit else "Create a recipe" }}</h1>
+  <p><a class="back-link" href="{{ url_for('history.index') }}">{{ icon('arrow_back') }} Recipes</a></p>
+
+  <form method="post" action="{{ form_action }}" id="recipe-form" class="form rf-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <label>Title
+      <input type="text" name="title" id="rf-title" required maxlength="200">
+    </label>
+    <label>Blurb <span class="muted">(one-line teaser, optional)</span>
+      <input type="text" name="blurb" id="rf-blurb" maxlength="300">
+    </label>
+    <label>Intro <span class="muted">(a sentence or two of context, optional)</span>
+      <textarea name="intro" id="rf-intro" rows="3"></textarea>
+    </label>
+
+    <div class="rf-grid">
+      <label>Servings
+        <input type="number" name="servings" id="rf-servings" min="1" value="2" required>
+      </label>
+      <label>Meal type
+        <select name="meal_type" id="rf-meal-type">
+          {% for name in meal_types %}
+            <option value="{{ name }}">{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+
+    <section class="rf-section">
+      <div class="section-head"><h2>Ingredients</h2></div>
+      <p class="muted">Each line links to a catalogue ingredient. Add the amount and unit as you'd write them.</p>
+      <ul class="rf-ing-list" id="rf-ing-list"></ul>
+      <button type="button" class="btn btn--sm btn--secondary" id="rf-add-ing">{{ icon('add') }} Add ingredient</button>
+    </section>
+
+    <section class="rf-section">
+      <div class="section-head"><h2>Prep <span class="muted">(optional)</span></h2></div>
+      <ul class="rf-step-list" id="rf-prep-list" data-prefix="prep" data-timer="1"></ul>
+      <button type="button" class="btn btn--sm btn--secondary rf-add-step" data-target="rf-prep-list">{{ icon('add') }} Add prep step</button>
+    </section>
+
+    <section class="rf-section">
+      <div class="section-head"><h2>Cook</h2></div>
+      <ul class="rf-step-list" id="rf-cook-list" data-prefix="cook" data-timer="1"></ul>
+      <button type="button" class="btn btn--sm btn--secondary rf-add-step" data-target="rf-cook-list">{{ icon('add') }} Add cook step</button>
+    </section>
+
+    <section class="rf-section">
+      <div class="section-head"><h2>Tips <span class="muted">(optional)</span></h2></div>
+      <ul class="rf-step-list" id="rf-tips-list" data-prefix="tips" data-timer="0"></ul>
+      <button type="button" class="btn btn--sm btn--secondary rf-add-step" data-target="rf-tips-list">{{ icon('add') }} Add tip</button>
+    </section>
+
+    <div class="rf-actions">
+      <button type="submit" class="btn btn--primary">{{ "Save changes" if is_edit else "Create recipe" }}</button>
+      <a class="btn btn--secondary" href="{{ url_for('history.index') }}">Cancel</a>
+    </div>
+  </form>
+
+  {# Shared catalogue picker — moved inline under the active ingredient row. #}
+  <div class="rf-picker" id="rf-picker" hidden>
+    <div class="rf-picker-head">
+      <span>Link an ingredient</span>
+      <button type="button" class="ri-edit-btn" id="rf-picker-close" aria-label="Close">{{ icon('close') }}</button>
+    </div>
+    <label class="rf-picker-search-label">Search your catalogue
+      <input type="search" id="rf-picker-search" autocomplete="off" placeholder="start typing an ingredient…">
+    </label>
+    <ul class="rf-picker-results" id="rf-picker-results"></ul>
+    <details class="rf-picker-add" id="rf-picker-add">
+      <summary>Not in your catalogue? Add it</summary>
+      <div class="rf-picker-add-body">
+        <label>Name <input type="text" id="rf-add-name"></label>
+        <label>Category
+          <select id="rf-add-category">
+            {% for c in categories %}
+              <option value="{{ c.id }}">{{ c.name }} ({{ c.section }})</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="rf-add-staple"><input type="checkbox" id="rf-add-staple"> Staple (assumed always available)</label>
+        <p class="rf-add-error" id="rf-add-error" hidden></p>
+        <button type="button" class="btn btn--sm btn--primary" id="rf-add-submit">{{ icon('add') }} Add &amp; use</button>
+      </div>
+    </details>
+  </div>
+
+  <script type="application/json" id="rf-catalogue-data">{{ link_catalogue | tojson }}</script>
+  <script type="application/json" id="rf-prefill-data">{{ prefill | tojson }}</script>
+  <script type="application/json" id="rf-urls">{{ {"add": url_for("wizard.recipe_ingredient_add")} | tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='recipe_form.js') }}"></script>
+{% endblock %}
