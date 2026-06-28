@@ -635,3 +635,25 @@ th { color: var(--text-muted); font-weight: 600; }
 }
 .recipes-filters { display:flex; gap:var(--space-3); flex-wrap:wrap; align-items:flex-end; }
 .recipe-source-dot .source-dot { width:22px; height:22px; vertical-align:-4px; }
+
+/* ---- wizard suggestions (Phase 18 — the keystone payoff) ---- */
+.suggestions { margin-bottom: var(--space-5); }
+.sugg-scroller {
+  display: flex; gap: var(--space-3);
+  overflow-x: auto; padding-bottom: var(--space-2);
+  scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+}
+.sugg-card {
+  flex: 0 0 78%; max-width: 280px; scroll-snap-align: start;
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface); border: 1px solid var(--divider);
+  border-radius: var(--radius); box-shadow: var(--shadow-1);
+  color: var(--text); text-decoration: none;
+}
+.sugg-card:hover { background: var(--surface-2); text-decoration: none; }
+.sugg-card-top { display: flex; align-items: center; }
+.sugg-card-title { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; line-height: 1.2; }
+.sugg-card-tags { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.sugg-card-serves { font-size: var(--fs-small); }
+@media (min-width: 620px) { .sugg-card { flex-basis: 240px; } }

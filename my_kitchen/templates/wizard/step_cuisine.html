@@ -27,7 +27,7 @@
         {% for c in cuisines %}
           <label class="option">
             <input type="radio" name="cuisine" value="{{ c }}" {% if c == current_cuisine %}checked{% endif %}>
-            <span>{{ c }}</span>
+            <span>{{ "Any" if c == surprise_value else c }}</span>
           </label>
         {% endfor %}
       </div>

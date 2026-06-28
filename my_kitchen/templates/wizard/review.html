@@ -1,84 +1,106 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_source.html" import source_dot %}
 {% block title %}Cook — Review{% endblock %}
 {% block page_title %}Lets Cook{% endblock %}
 {% block content %}
   <h1>Ready to cook?</h1>
-  {# CP1 bare list — verifies the suggestions query; replaced by cards in CP2. #}
+
+  {# ---- Suggestions: saved recipes cookable right now that fit the brief
+         (Phase 18, the keystone payoff). Pure DB query — see wizard/suggestions.py.
+         Cards tap through to the existing recipe page; browser back re-renders
+         this page from the preserved wizard session (no special state). ---- #}
   {% if suggestions %}
-    <div class="card section">
-      <h2 class="card-title">You can make these now ({{ suggestions|length }})</h2>
-      <ul>
+    <section class="section suggestions">
+      <h2 class="card-title">Make something from your bank</h2>
+      <p class="lead">Saved recipes you can cook right now with what’s in stock.</p>
+      <div class="sugg-scroller">
         {% for r in suggestions %}
-          <li>
-            <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>
-            <span class="muted">— {{ r.meal_type }}{% if r.cuisine %} · {{ r.cuisine }}{% endif %} · serves {{ r.servings }} · {{ r.source }}{% if r.source == 'ai' and r.was_chosen %} (chosen){% endif %}</span>
-          </li>
+          <a class="sugg-card" href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">
+            <span class="sugg-card-top">
+              {{ source_dot(r.source) }}
+              <span class="sugg-card-title">{{ r.title }}</span>
+            </span>
+            {% if r.meal_type or r.cuisine or r.time_band %}
+              <span class="sugg-card-tags">
+                {% if r.meal_type %}<span class="tag-pill tag-pill--meal">{{ r.meal_type }}</span>{% endif %}
+                {% if r.cuisine %}<span class="tag-pill tag-pill--cuisine">{{ r.cuisine }}</span>{% endif %}
+                {% if r.time_band %}<span class="badge badge--muted">{{ "Quick" if r.time_band == "quick" else "Relaxed" }}</span>{% endif %}
+              </span>
+            {% endif %}
+            <span class="sugg-card-serves muted">Serves {{ r.servings }}</span>
+          </a>
         {% endfor %}
-      </ul>
-    </div>
-  {% else %}
-    <p class="muted">(No saved recipes match the brief yet.)</p>
+      </div>
+    </section>
   {% endif %}
 
-  <p class="lead">Here's the brief. Go back to change anything.</p>
-
-  <div class="card section">
-    <h2 class="card-title">Ingredients to use up</h2>
-    {% if selected %}
-      <ul>
-        {% for ing in selected %}
-          <li>{{ ing.name }}{% if ing.note %} <span class="muted">({{ ing.note }})</span>{% endif %}</li>
-        {% endfor %}
-      </ul>
+  {# ---- Generate path (flow unchanged). Carries its own brief recap so the user
+         sees what a NEW recipe would be built from. ---- #}
+  <section class="section">
+    {% if suggestions %}
+      <h2 class="card-title">Nothing take your fancy?</h2>
+      <p class="lead">Generate a new recipe from this brief — go back to change anything.</p>
     {% else %}
-      <p class="muted">None chosen — recipes will lean on staples and suggested extras.</p>
+      <p class="lead">Nothing in your bank matches yet — let’s make something. Here’s the brief; go back to change anything.</p>
     {% endif %}
-  </div>
 
-  <div class="card section">
-    <h2 class="card-title">Cooking for</h2>
-    <ul>
-      {% for u in cooking_for_users %}
-        <li>{{ u.name }}{% if u.dietary_tags %} <span class="muted">({{ u.dietary_tags | map(attribute='name') | join(', ') }})</span>{% endif %}</li>
-      {% endfor %}
-      {% if guest_count %}<li>{{ guest_count }} guest{{ "s" if guest_count != 1 else "" }} <span class="muted">(no dietary data)</span></li>{% endif %}
-    </ul>
-    <p class="muted">Serves {{ servings }}.</p>
-  </div>
-
-  {% if allergies or preferences %}
     <div class="card section">
-      <h2 class="card-title">Dietary</h2>
-      {% if allergies %}<p><strong>Allergies (avoided entirely):</strong> {{ allergies | join(', ') }}.</p>{% endif %}
-      {% if preferences %}<p><strong>Preferences:</strong> {{ preferences | join(', ') }}.</p>{% endif %}
+      <h2 class="card-title">Ingredients to use up</h2>
+      {% if selected %}
+        <ul>
+          {% for ing in selected %}
+            <li>{{ ing.name }}{% if ing.note %} <span class="muted">({{ ing.note }})</span>{% endif %}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">None chosen — recipes will lean on staples and suggested extras.</p>
+      {% endif %}
     </div>
-  {% endif %}
 
-  <div class="card section">
-    <h2 class="card-title">Settings</h2>
-    <ul>
-      <li>Meal type: {{ meal_type }}</li>
-      {% if cuisine %}<li>Cuisine: {{ cuisine }}</li>{% endif %}
-      <li>Time: {{ time_label }}</li>
-    </ul>
-  </div>
-
-  <form method="post" action="{{ url_for('wizard.generate') }}" id="generate-form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="btn-row">
-      <a class="btn btn--secondary" href="{{ url_for('wizard.step_cooking_for') }}">{{ icon('arrow_back') }} Back</a>
-      <button type="submit" class="btn btn--primary" id="generate-btn">{{ icon('cooking') }} Generate recipes</button>
+    <div class="card section">
+      <h2 class="card-title">Cooking for</h2>
+      <ul>
+        {% for u in cooking_for_users %}
+          <li>{{ u.name }}{% if u.dietary_tags %} <span class="muted">({{ u.dietary_tags | map(attribute='name') | join(', ') }})</span>{% endif %}</li>
+        {% endfor %}
+        {% if guest_count %}<li>{{ guest_count }} guest{{ "s" if guest_count != 1 else "" }} <span class="muted">(no dietary data)</span></li>{% endif %}
+      </ul>
+      <p class="muted">Serves {{ servings }}.</p>
     </div>
-  </form>
+
+    {% if allergies or preferences %}
+      <div class="card section">
+        <h2 class="card-title">Dietary</h2>
+        {% if allergies %}<p><strong>Allergies (avoided entirely):</strong> {{ allergies | join(', ') }}.</p>{% endif %}
+        {% if preferences %}<p><strong>Preferences:</strong> {{ preferences | join(', ') }}.</p>{% endif %}
+      </div>
+    {% endif %}
+
+    <div class="card section">
+      <h2 class="card-title">Settings</h2>
+      <ul>
+        <li>Meal type: {{ meal_type }}</li>
+        {% if cuisine_label %}<li>Cuisine: {{ cuisine_label }}</li>{% endif %}
+        <li>Time: {{ time_label }}</li>
+      </ul>
+    </div>
+
+    <form method="post" action="{{ url_for('wizard.generate') }}" id="generate-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="btn-row">
+        <a class="btn btn--secondary" href="{{ url_for('wizard.step_cooking_for') }}">{{ icon('arrow_back') }} Back</a>
+        <button type="submit" class="btn btn--primary" id="generate-btn">{{ icon('cooking') }} Generate recipes</button>
+      </div>
+    </form>
+  </section>
 {% endblock %}
 
 {% block scripts %}
   <script>
-    // Disable-on-submit guard. The POST is now fast (it starts the background
-    // job and redirects to the generating page, where the wait UI lives). This
-    // prevents a visible double-tap before the redirect; the server's session
-    // idempotency is the real backstop — a resubmit resumes the same wait.
+    // Disable-on-submit guard. The POST is fast (starts the background job and
+    // redirects to the generating page). The server's session idempotency is the
+    // real backstop — a resubmit resumes the same wait.
     document.getElementById("generate-form").addEventListener("submit", function () {
       var btn = document.getElementById("generate-btn");
       btn.disabled = true;

@@ -136,7 +136,8 @@ def step_cuisine():
         meal_types=MEAL_TYPES,
         current_meal_type=w.get("meal_type", DEFAULT_MEAL_TYPE),
         cuisines=WIZARD_CUISINES,
-        current_cuisine=w.get("cuisine") or "Surprise me",
+        current_cuisine=w.get("cuisine") or SURPRISE_ME,
+        surprise_value=SURPRISE_ME,
     )
 
 
