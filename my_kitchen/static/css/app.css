@@ -607,3 +607,4 @@ th { color: var(--text-muted); font-weight: 600; }
 .rf-add-error { color:var(--accent-4); }
 .rf-actions { display:flex; gap:var(--space-3); margin-top:var(--space-5); }
 @media (max-width:480px){ .rf-grid{ grid-template-columns:1fr; } }
+.rf-head-actions { display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap; }

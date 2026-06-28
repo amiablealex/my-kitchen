@@ -22,7 +22,12 @@
           {% if r.blurb %}<div class="muted">{{ r.blurb }}</div>{% endif %}
           <div class="row-meta" style="margin-top:var(--space-2)">
             {{ r.created_at | localdt }}
-            — cooked by {{ r.generation.created_by.name if r.generation.created_by else "unknown" }}
+            —
+            {% if r.generation %}
+              cooked by {{ r.generation.created_by.name if r.generation.created_by else "unknown" }}
+            {% else %}
+              created by {{ r.author.name if r.author else "unknown" }}
+            {% endif %}
           </div>
         </li>
       {% endfor %}

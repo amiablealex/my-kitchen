@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request
 from flask_login import current_user
+from datetime import datetime
 
 from ..extensions import db
 from ..models import Generation, Recipe, User
@@ -9,15 +10,23 @@ history_bp = Blueprint("history", __name__, url_prefix="/history")
 
 @history_bp.route("/")
 def index():
-    """Generations newest-first, optionally filtered to one cook
-    (created_by_user_id via ?user=<id>). Each is one of three states:
-    chosen (a recipe was picked), unchosen (two recipes, none picked),
-    or error/incomplete (no recipes — failed generation)."""
+    """A merged, newest-first list of the recipe bank: AI generations (chosen /
+    unchosen / error, as before) plus hand-created (source='user') recipes, which
+    have no generation. The Cook filter works for both — generations carry the
+    cook on created_by_user_id, and user recipes carry the author on the same
+    column on the recipe row — so each source is filtered on its own table."""
     user_id = request.args.get("user", type=int)
-    q = Generation.query
+
+    gq = Generation.query
     if user_id:
-        q = q.filter(Generation.created_by_user_id == user_id)
-    generations = q.order_by(Generation.created_at.desc()).all()
+        gq = gq.filter(Generation.created_by_user_id == user_id)
+    generations = gq.all()
+
+    rq = Recipe.query.filter(Recipe.source == "user")
+    if user_id:
+        rq = rq.filter(Recipe.created_by_user_id == user_id)
+    user_recipes = rq.all()
+
     rows = []
     for gen in generations:
         if gen.recipes:
@@ -26,10 +35,17 @@ def index():
         else:
             chosen = None
             status = "error"
-        rows.append({"gen": gen, "status": status, "chosen": chosen, "recipes": gen.recipes})
-    # All users (incl. retired — they still hold history) drive the filter dropdown.
+        rows.append({"kind": "generation", "sort_at": gen.created_at,
+                     "gen": gen, "status": status, "chosen": chosen,
+                     "recipes": gen.recipes})
+    for r in user_recipes:
+        rows.append({"kind": "user", "sort_at": r.created_at, "recipe": r})
+
+    # Both created_at columns come back naive-UTC on re-query (same convention),
+    # so they're directly comparable; created_at is NOT NULL on both tables.
+    rows.sort(key=lambda row: row["sort_at"] or datetime.min, reverse=True)
+
     users = User.query.order_by(db.func.lower(User.name)).all()
-    # Star markers reflect the *logged-in* user's favourites, not a global flag.
     fav_ids = {r.id for r in current_user.favourite_recipes}
     return render_template("history/index.html", rows=rows, users=users,
                            selected_user_id=user_id, fav_ids=fav_ids)
