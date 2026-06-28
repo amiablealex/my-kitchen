@@ -1,6 +1,15 @@
 # Changelog
 
-## 0.12.1
+## 0.14.0 — Recipe suggestions at "Lets cook"
+
+- The review step now shows saved recipes you can cook **right now** that fit
+  your brief, as tappable cards — before offering to generate a new one. A
+  deterministic, no-AI query over your linked recipe bank (the keystone payoff).
+- Recipes carry a quick/relaxed **time badge**: AI recipes inherit it from the
+  cook; user recipes set it on the create/edit form.
+- The cuisine step's "Surprise me" now reads **Any** (same behaviour).
+
+## 0.13.0
 - Filter the recipes list by source (AI generated / created by hand).
 - Recipes are now colour-dotted by origin across the recipes list, favourites,
   and the recipe page — a playful AI pinwheel vs a solid dot for your own.
