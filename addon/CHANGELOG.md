@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.1
+- Filter the recipes list by source (AI generated / created by hand).
+- Recipes are now colour-dotted by origin across the recipes list, favourites,
+  and the recipe page — a playful AI pinwheel vs a solid dot for your own.
+
 ## 0.12.0
 - Recipes now carry meal-type and cuisine tags, editable inline on the recipe
   page (cuisine shown only for cuisine-bearing meal types).

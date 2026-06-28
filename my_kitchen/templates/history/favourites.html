@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_source.html" import source_dot %}
 {% block title %}Favourites — My Kitchen{% endblock %}
 {% block page_title %}Favourites{% endblock %}
 {% block content %}
@@ -16,7 +17,7 @@
       {% for r in recipes %}
         <li class="card">
           <div class="row-title">
-            <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>
+            {{ source_dot(r.source) }}<a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>
             <span style="color:var(--accent-2)">{{ icon('star_fill') }}</span>
           </div>
           {% if r.blurb %}<div class="muted">{{ r.blurb }}</div>{% endif %}

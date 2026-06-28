@@ -1,11 +1,16 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_source.html" import source_dot %}
 {% block title %}{{ recipe.title }} — My Kitchen{% endblock %}
 {% block page_title %}Recipe{% endblock %}
 {% block content %}
   <h1 class="display recipe-title">{{ recipe.title }}</h1>
-  <p class="recipe-blurb">{{ recipe.blurb }}</p>
-  <p class="recipe-serves">Serves {{ recipe.servings }}.</p>
+  {% if recipe.blurb %}
+    <p class="recipe-blurb recipe-source-dot">{{ source_dot(recipe.source) }}{{ recipe.blurb }}</p>
+    <p class="recipe-serves">Serves {{ recipe.servings }}.</p>
+  {% else %}
+    <p class="recipe-serves recipe-source-dot">{{ source_dot(recipe.source) }}Serves {{ recipe.servings }}.</p>
+  {% endif %}
 
   <div class="recipe-tags" id="recipe-tags"
        data-tags-url="{{ url_for('wizard.recipe_set_tags', recipe_id=recipe.id) }}">
