@@ -40,6 +40,14 @@
           {% endfor %}
         </select>
       </label>
+      <label>Time <span class="muted">(optional)</span>
+        <select name="time_band" id="rf-time-band">
+          <option value="">No time</option>
+          {% for value, label in time_bands %}
+            <option value="{{ value }}"{% if prefill.time_band == value %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
     </div>
 
     <section class="rf-section">

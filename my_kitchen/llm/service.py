@@ -290,6 +290,7 @@ def _run_generation_job(app, generation_id, user_prompt, brief):
                     source="ai",
                     meal_type=gen.meal_type,
                     cuisine=recipe_cuisine_from(gen.cuisine),
+                    time_band=gen.time_band,
                     created_by_user_id=gen.created_by_user_id,
                 )
                 # Resolve each free-text ingredient to a catalogue id and write a

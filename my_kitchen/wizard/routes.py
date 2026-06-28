@@ -574,6 +574,11 @@ def _save_recipe_from_form(recipe=None):
     meal_type, cuisine = _normalise_tags(
         request.form.get("meal_type"), request.form.get("cuisine")
     )
+    # time_band is a free-standing display tag (Phase 18) — quick | relaxed | None.
+    # Not gated by meal type (unlike cuisine); an unrecognised value -> None.
+    time_band = (request.form.get("time_band") or "").strip()
+    if time_band not in dict(TIME_BANDS):
+        time_band = None
     try:
         servings = int(request.form.get("servings", ""))
     except (TypeError, ValueError):
@@ -613,6 +618,7 @@ def _save_recipe_from_form(recipe=None):
     recipe.servings = servings
     recipe.meal_type = meal_type
     recipe.cuisine = cuisine
+    recipe.time_band = time_band
     recipe.prep_steps_json = prep
     recipe.cook_steps_json = cook
     recipe.tips_json = tips or None
@@ -660,6 +666,7 @@ def _collect_prefill_from_form():
         "servings": request.form.get("servings") or "",
         "meal_type": request.form.get("meal_type") or "",
         "cuisine": request.form.get("cuisine") or "",
+        "time_band": request.form.get("time_band") or "",
         "prep": steps("prep", True),
         "cook": steps("cook", True),
         "tips": steps("tips", False),
@@ -694,6 +701,7 @@ def _recipe_to_prefill(recipe):
         "servings": str(recipe.servings or ""),
         "meal_type": recipe.meal_type or "",
         "cuisine": recipe.cuisine or "",
+        "time_band": recipe.time_band or "",
         "prep": steps(recipe.prep_steps_json, True),
         "cook": steps(recipe.cook_steps_json, True),
         "tips": steps(recipe.tips_json, False),
@@ -708,7 +716,7 @@ def _form_context(mode, recipe=None, from_form=False):
         prefill = _recipe_to_prefill(recipe)
     else:
         prefill = {"title": "", "blurb": "", "intro": "", "servings": "2",
-                   "meal_type": "", "cuisine": "",
+                   "meal_type": "", "cuisine": "", "time_band": "",
                    "prep": [], "cook": [], "tips": [], "ingredients": []}
     link_catalogue = [
         {"id": i.id, "name": i.name}
@@ -724,6 +732,7 @@ def _form_context(mode, recipe=None, from_form=False):
         "prefill": prefill, "link_catalogue": link_catalogue,
         "categories": categories, "meal_types": MEAL_TYPE_NAMES,
         "cuisines": CUISINES, "cuisine_meal_types": CUISINE_MEAL_TYPES,
+        "time_bands": TIME_BANDS,
     }
 
 
