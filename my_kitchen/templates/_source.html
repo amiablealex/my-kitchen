@@ -1,0 +1,10 @@
+{# Source marker (Phase 18 / 4c). A small colour-coded dot — no pill, no text —
+   distinguishing a recipe's origin. AI = a four-quadrant pinwheel in the wizard
+   accents (the generative signature, tied to the cook wizard's step dots);
+   user = solid lime; imported = solid orange (reserved for web/photo ingestion).
+   Decorative only (aria-hidden): the source is also carried textually by the
+   "cooked by" / "created by" meta and the Source filter. #}
+{% macro source_dot(source) %}
+{%- set kind = 'user' if source == 'user' else ('imported' if source == 'imported' else 'ai') -%}
+<span class="source-dot source-dot--{{ kind }}" aria-hidden="true"></span>
+{%- endmacro %}

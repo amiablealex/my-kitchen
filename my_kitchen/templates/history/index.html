@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_source.html" import source_dot %}
 {% block title %}Recipes — My Kitchen{% endblock %}
 {% block page_title %}Recipes{% endblock %}
 {% block content %}
@@ -10,7 +11,7 @@
     <a class="back-link" href="{{ url_for('history.favourites') }}">{{ icon('star') }} Favourites</a>
   </p>
 
-  <form method="get" action="{{ url_for('history.index') }}" class="form" style="margin-bottom:var(--space-4)">
+  <form method="get" action="{{ url_for('history.index') }}" class="form recipes-filters" style="margin-bottom:var(--space-4)">
     <label>Cook
       <select name="user" onchange="this.form.submit()">
         <option value="">All cooks</option>
@@ -19,15 +20,22 @@
         {% endfor %}
       </select>
     </label>
+    <label>Source
+      <select name="source" onchange="this.form.submit()">
+        <option value="">All sources</option>
+        <option value="ai" {% if selected_source == 'ai' %}selected{% endif %}>AI generated</option>
+        <option value="user" {% if selected_source == 'user' %}selected{% endif %}>Created by hand</option>
+      </select>
+    </label>
     <noscript><button type="submit" class="btn btn--secondary btn--sm">Filter</button></noscript>
   </form>
 
   {% if not rows %}
-    {% if selected_user_id %}
-      <div class="empty">{{ icon('menu_book') }}<p>Nothing cooked by this person yet.</p>
+    {% if selected_user_id or selected_source %}
+      <div class="empty">{{ icon('menu_book') }}<p>No recipes match these filters.</p>
         <a class="btn btn--secondary" href="{{ url_for('history.index') }}">Show all</a></div>
     {% else %}
-      <div class="empty">{{ icon('menu_book') }}<p>Nothing cooked yet.</p>
+      <div class="empty">{{ icon('menu_book') }}<p>Nothing here yet.</p>
         <a class="btn btn--primary" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Lets cook</a></div>
     {% endif %}
   {% else %}
@@ -40,6 +48,7 @@
               — created by {{ row.recipe.author.name if row.recipe.author else "unknown" }}
             </div>
             <div class="row-title" style="margin-top:var(--space-2)">
+              {{ source_dot(row.recipe.source) }}<a href="{{ url_for('wizard.recipe', recipe_id=row.recipe.id) }}">{{ row.recipe.title }}</a>
               <a href="{{ url_for('wizard.recipe', recipe_id=row.recipe.id) }}">{{ row.recipe.title }}</a>
               {% if row.recipe.id in fav_ids %} <span style="color:var(--accent-2)">{{ icon('star_fill') }}</span>{% endif %}
             </div>
@@ -55,11 +64,13 @@
 
             {% if row.status == "chosen" %}
               <div class="row-title" style="margin-top:var(--space-2)">
+                {{ source_dot('ai') }}<a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a>
                 <a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a>
                 {% if row.chosen.id in fav_ids %} <span style="color:var(--accent-2)">{{ icon('star_fill') }}</span>{% endif %}
               </div>
             {% elif row.status == "unchosen" %}
               <div style="margin-top:var(--space-2)">
+                {{ source_dot('ai') }}<span class="muted">Generated (none chosen):</span>
                 <span class="muted">Generated (none chosen):</span>
                 {% for r in row.recipes %}
                   <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if r.id in fav_ids %} <span style="color:var(--accent-2)">{{ icon('star_fill') }}</span>{% endif %}{% if not loop.last %} · {% endif %}
@@ -67,7 +78,7 @@
                 — <a href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">choose one</a>
               </div>
             {% else %}
-              <div class="muted" style="margin-top:var(--space-2)"><em>Generation failed{% if row.gen.error %}: {{ row.gen.error }}{% endif %}</em></div>
+              <div class="muted" style="margin-top:var(--space-2)">{{ source_dot('ai') }}<em>Generation failed{% if row.gen.error %}: {{ row.gen.error }}{% endif %}</em></div>
             {% endif %}
           </li>
         {% endif %}

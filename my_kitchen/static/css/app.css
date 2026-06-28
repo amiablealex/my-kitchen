@@ -620,3 +620,17 @@ th { color: var(--text-muted); font-weight: 600; }
   margin-top:var(--space-2); background:var(--surface); border-radius:var(--radius); padding:var(--space-3); }
 .tag-edit-actions { display:flex; gap:var(--space-2); }
 .tag-error { color:var(--accent-4); width:100%; }
+
+/* ---- source dots (Phase 18 / 4c) ---- */
+.source-dot { display:inline-block; width:9px; height:9px; border-radius:50%;
+  vertical-align:baseline; margin-right:.5em; flex:0 0 auto; }
+.source-dot--user { background:var(--accent-2); }       /* lime — made by hand */
+.source-dot--imported { background:var(--accent-3); }   /* orange — reserved */
+.source-dot--ai {                                       /* wizard four-colour pinwheel */
+  background:conic-gradient(
+    var(--accent-1) 0deg 90deg,
+    var(--accent-2) 90deg 180deg,
+    var(--accent-3) 180deg 270deg,
+    var(--accent-4) 270deg 360deg);
+}
+.recipes-filters { display:flex; gap:var(--space-3); flex-wrap:wrap; align-items:flex-end; }

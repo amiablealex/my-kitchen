@@ -16,16 +16,26 @@ def index():
     cook on created_by_user_id, and user recipes carry the author on the same
     column on the recipe row — so each source is filtered on its own table."""
     user_id = request.args.get("user", type=int)
+    source = (request.args.get("source") or "").strip().lower()
+    if source not in ("ai", "user"):
+        source = ""  # any other value == no source filter
 
-    gq = Generation.query
-    if user_id:
-        gq = gq.filter(Generation.created_by_user_id == user_id)
-    generations = gq.all()
+    # Source filter is read-side only: it just decides which tables contribute.
+    # "ai" -> generations only; "user" -> user recipes only; "" -> both. Composes
+    # with the Cook filter (AND), which each table still applies on its own column.
+    generations = []
+    if source != "user":
+        gq = Generation.query
+        if user_id:
+            gq = gq.filter(Generation.created_by_user_id == user_id)
+        generations = gq.all()
 
-    rq = Recipe.query.filter(Recipe.source == "user")
-    if user_id:
-        rq = rq.filter(Recipe.created_by_user_id == user_id)
-    user_recipes = rq.all()
+    user_recipes = []
+    if source != "ai":
+        rq = Recipe.query.filter(Recipe.source == "user")
+        if user_id:
+            rq = rq.filter(Recipe.created_by_user_id == user_id)
+        user_recipes = rq.all()
 
     rows = []
     for gen in generations:
@@ -41,14 +51,13 @@ def index():
     for r in user_recipes:
         rows.append({"kind": "user", "sort_at": r.created_at, "recipe": r})
 
-    # Both created_at columns come back naive-UTC on re-query (same convention),
-    # so they're directly comparable; created_at is NOT NULL on both tables.
     rows.sort(key=lambda row: row["sort_at"] or datetime.min, reverse=True)
 
     users = User.query.order_by(db.func.lower(User.name)).all()
     fav_ids = {r.id for r in current_user.favourite_recipes}
     return render_template("history/index.html", rows=rows, users=users,
-                           selected_user_id=user_id, fav_ids=fav_ids)
+                           selected_user_id=user_id, selected_source=source,
+                           fav_ids=fav_ids)
 
 
 @history_bp.route("/favourites")
