@@ -238,6 +238,12 @@ class Recipe(db.Model):
     # the recipe page + the create/edit form; gated by meal type (only cuisine-
     # bearing meal types keep it).
     cuisine = db.Column(db.String, nullable=True)
+    # time_band: the recipe's "quick" | "relaxed" tag (Phase 18). DISPLAY ONLY —
+    # it drives the suggestion card's time badge and is NEVER part of the
+    # suggestions match query. Nullable: AI recipes copy it forward from the
+    # generation; user recipes set it on the create/edit form ("no time" = NULL);
+    # legacy / imported rows may have none.
+    time_band = db.Column(db.String, nullable=True)
     # created_by_user_id: the recipe's author. For AI recipes = the generation's
     # cook. Nullable FK (user/imported provenance comes later).
     created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)

@@ -12,9 +12,10 @@ from ..extensions import db
 from ..models import (
     Ingredient, Category, Generation, Recipe, RecipeIngredient, User,
     SECTION_CHOICES, DEFAULT_MEAL_TYPE, MEAL_TYPES, MEAL_TYPE_NAMES,
-    meal_type_takes_cuisine, CUISINES, WIZARD_CUISINES,
+    meal_type_takes_cuisine, CUISINES, WIZARD_CUISINES, SURPRISE_ME,
 )
 from ..llm.service import start_generation, combined_dietary
+from .suggestions import suggest_recipes
 # Reuse the manage blueprint's ingredient-creation validation rather than
 # duplicating the name/category/staple handling (Phase 4a add-and-link). One-way
 # import — manage.routes doesn't import wizard, so there's no cycle.
@@ -195,13 +196,28 @@ def review():
     )
     guests = int(w.get("guest_count") or 0)
     allergies, preferences = combined_dietary(cooking_for_ids)
+
+    meal_type = w.get("meal_type", DEFAULT_MEAL_TYPE)
+    cuisine = w["cuisine"]
+    # The keystone payoff: deterministic, no-LLM query for saved recipes cookable
+    # right now that fit the brief (see wizard/suggestions.py).
+    suggestions = suggest_recipes(
+        meal_type=meal_type,
+        cuisine=cuisine,
+        must_use_ids=w.get("selected_ingredient_ids") or [],
+    )
+    # Display label for the brief summary: the Surprise sentinel reads as "Any"
+    # (value/behaviour unchanged); None (non-cuisine meal type) shows no line.
+    cuisine_label = None if not cuisine else ("Any" if cuisine == SURPRISE_ME else cuisine)
+
     return render_template(
         "wizard/review.html",
-        selected=selected, meal_type=w.get("meal_type", DEFAULT_MEAL_TYPE),
-        cuisine=w["cuisine"], time_label=time_label,
+        selected=selected, meal_type=meal_type,
+        cuisine=cuisine, cuisine_label=cuisine_label, time_label=time_label,
         servings=len(cooking_for_ids) + guests,
         cooking_for_users=cooking_for_users, guest_count=guests,
         allergies=allergies, preferences=preferences,
+        suggestions=suggestions,
     )
 
 

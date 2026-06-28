@@ -4,6 +4,23 @@
 {% block page_title %}Lets Cook{% endblock %}
 {% block content %}
   <h1>Ready to cook?</h1>
+  {# CP1 bare list — verifies the suggestions query; replaced by cards in CP2. #}
+  {% if suggestions %}
+    <div class="card section">
+      <h2 class="card-title">You can make these now ({{ suggestions|length }})</h2>
+      <ul>
+        {% for r in suggestions %}
+          <li>
+            <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>
+            <span class="muted">— {{ r.meal_type }}{% if r.cuisine %} · {{ r.cuisine }}{% endif %} · serves {{ r.servings }} · {{ r.source }}{% if r.source == 'ai' and r.was_chosen %} (chosen){% endif %}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% else %}
+    <p class="muted">(No saved recipes match the brief yet.)</p>
+  {% endif %}
+
   <p class="lead">Here's the brief. Go back to change anything.</p>
 
   <div class="card section">

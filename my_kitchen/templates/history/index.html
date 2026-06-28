@@ -49,7 +49,6 @@
             </div>
             <div class="row-title" style="margin-top:var(--space-2)">
               {{ source_dot(row.recipe.source) }}<a href="{{ url_for('wizard.recipe', recipe_id=row.recipe.id) }}">{{ row.recipe.title }}</a>
-              <a href="{{ url_for('wizard.recipe', recipe_id=row.recipe.id) }}">{{ row.recipe.title }}</a>
               {% if row.recipe.id in fav_ids %} <span style="color:var(--accent-2)">{{ icon('star_fill') }}</span>{% endif %}
             </div>
             {% if row.recipe.blurb %}<div class="muted">{{ row.recipe.blurb }}</div>{% endif %}
@@ -65,7 +64,6 @@
             {% if row.status == "chosen" %}
               <div class="row-title" style="margin-top:var(--space-2)">
                 {{ source_dot('ai') }}<a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a>
-                <a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a>
                 {% if row.chosen.id in fav_ids %} <span style="color:var(--accent-2)">{{ icon('star_fill') }}</span>{% endif %}
               </div>
             {% elif row.status == "unchosen" %}
