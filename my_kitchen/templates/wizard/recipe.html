@@ -7,6 +7,44 @@
   <p class="recipe-blurb">{{ recipe.blurb }}</p>
   <p class="recipe-serves">Serves {{ recipe.servings }}.</p>
 
+  <div class="recipe-tags" id="recipe-tags"
+       data-tags-url="{{ url_for('wizard.recipe_set_tags', recipe_id=recipe.id) }}">
+    <div class="recipe-tags-view">
+      <span class="tag-pill tag-pill--meal{% if not recipe.meal_type %} tag-pill--none{% endif %}" id="tag-meal-pill">
+        {{ recipe.meal_type or "No meal type" }}
+      </span>
+      <span class="tag-pill tag-pill--cuisine{% if not recipe.cuisine %} tag-pill--none{% endif %}"
+            id="tag-cuisine-pill"{% if not cuisine_allowed %} hidden{% endif %}>
+        {{ recipe.cuisine or "No cuisine" }}
+      </span>
+      <button type="button" class="btn btn--sm btn--secondary" id="tag-edit-toggle">{{ icon('edit') }} Edit tags</button>
+    </div>
+    <div class="recipe-tags-edit" id="recipe-tags-edit" hidden>
+      <label>Meal type
+        <select id="tag-meal-select">
+          <option value="">No meal type</option>
+          {% for name in meal_type_names %}
+            <option value="{{ name }}"{% if name == recipe.meal_type %} selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label id="tag-cuisine-label">Cuisine
+        <select id="tag-cuisine-select">
+          <option value="">No cuisine</option>
+          {% for c in cuisines %}
+            <option value="{{ c }}"{% if c == recipe.cuisine %} selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="tag-edit-actions">
+        <button type="button" class="btn btn--sm btn--primary" id="tag-save">Save tags</button>
+        <button type="button" class="btn btn--sm" id="tag-cancel">Cancel</button>
+      </div>
+      <p class="tag-error" id="tag-error" hidden></p>
+    </div>
+  </div>
+  <script type="application/json" id="tag-cuisine-meal-types">{{ cuisine_meal_types | tojson }}</script>
+
   {% if recipe.intro %}
     <p class="recipe-intro">{{ recipe.intro }}</p>
   {% endif %}
@@ -144,10 +182,17 @@
     {% endif %}
   </form>
 
+  {% if recipe.source == 'user' %}
+    <p style="margin-top:var(--space-3)">
+      <a class="btn btn--secondary" href="{{ url_for('wizard.recipe_edit', recipe_id=recipe.id) }}">{{ icon('edit') }} Edit recipe</a>
+    </p>
+  {% endif %}
+
   <p style="margin-top:var(--space-4)"><a class="back-link" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Cook something else</a></p>
 {% endblock %}
 
 {% block scripts %}
+  <script src="{{ url_for('static', filename='recipe_tags.js') }}"></script>
   {% if recipe.ingredients %}
     <script src="{{ url_for('static', filename='recipe_links.js') }}"></script>
   {% endif %}

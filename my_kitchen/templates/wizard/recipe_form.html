@@ -24,10 +24,19 @@
       <label>Servings
         <input type="number" name="servings" id="rf-servings" min="1" value="2" required>
       </label>
-      <label>Meal type
+      <label>Meal type <span class="muted">(optional)</span>
         <select name="meal_type" id="rf-meal-type">
+          <option value="">No meal type</option>
           {% for name in meal_types %}
             <option value="{{ name }}">{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label id="rf-cuisine-label">Cuisine <span class="muted">(optional)</span>
+        <select name="cuisine" id="rf-cuisine">
+          <option value="">No cuisine</option>
+          {% for c in cuisines %}
+            <option value="{{ c }}">{{ c }}</option>
           {% endfor %}
         </select>
       </label>
@@ -95,6 +104,7 @@
   <script type="application/json" id="rf-catalogue-data">{{ link_catalogue | tojson }}</script>
   <script type="application/json" id="rf-prefill-data">{{ prefill | tojson }}</script>
   <script type="application/json" id="rf-urls">{{ {"add": url_for("wizard.recipe_ingredient_add")} | tojson }}</script>
+  <script type="application/json" id="rf-cuisine-meal-types">{{ cuisine_meal_types | tojson }}</script>
 {% endblock %}
 
 {% block scripts %}

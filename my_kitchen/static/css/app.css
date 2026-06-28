@@ -582,7 +582,7 @@ th { color: var(--text-muted); font-weight: 600; }
 
 /* ---- recipe create/edit form (Phase 4b) ---- */
 .rf-form label { display:block; margin-bottom:var(--space-3); }
-.rf-grid { display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3); }
+.rf-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:var(--space-3); }
 .rf-section { margin-top:var(--space-4); }
 .rf-ing-list, .rf-step-list { list-style:none; padding:0; margin:0 0 var(--space-2);
   display:flex; flex-direction:column; gap:var(--space-2); }
@@ -608,3 +608,15 @@ th { color: var(--text-muted); font-weight: 600; }
 .rf-actions { display:flex; gap:var(--space-3); margin-top:var(--space-5); }
 @media (max-width:480px){ .rf-grid{ grid-template-columns:1fr; } }
 .rf-head-actions { display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap; }
+
+/* ---- recipe tags (Phase 17) ---- */
+.recipe-tags { margin:var(--space-3) 0 var(--space-4); }
+.recipe-tags-view { display:flex; align-items:center; gap:var(--space-2); flex-wrap:wrap; }
+.recipe-tags-view[hidden],
+.recipe-tags-edit[hidden] { display: none; }
+.tag-pill { background:var(--surface-2); border-radius:999px; padding:2px var(--space-3); font-size:.85rem; }
+.tag-pill--none { color:var(--text-muted); font-style:italic; }
+.recipe-tags-edit { display:flex; align-items:flex-end; gap:var(--space-3); flex-wrap:wrap;
+  margin-top:var(--space-2); background:var(--surface); border-radius:var(--radius); padding:var(--space-3); }
+.tag-edit-actions { display:flex; gap:var(--space-2); }
+.tag-error { color:var(--accent-4); width:100%; }

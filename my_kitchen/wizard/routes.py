@@ -355,6 +355,10 @@ def recipe(recipe_id):
         "wizard/recipe.html", recipe=recipe, favourited=favourited,
         allergy_caveat=bool(allergies),
         link_catalogue=link_catalogue, categories=categories,
+        meal_type_names=MEAL_TYPE_NAMES,
+        cuisines=CUISINES,
+        cuisine_meal_types=CUISINE_MEAL_TYPES,
+        cuisine_allowed=bool(recipe.meal_type and meal_type_takes_cuisine(recipe.meal_type)),
     )
 
 
@@ -428,6 +432,27 @@ def recipe_ingredient_add_and_link(recipe_id, ri_id):
             error="exists", message=f'“{data["name"]}” already exists.'
         ), 400
     return jsonify(ri_id=ri.id, ingredient_id=ing.id, name=ing.name)
+
+
+@wizard_bp.route("/recipe/<int:recipe_id>/tags", methods=["POST"])
+def recipe_set_tags(recipe_id):
+    """Set a recipe's meal-type / cuisine tags from the inline editor. Works for
+    any recipe (AI or user) — tags are a shared property, like ingredient links.
+    Cuisine is gated server-side via _normalise_tags, so a stale hidden cuisine
+    for a non-cuisine meal type is dropped regardless of what the client sent."""
+    recipe = db.session.get(Recipe, recipe_id)
+    if recipe is None:
+        abort(404)
+    meal_type, cuisine = _normalise_tags(
+        request.form.get("meal_type"), request.form.get("cuisine")
+    )
+    recipe.meal_type = meal_type
+    recipe.cuisine = cuisine
+    db.session.commit()
+    return jsonify(
+        meal_type=meal_type, cuisine=cuisine,
+        cuisine_allowed=bool(meal_type and meal_type_takes_cuisine(meal_type)),
+    )
 
 
 # --------------------------------------------------------------------------
@@ -509,6 +534,19 @@ def _parse_ingredient_lines():
     return lines, None
 
 
+def _normalise_tags(meal_type_raw, cuisine_raw):
+    """Validate + gate the two tags (shared by the create/edit form and the inline
+    tag editor). Both optional. Cuisine is kept only when the meal type is set AND
+    cuisine-bearing — mirrors the wizard hierarchy — else forced to None."""
+    mt = (meal_type_raw or "").strip()
+    meal_type = mt if mt in MEAL_TYPE_NAMES else None
+    cu = (cuisine_raw or "").strip()
+    cuisine = cu if cu in CUISINES else None
+    if meal_type is None or not meal_type_takes_cuisine(meal_type):
+        cuisine = None
+    return meal_type, cuisine
+
+
 def _save_recipe_from_form(recipe=None):
     """Create (recipe=None) or update a source='user' recipe in place. Writes the
     structured recipe_ingredients rows AND ingredients_json (display parity with
@@ -516,9 +554,9 @@ def _save_recipe_from_form(recipe=None):
     title = (request.form.get("title") or "").strip()
     blurb = (request.form.get("blurb") or "").strip()
     intro = (request.form.get("intro") or "").strip()
-    meal_type = request.form.get("meal_type") or DEFAULT_MEAL_TYPE
-    if meal_type not in MEAL_TYPE_NAMES:
-        meal_type = DEFAULT_MEAL_TYPE
+    meal_type, cuisine = _normalise_tags(
+        request.form.get("meal_type"), request.form.get("cuisine")
+    )
     try:
         servings = int(request.form.get("servings", ""))
     except (TypeError, ValueError):
@@ -557,6 +595,7 @@ def _save_recipe_from_form(recipe=None):
     recipe.intro = intro or None
     recipe.servings = servings
     recipe.meal_type = meal_type
+    recipe.cuisine = cuisine
     recipe.prep_steps_json = prep
     recipe.cook_steps_json = cook
     recipe.tips_json = tips or None
@@ -602,7 +641,8 @@ def _collect_prefill_from_form():
         "blurb": request.form.get("blurb") or "",
         "intro": request.form.get("intro") or "",
         "servings": request.form.get("servings") or "",
-        "meal_type": request.form.get("meal_type") or DEFAULT_MEAL_TYPE,
+        "meal_type": request.form.get("meal_type") or "",
+        "cuisine": request.form.get("cuisine") or "",
         "prep": steps("prep", True),
         "cook": steps("cook", True),
         "tips": steps("tips", False),
@@ -635,7 +675,8 @@ def _recipe_to_prefill(recipe):
         "blurb": recipe.blurb or "",
         "intro": recipe.intro or "",
         "servings": str(recipe.servings or ""),
-        "meal_type": recipe.meal_type or DEFAULT_MEAL_TYPE,
+        "meal_type": recipe.meal_type or "",
+        "cuisine": recipe.cuisine or "",
         "prep": steps(recipe.prep_steps_json, True),
         "cook": steps(recipe.cook_steps_json, True),
         "tips": steps(recipe.tips_json, False),
@@ -650,7 +691,7 @@ def _form_context(mode, recipe=None, from_form=False):
         prefill = _recipe_to_prefill(recipe)
     else:
         prefill = {"title": "", "blurb": "", "intro": "", "servings": "2",
-                   "meal_type": DEFAULT_MEAL_TYPE,
+                   "meal_type": "", "cuisine": "",
                    "prep": [], "cook": [], "tips": [], "ingredients": []}
     link_catalogue = [
         {"id": i.id, "name": i.name}
@@ -665,6 +706,7 @@ def _form_context(mode, recipe=None, from_form=False):
         "mode": mode, "recipe": recipe, "form_action": action,
         "prefill": prefill, "link_catalogue": link_catalogue,
         "categories": categories, "meal_types": MEAL_TYPE_NAMES,
+        "cuisines": CUISINES, "cuisine_meal_types": CUISINE_MEAL_TYPES,
     }
 
 

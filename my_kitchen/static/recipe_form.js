@@ -29,6 +29,19 @@
   var mt = document.getElementById("rf-meal-type");
   if (mt && prefill.meal_type) mt.value = prefill.meal_type;
 
+  // ---- cuisine, gated by meal type (mirrors the wizard hierarchy) ----------
+  var cuisineSel = document.getElementById("rf-cuisine");
+  var cuisineLabel = document.getElementById("rf-cuisine-label");
+  var cuisineMealTypes = readJSON("rf-cuisine-meal-types", []);
+  if (cuisineSel && prefill.cuisine) cuisineSel.value = prefill.cuisine;
+  function syncCuisineVisibility() {
+    var allowed = mt && mt.value && cuisineMealTypes.indexOf(mt.value) !== -1;
+    if (cuisineLabel) cuisineLabel.hidden = !allowed;
+    if (!allowed && cuisineSel) cuisineSel.value = "";  // never submit a stale cuisine
+  }
+  if (mt) mt.addEventListener("change", syncCuisineVisibility);
+  syncCuisineVisibility();
+
   // ---- ingredient rows -----------------------------------------------------
   var ingList = document.getElementById("rf-ing-list");
   var ingIdx = 0;
