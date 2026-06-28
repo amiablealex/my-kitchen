@@ -5,13 +5,19 @@ from flask import (
     current_app, abort, flash, jsonify,
 )
 from flask_login import current_user
+from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
 from ..models import (
-    Ingredient, Generation, Recipe, User, SECTION_CHOICES,
-    DEFAULT_MEAL_TYPE, MEAL_TYPES, MEAL_TYPE_NAMES, meal_type_takes_cuisine,
+    Ingredient, Category, Generation, Recipe, RecipeIngredient, User,
+    SECTION_CHOICES, DEFAULT_MEAL_TYPE, MEAL_TYPES, MEAL_TYPE_NAMES,
+    meal_type_takes_cuisine,
 )
 from ..llm.service import start_generation, combined_dietary
+# Reuse the manage blueprint's ingredient-creation validation rather than
+# duplicating the name/category/staple handling (Phase 4a add-and-link). One-way
+# import — manage.routes doesn't import wizard, so there's no cycle.
+from ..manage.routes import _parse_ingredient_form, _name_taken
 
 wizard_bp = Blueprint("wizard", __name__, url_prefix="/cook")
 
@@ -317,10 +323,96 @@ def recipe(recipe_id):
     # Re-derived from current tags (no snapshot stored) — consistent with the
     # spec's "an LLM is not a safety guarantee" honesty.
     allergies, _ = combined_dietary(recipe.generation.cooking_for_user_ids or [])
+    # The inline link editor (Phase 4a) needs the live catalogue to search
+    # (active incl. staples, excl. retired) and the categories for add-and-link.
+    # Built only for structured recipes — legacy row-less ones aren't editable.
+    link_catalogue, categories = [], []
+    if recipe.ingredients:
+        link_catalogue = [
+            {"id": i.id, "name": i.name}
+            for i in Ingredient.query.filter_by(is_active=True)
+                                     .order_by(db.func.lower(Ingredient.name)).all()
+        ]
+        categories = Category.query.order_by(
+            Category.display_order, Category.name
+        ).all()
     return render_template(
         "wizard/recipe.html", recipe=recipe, favourited=favourited,
         allergy_caveat=bool(allergies),
+        link_catalogue=link_catalogue, categories=categories,
     )
+
+
+def _recipe_ingredient_or_404(recipe_id, ri_id):
+    """Fetch a RecipeIngredient, enforcing that it belongs to the given recipe.
+    Guards the recipe-scoped link endpoints — a ri_id from another recipe 404s
+    rather than being silently editable via a mismatched URL."""
+    ri = db.session.get(RecipeIngredient, ri_id)
+    if ri is None or ri.recipe_id != recipe_id:
+        abort(404)
+    return ri
+
+
+@wizard_bp.route("/recipe/<int:recipe_id>/ingredient/<int:ri_id>/link", methods=["POST"])
+def recipe_ingredient_link(recipe_id, ri_id):
+    """Re-link or unlink one ingredient line. Body: ingredient_id (an active
+    catalogue id to link), or empty/absent to unlink (ingredient_id -> NULL).
+    A manual link/unlink is authoritative — no re-resolution is triggered, and
+    the change is shared across the household (no per-user scoping)."""
+    ri = _recipe_ingredient_or_404(recipe_id, ri_id)
+    raw = (request.form.get("ingredient_id") or "").strip()
+    if raw == "":
+        ri.ingredient_id = None
+        db.session.commit()
+        return jsonify(ri_id=ri.id, ingredient_id=None, name=None)
+    try:
+        ing_id = int(raw)
+    except (TypeError, ValueError):
+        return jsonify(error="invalid", message="That ingredient isn’t valid."), 400
+    ing = db.session.get(Ingredient, ing_id)
+    if ing is None or not ing.is_active:
+        # Never link to a missing or retired ingredient — the picker only offers
+        # active ones, so this is a stale-page / tampered-request guard.
+        return jsonify(error="invalid", message="That ingredient isn’t available."), 400
+    ri.ingredient_id = ing.id
+    db.session.commit()
+    return jsonify(ri_id=ri.id, ingredient_id=ing.id, name=ing.name)
+
+
+@wizard_bp.route("/recipe/<int:recipe_id>/ingredient/<int:ri_id>/add-and-link", methods=["POST"])
+def recipe_ingredient_add_and_link(recipe_id, ri_id):
+    """Create a NEW catalogue ingredient and link this line to it, in one action.
+    Reuses manage's _parse_ingredient_form + _name_taken so the validation and
+    category/staple handling can't drift. Faithful to manage on a name clash:
+    if the name already exists we refuse and point the user at the picker (the
+    existing ingredient is searchable there) rather than silently linking it.
+    New ingredients default in_stock=False / is_active=True, matching seed +
+    manage.ingredient_add."""
+    ri = _recipe_ingredient_or_404(recipe_id, ri_id)
+    data, error = _parse_ingredient_form()
+    if error:
+        return jsonify(error="validation", message=error), 400
+    if _name_taken(data["name"]):
+        return jsonify(
+            error="exists",
+            message=f'“{data["name"]}” is already in your catalogue — '
+                    "search for it above to link it.",
+        ), 400
+    ing = Ingredient(
+        name=data["name"], category_id=data["category_id"],
+        is_staple=data["is_staple"], in_stock=False, is_active=True,
+    )
+    db.session.add(ing)
+    try:
+        db.session.flush()  # assign ing.id before linking
+        ri.ingredient_id = ing.id
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(
+            error="exists", message=f'“{data["name"]}” already exists.'
+        ), 400
+    return jsonify(ri_id=ri.id, ingredient_id=ing.id, name=ing.name)
 
 
 @wizard_bp.route("/recipe/<int:recipe_id>/favourite", methods=["POST"])

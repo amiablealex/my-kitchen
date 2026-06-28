@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.0
+- Recipe pages now show which catalogue ingredient each line is linked to, as a
+  small tag beside it — and you can change those links. Tap "Edit links" on the
+  Ingredients section to re-link a line to a different ingredient, unlink one,
+  or add a brand-new ingredient to your catalogue and link it in one step.
+- Works on every recipe, including ones generated before now.
+- Your corrections are shared across the household and stick — nothing is
+  re-linked automatically behind your back.
+- No schema change, and the generation prompt is unchanged.
+
 ## 0.10.0
 - Groundwork for "what can I cook now?" suggestions: every new recipe's
   ingredients are now linked to the shared ingredient catalogue behind the

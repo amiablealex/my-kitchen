@@ -460,6 +460,66 @@ th { color: var(--text-muted); font-weight: 600; }
 .ingredient-list { list-style: none; padding: 0; margin: 0; }
 .ingredient-list li { padding: var(--space-2) 0; border-bottom: 1px solid var(--divider); }
 .to-buy { color: var(--accent-3); font-weight: 700; }
+/* Ingredient catalogue-link pills (Phase 4a). Calm by design: a filled chip in
+   muted text marks a linked line; a dashed, italic chip marks an unlinked one.
+   Sits inline after the freetext line and wraps with it on narrow screens. */
+.link-pill {
+  display: inline-flex; align-items: center;
+  margin-left: var(--space-2); padding: 1px 10px;
+  border-radius: var(--radius-pill); font-size: var(--fs-small);
+  background: var(--surface-2); color: var(--text-muted);
+  border: 1px solid var(--divider); vertical-align: middle; white-space: nowrap;
+}
+.link-pill--none { background: transparent; border-style: dashed; font-style: italic; }
+
+/* --- inline link editor (Phase 4a) --- */
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.section-head h2 { margin: 0; }
+.link-edit-hint { color: var(--text-muted); font-size: var(--fs-small); margin: var(--space-2) 0 0; }
+/* per-row edit trigger: compact + muted, revealed only when edit mode is on */
+.ri-edit-btn {
+  display: none; align-items: center; justify-content: center;
+  min-height: 32px; min-width: 32px; padding: 0 var(--space-2); margin-left: var(--space-2);
+  border: 1px solid var(--divider); border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-muted); cursor: pointer; vertical-align: middle;
+}
+.ri-edit-btn .icon { width: 1.05em; height: 1.05em; }
+.ri-edit-btn:hover { background: var(--surface-2); color: var(--text); filter: none; }
+.is-editing .ri-edit-btn { display: inline-flex; }
+#ri-editor-close { display: inline-flex; }
+/* the editor panel: a calm card, moved inline under the row being edited */
+.ri-editor {
+  margin-top: var(--space-3); padding: var(--space-3);
+  background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius-sm);
+}
+.ri-editor input[type="text"], .ri-editor input[type="search"], .ri-editor select {
+  width: 100%; box-sizing: border-box;
+}
+.ri-editor-head {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+  color: var(--text-muted); font-size: var(--fs-small); margin-bottom: var(--space-2);
+}
+.ri-editor-current {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2);
+  margin-bottom: var(--space-3); font-size: var(--fs-small); color: var(--text-muted);
+}
+.ri-editor-search-label { display: block; font-size: var(--fs-small); color: var(--text-muted); }
+.ri-editor-search-label input { margin-top: var(--space-1); }
+.ri-editor-results {
+  list-style: none; padding: 0; margin: var(--space-2) 0 0;
+  display: flex; flex-wrap: wrap; gap: var(--space-2);
+}
+.ri-result-empty { color: var(--text-muted); font-style: italic; font-size: var(--fs-small); }
+.ri-result-btn {
+  min-height: 36px; padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--divider); border-radius: var(--radius-pill);
+  background: var(--surface-2); color: var(--text); font-size: var(--fs-small); cursor: pointer;
+}
+.ri-editor-add { margin-top: var(--space-3); }
+.ri-editor-add summary { cursor: pointer; color: var(--text-muted); font-size: var(--fs-small); }
+.ri-editor-add-body { margin-top: var(--space-2); display: flex; flex-direction: column; gap: var(--space-2); }
+.ri-add-staple { font-size: var(--fs-small); }
+.ri-add-error { color: var(--danger); font-size: var(--fs-small); margin: 0; }
 .method { padding-left: 1.4em; }
 .method li { margin-bottom: var(--space-4); }
 .step-title { font-family: var(--font-display); font-weight: 700; }

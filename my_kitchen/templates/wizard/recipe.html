@@ -21,16 +21,87 @@
     </div>
   {% endif %}
 
-  <section class="recipe-section">
-    <h2>Ingredients</h2>
-    <ul class="ingredient-list">
-      {% for ing in recipe.ingredients_json %}
-        <li>
-          {% if ing.amount not in (none, '') %}{{ ing.amount }} {% endif %}{{ ing.unit }} {{ ing.item }}
-          {% if ing.to_buy %} <span class="to-buy">(you may need to buy)</span>{% endif %}
-        </li>
-      {% endfor %}
-    </ul>
+  <section class="recipe-section" id="ingredients-section">
+    <div class="section-head">
+      <h2>Ingredients</h2>
+      {% if recipe.ingredients %}
+        <button type="button" class="btn btn--sm btn--secondary" id="link-edit-toggle" aria-pressed="false">
+          {{ icon('edit') }} Edit links
+        </button>
+      {% endif %}
+    </div>
+    {% if recipe.ingredients %}
+      {# Structured source (keystone): render the ordered RecipeIngredient rows.
+         The freetext line ({amount} {unit} {raw_text}) is byte-identical to the
+         old ingredients_json render; the calm pill shows each line's catalogue
+         link, or a muted "not linked" state when ingredient_id is null. In edit
+         mode (toggle on) each row reveals an edit button that opens the inline
+         link editor. Endpoint URLs are injected with url_for (ingress-safe). #}
+      <p class="link-edit-hint" id="link-edit-hint" hidden>Tap a line’s edit button to change its catalogue link.</p>
+      <ul class="ingredient-list" id="ingredient-list">
+        {% for ri in recipe.ingredients %}
+          <li class="ingredient-row" data-ri-id="{{ ri.id }}" data-raw-text="{{ ri.raw_text }}"
+              data-link-url="{{ url_for('wizard.recipe_ingredient_link', recipe_id=recipe.id, ri_id=ri.id) }}"
+              data-add-link-url="{{ url_for('wizard.recipe_ingredient_add_and_link', recipe_id=recipe.id, ri_id=ri.id) }}">
+            {% if ri.amount not in (none, '') %}{{ ri.amount }} {% endif %}{{ ri.unit }} {{ ri.raw_text }}
+            {% if ri.to_buy %} <span class="to-buy">(you may need to buy)</span>{% endif %}
+            {% if ri.ingredient %}
+              <span class="link-pill" data-linked-id="{{ ri.ingredient.id }}">{{ ri.ingredient.name }}</span>
+            {% else %}
+              <span class="link-pill link-pill--none" data-linked-id="">not linked</span>
+            {% endif %}
+            <button type="button" class="ri-edit-btn" aria-label="Edit this ingredient’s catalogue link">{{ icon('edit') }}</button>
+          </li>
+        {% endfor %}
+      </ul>
+
+      {# Single shared editor panel, moved inline under the row being edited. #}
+      <div class="ri-editor" id="ri-editor" hidden>
+        <div class="ri-editor-head">
+          <span>Editing <strong id="ri-editor-rawtext"></strong></span>
+          <button type="button" class="ri-edit-btn" id="ri-editor-close" aria-label="Close editor">{{ icon('close') }}</button>
+        </div>
+        <div class="ri-editor-current" id="ri-editor-current" hidden>
+          Linked to <strong id="ri-editor-current-name"></strong>
+          <button type="button" class="btn btn--sm" id="ri-editor-unlink">Unlink</button>
+        </div>
+        <label class="ri-editor-search-label">Link to a catalogue ingredient
+          <input type="search" id="ri-editor-search" autocomplete="off" placeholder="start typing an ingredient…">
+        </label>
+        <ul class="ri-editor-results" id="ri-editor-results"></ul>
+        <details class="ri-editor-add">
+          <summary>Not in your catalogue? Add it &amp; link</summary>
+          <div class="ri-editor-add-body">
+            <label>Name <input type="text" id="ri-add-name"></label>
+            <label>Category
+              <select id="ri-add-category">
+                {% for c in categories %}
+                  <option value="{{ c.id }}">{{ c.name }} ({{ c.section }})</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="ri-add-staple"><input type="checkbox" id="ri-add-staple"> Staple (assumed always available)</label>
+            <p class="ri-add-error" id="ri-add-error" hidden></p>
+            <button type="button" class="btn btn--sm btn--primary" id="ri-add-submit">{{ icon('add') }} Add &amp; link</button>
+          </div>
+        </details>
+      </div>
+
+      {# Catalogue for client-side search: [{id, name}], active incl. staples.
+         tojson escapes for safe embedding in the script tag. #}
+      <script type="application/json" id="link-catalogue-data">{{ link_catalogue | tojson }}</script>
+    {% else %}
+      {# Legacy fallback: row-less recipes (pre-keystone / dev legacy) still
+         render straight from ingredients_json, exactly as before — no pills. #}
+      <ul class="ingredient-list">
+        {% for ing in recipe.ingredients_json %}
+          <li>
+            {% if ing.amount not in (none, '') %}{{ ing.amount }} {% endif %}{{ ing.unit }} {{ ing.item }}
+            {% if ing.to_buy %} <span class="to-buy">(you may need to buy)</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
   </section>
 
   {% if recipe.prep_steps_json %}
@@ -74,4 +145,10 @@
   </form>
 
   <p style="margin-top:var(--space-4)"><a class="back-link" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Cook something else</a></p>
+{% endblock %}
+
+{% block scripts %}
+  {% if recipe.ingredients %}
+    <script src="{{ url_for('static', filename='recipe_links.js') }}"></script>
+  {% endif %}
 {% endblock %}
