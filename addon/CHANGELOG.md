@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.0
+- Recipes now carry meal-type and cuisine tags, editable inline on the recipe
+  page (cuisine shown only for cuisine-bearing meal types).
+- AI recipes are tagged automatically from the wizard choices; created recipes
+  can be tagged on the create/edit form. Both tags are optional.
+- Edit your own created recipes from a button on the recipe page.
+
 ## 0.11.0
 - Recipe pages now show which catalogue ingredient each line is linked to, as a
   small tag beside it — and you can change those links. Tap "Edit links" on the
