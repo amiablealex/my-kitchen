@@ -1,6 +1,6 @@
 # Phase 16 — Create a recipe from scratch (4b)
 
-Shipped as add-on **0.11.0**. No LLM, no resolver, **no schema change** — every
+Shipped as add-on **0.12.0**. No LLM, no resolver, **no schema change** — every
 column already existed from the keystone (Phase 14).
 
 ## What shipped
@@ -70,7 +70,7 @@ Kept per-source so unchosen/failed generations (no recipe rows) stay filterable.
   create/edit form as their review/edit UI (the §3.4 plan) — the form is already
   source-agnostic on save.
 
-## Scope extension (shipped 0.12.0) — recipe tags + edit affordance
+## Scope extension (also shipped in 0.12.0) — recipe tags + edit affordance
 
 After the original 4b shipped (0.11.0), the same conversation added recipe-level
 meal-type/cuisine tagging and a recipe-page edit entry, plus one migration.
