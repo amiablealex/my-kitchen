@@ -12,7 +12,7 @@ from ..extensions import db
 from ..models import (
     Ingredient, Category, Generation, Recipe, RecipeIngredient, User,
     SECTION_CHOICES, DEFAULT_MEAL_TYPE, MEAL_TYPES, MEAL_TYPE_NAMES,
-    meal_type_takes_cuisine,
+    meal_type_takes_cuisine, CUISINES, WIZARD_CUISINES,
 )
 from ..llm.service import start_generation, combined_dietary
 # Reuse the manage blueprint's ingredient-creation validation rather than
@@ -22,9 +22,12 @@ from ..manage.routes import _parse_ingredient_form, _name_taken
 
 wizard_bp = Blueprint("wizard", __name__, url_prefix="/cook")
 
-CUISINES = ["Italian", "Mediterranean", "British", "Asian", "Surprise me"]
 TIME_BANDS = [("quick", "Quick (under 30 min)"), ("relaxed", "Relaxed (30–75 min)")]
 SECTIONS = SECTION_CHOICES
+
+# Meal types that carry a cuisine (mirrors the wizard hierarchy). Gates the recipe
+# cuisine tag in the create/edit form and the inline tag editor. (Phase 17)
+CUISINE_MEAL_TYPES = [n for n in MEAL_TYPE_NAMES if meal_type_takes_cuisine(n)]
 
 # A running generation older than this is treated as dead (no reaper process —
 # the check lives in the poll + the idempotency guard). Phase 12.
@@ -122,7 +125,7 @@ def step_cuisine():
         # cuisine radios submitted; a cuisine-bearing type takes the choice.
         if meal_type_takes_cuisine(meal_type):
             choice = request.form.get("cuisine", "Surprise me")
-            w["cuisine"] = choice if choice in CUISINES else "Surprise me"
+            w["cuisine"] = choice if choice in WIZARD_CUISINES else "Surprise me"
         else:
             w["cuisine"] = None
         save_wizard(w)
@@ -131,7 +134,7 @@ def step_cuisine():
         "wizard/step_cuisine.html",
         meal_types=MEAL_TYPES,
         current_meal_type=w.get("meal_type", DEFAULT_MEAL_TYPE),
-        cuisines=CUISINES,
+        cuisines=WIZARD_CUISINES,
         current_cuisine=w.get("cuisine") or "Surprise me",
     )
 

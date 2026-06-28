@@ -3,7 +3,7 @@ import threading
 from ..extensions import db
 from ..models import (
     Ingredient, Equipment, Generation, Recipe, RecipeIngredient, User,
-    DEFAULT_MEAL_TYPE, meal_type_takes_cuisine,
+    DEFAULT_MEAL_TYPE, meal_type_takes_cuisine, recipe_cuisine_from,
 )
 from .prompt import SYSTEM_PROMPT, build_user_prompt
 from .schema import extract_json, validate_and_normalize
@@ -289,6 +289,7 @@ def _run_generation_job(app, generation_id, user_prompt, brief):
                     # post-3b recipes are suggestion-ready.
                     source="ai",
                     meal_type=gen.meal_type,
+                    cuisine=recipe_cuisine_from(gen.cuisine),
                     created_by_user_id=gen.created_by_user_id,
                 )
                 # Resolve each free-text ingredient to a catalogue id and write a

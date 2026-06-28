@@ -46,6 +46,23 @@ MEAL_TYPE_NAMES = [name for name, _ in MEAL_TYPES]
 DEFAULT_MEAL_TYPE = "Dinner"
 _MEAL_TYPE_TAKES_CUISINE = {name: takes for name, takes in MEAL_TYPES}
 
+# Cuisines (Phase 17). Kept here, not in wizard/routes.py, so llm/service.py can
+# import the normaliser without a circular import (same reason as MEAL_TYPES).
+# CUISINES are the real, taggable cuisines; the wizard additionally offers
+# "Surprise me" — an open-choice request, NOT a tag.
+CUISINES = ["Italian", "Mediterranean", "British", "Asian"]
+SURPRISE_ME = "Surprise me"
+WIZARD_CUISINES = CUISINES + [SURPRISE_ME]
+
+
+def recipe_cuisine_from(value):
+    """Map a generation's requested cuisine to a recipe cuisine TAG. 'Surprise me'
+    and None/'' aren't real cuisines -> None; a concrete one is kept (validated
+    against CUISINES so a stray value can't become a bogus tag)."""
+    if not value or value == SURPRISE_ME:
+        return None
+    return value if value in CUISINES else None
+
 
 def meal_type_takes_cuisine(name):
     """True if the meal type carries a cuisine. Unknown names default to True
@@ -215,6 +232,12 @@ class Recipe(db.Model):
     # recipes are suggestion-ready. Nullable (legacy generations; user/imported
     # provenance later). recipes.meal_type is owned here, not on generations.
     meal_type = db.Column(db.String, nullable=True)
+    # cuisine: the recipe's cuisine TAG (Phase 17). Nullable — not every recipe has
+    # one (non-cuisine meal types, "Surprise me" generations, or simply untagged).
+    # For AI recipes, copied forward from the generation at write time. Editable on
+    # the recipe page + the create/edit form; gated by meal type (only cuisine-
+    # bearing meal types keep it).
+    cuisine = db.Column(db.String, nullable=True)
     # created_by_user_id: the recipe's author. For AI recipes = the generation's
     # cook. Nullable FK (user/imported provenance comes later).
     created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
