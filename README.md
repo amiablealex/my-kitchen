@@ -7,6 +7,8 @@ provider adapter (mock / Anthropic / Gemini).
 
 Runs on a Raspberry Pi on the local network.
 
+<img width="1200" height="920" alt="example" src="https://github.com/user-attachments/assets/f7a9f215-47f9-4b38-8b2d-02bc06ea9219" />
+
 ## Setup
 
 ```bash
