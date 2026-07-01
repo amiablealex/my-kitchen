@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14.1 - Fixed llm leaning too heavily on "To-buy"
+
+- Prevented llm generated recipes bbeing based around a to_buy not-in-stock ingredient,
+instead guided the llm to use as 'optional extras' i.e garnish, flavour enhancers and to never build a
+meal around an item not in stock
+
+- Rephrased "You may need to-buy" -> "Optional Extra" for clarity
+
 ## 0.14.0 — Recipe suggestions at "Lets cook"
 
 - The review step now shows saved recipes you can cook **right now** that fit

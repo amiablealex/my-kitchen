@@ -18,7 +18,7 @@ RULES = """Rules:
   2. MUST-USE overrides soft preferences. A deliberately chosen ingredient is used even when it clashes with a preference (e.g. chicken chosen while cooking for a vegetarian -> use the chicken).
   3. PREFERENCES steer the AVAILABLE tier only, and yield to must-use. Lean away from preference-breaking available items, but never drop a must-use item to honour a preference.
 
-- You may suggest at most two extra items the user might need to buy; mark each "to_buy": true. Everything else is "to_buy": false.
+- Optional extras ("to_buy": true): you may suggest at most two items not currently in MUST-USE/AVAILABLE/STAPLES. These must be genuinely optional — a garnish, a finishing touch, a small flavour lift — NEVER the ingredient the dish is built or named around. The recipe MUST be fully cookable and satisfying using ONLY MUST-USE, AVAILABLE and STAPLES. mark each optional extra "to_buy": true. Everything else is "to_buy": false.
 - Respect the requested time band and serving count.
 - Return TWO genuinely distinct recipes that differ in technique or flavour direction, not minor variants. The first may follow an optional creative angle if one is supplied; the second is given no angle and must be designed freely as a real alternative, not a variation of the first.
 - Respond with VALID JSON ONLY, matching the schema exactly. No markdown, no commentary, no code fences."""

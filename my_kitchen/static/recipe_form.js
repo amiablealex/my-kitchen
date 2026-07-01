@@ -78,7 +78,7 @@
       '<div class="rf-ing-fields">' +
         '<input type="text" class="rf-ing-amount" name="ing-' + i + '-amount" placeholder="amount" value="">' +
         '<input type="text" class="rf-ing-unit" name="ing-' + i + '-unit" placeholder="unit" value="">' +
-        '<label class="rf-ing-tobuy"><input type="checkbox" class="rf-ing-tobuycb" name="ing-' + i + '-to_buy"> to buy</label>' +
+        '<label class="rf-ing-tobuy"><input type="checkbox" class="rf-ing-tobuycb" name="ing-' + i + '-to_buy"> optional extra</label>' +
         '<button type="button" class="rf-row-remove" aria-label="Remove ingredient">&times;</button>' +
       '</div>';
     ingList.appendChild(row);
