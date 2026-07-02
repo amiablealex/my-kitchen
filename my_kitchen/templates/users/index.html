@@ -7,8 +7,8 @@
   <p class="lead">The people who can log in. Users are retired rather than deleted, so their
      cooking history stays intact.</p>
 
-  <section class="section">
-    <h2>Add a user</h2>
+  <details class="manage-add">
+    <summary>{{ icon('add') }} Add a user</summary>
     <form class="form" method="post" action="{{ url_for('users.add') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Name <input type="text" name="name" required></label>
@@ -17,60 +17,63 @@
       <div class="form-actions">
         <button type="submit" class="btn btn--primary">{{ icon('add') }} Add</button>
       </div>
+      <p class="help">Leave the password blank to create the user now and set it later.</p>
     </form>
-    <p class="help">Leave the password blank to create the user now and set it later.</p>
-  </section>
+  </details>
 
-  <section class="section">
-    <h2>Active ({{ active|length }})</h2>
-    {% if active %}
-      <ul class="rows">
+  {% if active %}
+    <section class="recipe-group recipe-group--plain">
+      <header class="recipe-group-head">
+        <h2 class="recipe-group-name">Active</h2>
+        <span class="recipe-group-count">{{ active|length }}</span>
+      </header>
+      <ul class="recipe-list">
         {% for u in active %}
-          <li class="row">
+          <li class="recipe-row">
             <div class="row-main">
-              <div class="row-title">{{ u.name }}{% if u.id == current_user.id %} <span class="badge badge--muted">you</span>{% endif %}</div>
-              <div class="row-badges">{% if not u.password_hash %}<span class="badge badge--warn">no password</span>{% endif %}</div>
+              <div class="row-title">{{ u.name }}{% if u.id == current_user.id %} <span class="muted">· you</span>{% endif %}{% if not u.password_hash %} <span class="warn-text">· no password</span>{% endif %}</div>
             </div>
             <div class="row-actions">
-              <a class="btn btn--sm btn--secondary" href="{{ url_for('users.edit', user_id=u.id) }}">{{ icon('edit') }} Edit / password</a>
+              <a class="btn btn--sm btn--icon btn--secondary" aria-label="Edit {{ u.name }}"
+                 href="{{ url_for('users.edit', user_id=u.id) }}">{{ icon('edit') }}</a>
               {% if u.id != current_user.id %}
                 <form method="post" action="{{ url_for('users.retire', user_id=u.id) }}"
                       onsubmit="return confirm('Retire \u201c{{ u.name }}\u201d? They won\u2019t be able to log in until reactivated.');">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="btn btn--sm">Retire</button>
+                  <button type="submit" class="btn btn--sm btn--icon" aria-label="Retire {{ u.name }}">{{ icon('archive') }}</button>
                 </form>
-              {% else %}
-                <span class="help">can't retire yourself</span>
               {% endif %}
             </div>
           </li>
         {% endfor %}
       </ul>
-    {% else %}
-      <p class="muted">No active users.</p>
-    {% endif %}
-  </section>
+    </section>
+  {% else %}
+    <p class="muted">No active users.</p>
+  {% endif %}
 
   {% if retired %}
     <details class="section">
       <summary>Retired ({{ retired|length }})</summary>
-      <ul class="rows" style="margin-top:var(--space-3)">
-        {% for u in retired %}
-          <li class="row">
-            <div class="row-main">
-              <div class="row-title">{{ u.name }}</div>
-              <div class="row-badges"><span class="badge badge--muted">retired</span>{% if not u.password_hash %}<span class="badge badge--warn">no password</span>{% endif %}</div>
-            </div>
-            <div class="row-actions">
-              <a class="btn btn--sm btn--secondary" href="{{ url_for('users.edit', user_id=u.id) }}">{{ icon('edit') }} Edit / password</a>
-              <form method="post" action="{{ url_for('users.activate', user_id=u.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn--sm">Reactivate</button>
-              </form>
-            </div>
-          </li>
-        {% endfor %}
-      </ul>
+      <section class="recipe-group recipe-group--plain" data-no-filter style="margin-top:var(--space-3)">
+        <ul class="recipe-list">
+          {% for u in retired %}
+            <li class="recipe-row">
+              <div class="row-main">
+                <div class="row-title">{{ u.name }}{% if not u.password_hash %} <span class="warn-text">· no password</span>{% endif %}</div>
+              </div>
+              <div class="row-actions">
+                <a class="btn btn--sm btn--icon btn--secondary" aria-label="Edit {{ u.name }}"
+                   href="{{ url_for('users.edit', user_id=u.id) }}">{{ icon('edit') }}</a>
+                <form method="post" action="{{ url_for('users.activate', user_id=u.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn--sm btn--icon btn--secondary" aria-label="Reactivate {{ u.name }}">{{ icon('check') }}</button>
+                </form>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
     </details>
   {% endif %}
 {% endblock %}

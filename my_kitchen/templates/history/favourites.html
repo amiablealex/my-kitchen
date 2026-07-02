@@ -77,25 +77,5 @@
 {% endblock %}
 
 {% block scripts %}
-  <script>
-    (function () {
-      var input = document.getElementById("recipe-filter");
-      if (!input) return;
-      var groups = document.querySelectorAll(".recipe-group");
-      var nomatch = document.getElementById("recipe-nomatch");
-      input.addEventListener("input", function () {
-        var q = input.value.trim().toLowerCase();
-        var any = false;
-        groups.forEach(function (g) {
-          var gv = false;
-          g.querySelectorAll(".recipe-row").forEach(function (r) {
-            var m = !q || (r.dataset.title || "").indexOf(q) !== -1;
-            r.hidden = !m; if (m) gv = true;
-          });
-          g.hidden = !gv; if (gv) any = true;
-        });
-        if (nomatch) nomatch.hidden = any || !q;
-      });
-    })();
-  </script>
+  <script src="{{ url_for('static', filename='recipe_filter.js') }}"></script>
 {% endblock %}
