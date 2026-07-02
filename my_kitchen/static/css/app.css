@@ -790,3 +790,12 @@ th { color: var(--text-muted); font-weight: 600; }
 .sec-dot--other   { background: var(--accent-1); }
 
 .recipe-row.is-off .row-title { color: var(--text-muted); }
+
+/* ingredient tables: section colours (mirror the stock editor) + toolbar */
+.recipe-group--protein { --group: var(--accent-4); --group-tint: rgba(255, 95, 145, 0.14); }
+.recipe-group--carb    { --group: var(--accent-3); --group-tint: rgba(254, 155, 70, 0.14); }
+.recipe-group--veg     { --group: var(--accent-2); --group-tint: rgba(177, 228, 109, 0.14); }
+.recipe-group--other   { --group: var(--accent-1); --group-tint: rgba(86, 208, 187, 0.14); }
+.manage-toolbar { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+.manage-toolbar .recipe-filter { flex: 1 1 auto; }
+.manage-count { flex: none; font-size: var(--fs-small); }
