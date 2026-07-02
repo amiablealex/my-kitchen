@@ -1,11 +1,26 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
-{% from "_source.html" import source_dot %}
 {% block title %}Favourites — My Kitchen{% endblock %}
 {% block page_title %}Favourites{% endblock %}
+
+{% macro fav_row(r) %}
+  <li class="recipe-row" data-title="{{ r.title | lower }}">
+    <div class="row-main">
+      <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a></div>
+      <div class="row-meta">
+        {{ r.created_at | localdt }} ·
+        {% if r.generation %}cooked by {{ r.generation.created_by.name if r.generation.created_by else "unknown" }}
+        {% else %}created by {{ r.author.name if r.author else "unknown" }}{% endif %}
+      </div>
+    </div>
+    <span class="row-star" aria-label="Favourite">{{ icon('star_fill') }}</span>
+  </li>
+{% endmacro %}
+
 {% block content %}
   <h1>Favourites</h1>
   <p><a class="back-link" href="{{ url_for('history.index') }}">{{ icon('arrow_back') }} Recipes</a></p>
+
   {% if not recipes %}
     <div class="empty">
       {{ icon('star') }}
@@ -13,22 +28,74 @@
       <a class="btn btn--primary" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Lets cook</a>
     </div>
   {% else %}
-    <ul class="rows">
-      {% for r in recipes %}
-        <li class="row recipe-row">
-          <div class="row-main">
-            <div class="row-title">
-              {{ source_dot(r.source) }}<a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>
-            </div>
-            <div class="row-meta">
-              {{ r.created_at | localdt }} ·
-              {% if r.generation %}cooked by {{ r.generation.created_by.name if r.generation.created_by else "unknown" }}
-              {% else %}created by {{ r.author.name if r.author else "unknown" }}{% endif %}
-            </div>
-          </div>
-          <span class="row-star" aria-label="Favourite">{{ icon('star_fill') }}</span>
-        </li>
-      {% endfor %}
-    </ul>
+    <div class="recipe-toolbar">
+      <label class="recipe-filter">
+        {{ icon('search') }}
+        <input type="search" id="recipe-filter" placeholder="Filter favourites…" autocomplete="off">
+      </label>
+    </div>
+
+    {% set ns = namespace(ai=[], hand=[], imported=[]) %}
+    {% for r in recipes %}
+      {% if r.source == 'user' %}{% set ns.hand = ns.hand + [r] %}
+      {% elif r.source == 'imported' %}{% set ns.imported = ns.imported + [r] %}
+      {% else %}{% set ns.ai = ns.ai + [r] %}{% endif %}
+    {% endfor %}
+
+    {% if ns.ai %}
+      <section class="recipe-group recipe-group--ai">
+        <header class="recipe-group-head">
+          <h2 class="recipe-group-name">AI generated</h2>
+          <span class="recipe-group-count">{{ ns.ai | length }}</span>
+        </header>
+        <ul class="recipe-list">{% for r in ns.ai %}{{ fav_row(r) }}{% endfor %}</ul>
+      </section>
+    {% endif %}
+
+    {% if ns.hand %}
+      <section class="recipe-group recipe-group--hand">
+        <header class="recipe-group-head">
+          <h2 class="recipe-group-name">Created by hand</h2>
+          <span class="recipe-group-count">{{ ns.hand | length }}</span>
+        </header>
+        <ul class="recipe-list">{% for r in ns.hand %}{{ fav_row(r) }}{% endfor %}</ul>
+      </section>
+    {% endif %}
+
+    {% if ns.imported %}
+      <section class="recipe-group recipe-group--imported">
+        <header class="recipe-group-head">
+          <h2 class="recipe-group-name">Imported</h2>
+          <span class="recipe-group-count">{{ ns.imported | length }}</span>
+        </header>
+        <ul class="recipe-list">{% for r in ns.imported %}{{ fav_row(r) }}{% endfor %}</ul>
+      </section>
+    {% endif %}
+
+    <p class="recipe-nomatch" id="recipe-nomatch" hidden><em>No favourites match your filter.</em></p>
   {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (function () {
+      var input = document.getElementById("recipe-filter");
+      if (!input) return;
+      var groups = document.querySelectorAll(".recipe-group");
+      var nomatch = document.getElementById("recipe-nomatch");
+      input.addEventListener("input", function () {
+        var q = input.value.trim().toLowerCase();
+        var any = false;
+        groups.forEach(function (g) {
+          var gv = false;
+          g.querySelectorAll(".recipe-row").forEach(function (r) {
+            var m = !q || (r.dataset.title || "").indexOf(q) !== -1;
+            r.hidden = !m; if (m) gv = true;
+          });
+          g.hidden = !gv; if (gv) any = true;
+        });
+        if (nomatch) nomatch.hidden = any || !q;
+      });
+    })();
+  </script>
 {% endblock %}

@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
-{% from "_source.html" import source_dot %}
 {% block title %}Recipes — My Kitchen{% endblock %}
 {% block page_title %}Recipes{% endblock %}
 {% block content %}
@@ -11,24 +10,24 @@
     <a class="back-link" href="{{ url_for('history.favourites') }}">{{ icon('star') }} Favourites</a>
   </p>
 
-  <form method="get" action="{{ url_for('history.index') }}" class="form recipes-filters" style="margin-bottom:var(--space-4)">
-    <label>Cook
-      <select name="user" onchange="this.form.submit()">
-        <option value="">All cooks</option>
-        {% for u in users %}
-          <option value="{{ u.id }}" {% if u.id == selected_user_id %}selected{% endif %}>{{ u.name }}</option>
-        {% endfor %}
-      </select>
+  <div class="recipe-toolbar">
+    <label class="recipe-filter">
+      {{ icon('search') }}
+      <input type="search" id="recipe-filter" placeholder="Filter recipes…" autocomplete="off">
     </label>
-    <label>Source
-      <select name="source" onchange="this.form.submit()">
-        <option value="">All sources</option>
-        <option value="ai" {% if selected_source == 'ai' %}selected{% endif %}>AI generated</option>
-        <option value="user" {% if selected_source == 'user' %}selected{% endif %}>Created by hand</option>
-      </select>
-    </label>
-    <noscript><button type="submit" class="btn btn--secondary btn--sm">Filter</button></noscript>
-  </form>
+    <form method="get" action="{{ url_for('history.index') }}" class="recipe-cook-filter">
+      {% if selected_source %}<input type="hidden" name="source" value="{{ selected_source }}">{% endif %}
+      <label>Cook
+        <select name="user" onchange="this.form.submit()">
+          <option value="">All cooks</option>
+          {% for u in users %}
+            <option value="{{ u.id }}" {% if u.id == selected_user_id %}selected{% endif %}>{{ u.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <noscript><button type="submit" class="btn btn--secondary btn--sm">Filter</button></noscript>
+    </form>
+  </div>
 
   {% if not rows %}
     {% if selected_user_id or selected_source %}
@@ -39,62 +38,94 @@
         <a class="btn btn--primary" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Lets cook</a></div>
     {% endif %}
   {% else %}
-    <ul class="rows">
-      {% for row in rows %}
-        {% if row.kind == "user" %}
-          <li class="row recipe-row">
-            <div class="row-main">
-              <div class="row-title">
-                {{ source_dot(row.recipe.source) }}<a href="{{ url_for('wizard.recipe', recipe_id=row.recipe.id) }}">{{ row.recipe.title }}</a>
-              </div>
-              <div class="row-meta">
-                {{ row.recipe.created_at | localdt }} · created by {{ row.recipe.author.name if row.recipe.author else "unknown" }}
-              </div>
-            </div>
-            {% if row.recipe.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}
-          </li>
+    {# Bucket the merged rows by source. AI rows lack kind=='user'. #}
+    {% set ns = namespace(ai=[], hand=[]) %}
+    {% for row in rows %}
+      {% if row.kind == 'user' %}{% set ns.hand = ns.hand + [row] %}{% else %}{% set ns.ai = ns.ai + [row] %}{% endif %}
+    {% endfor %}
 
-        {% elif row.status == "chosen" %}
-          <li class="row recipe-row">
-            <div class="row-main">
-              <div class="row-title">
-                {{ source_dot('ai') }}<a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a>
-              </div>
-              <div class="row-meta">
-                {{ row.gen.created_at | localdt }} · {{ row.gen.cuisine }}, {{ row.gen.time_band }}, serves {{ row.gen.servings }} · cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }}
-              </div>
-            </div>
-            {% if row.chosen.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}
-          </li>
+    {% if ns.ai %}
+      <section class="recipe-group recipe-group--ai">
+        <header class="recipe-group-head">
+          <h2 class="recipe-group-name">AI generated</h2>
+          <span class="recipe-group-count">{{ ns.ai | length }}</span>
+        </header>
+        <ul class="recipe-list">
+          {% for row in ns.ai %}
+            {% if row.status == "chosen" %}
+              <li class="recipe-row" data-title="{{ row.chosen.title | lower }}">
+                <div class="row-main">
+                  <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a></div>
+                  <div class="row-meta">{{ row.gen.created_at | localdt }} · {{ row.gen.cuisine }}, {{ row.gen.time_band }}, serves {{ row.gen.servings }} · cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }}</div>
+                </div>
+                {% if row.chosen.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}
+              </li>
+            {% elif row.status == "unchosen" %}
+              <li class="recipe-row" data-title="{% for r in row.recipes %}{{ r.title | lower }} {% endfor %}">
+                <div class="row-main">
+                  <div class="row-title">
+                    {% for r in row.recipes %}<a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if r.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}{% if not loop.last %}<span class="muted">·</span>{% endif %}{% endfor %}
+                  </div>
+                  <div class="row-meta">none chosen · {{ row.gen.created_at | localdt }} · cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }} · <a href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">choose one</a></div>
+                </div>
+              </li>
+            {% else %}
+              <li class="recipe-row" data-title="generation failed">
+                <div class="row-main">
+                  <div class="row-title"><span class="muted">Generation failed</span></div>
+                  <div class="row-meta">{{ row.gen.created_at | localdt }}{% if row.gen.error %} · {{ row.gen.error }}{% endif %}</div>
+                </div>
+              </li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
 
-        {% elif row.status == "unchosen" %}
-          <li class="row recipe-row">
-            <div class="row-main">
-              <div class="row-title">
-                {{ source_dot('ai') }}
-                {% for r in row.recipes %}
-                  <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if r.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}{% if not loop.last %}<span class="muted">·</span>{% endif %}
-                {% endfor %}
+    {% if ns.hand %}
+      <section class="recipe-group recipe-group--hand">
+        <header class="recipe-group-head">
+          <h2 class="recipe-group-name">Created by hand</h2>
+          <span class="recipe-group-count">{{ ns.hand | length }}</span>
+        </header>
+        <ul class="recipe-list">
+          {% for row in ns.hand %}
+            <li class="recipe-row" data-title="{{ row.recipe.title | lower }}">
+              <div class="row-main">
+                <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.recipe.id) }}">{{ row.recipe.title }}</a></div>
+                <div class="row-meta">{{ row.recipe.created_at | localdt }} · created by {{ row.recipe.author.name if row.recipe.author else "unknown" }}</div>
               </div>
-              <div class="row-meta">
-                none chosen · {{ row.gen.created_at | localdt }} · cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }} · <a href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">choose one</a>
-              </div>
-            </div>
-          </li>
+              {% if row.recipe.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
 
-        {% else %}
-          <li class="row recipe-row">
-            <div class="row-main">
-              <div class="row-title">
-                {{ source_dot('ai') }}<span class="muted">Generation failed</span>
-              </div>
-              <div class="row-meta">
-                {{ row.gen.created_at | localdt }}{% if row.gen.error %} · {{ row.gen.error }}{% endif %}
-              </div>
-            </div>
-          </li>
-        {% endif %}
-      {% endfor %}
-    </ul>
+    <p class="recipe-nomatch" id="recipe-nomatch" hidden><em>No recipes match your filter.</em></p>
   {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (function () {
+      var input = document.getElementById("recipe-filter");
+      if (!input) return;
+      var groups = document.querySelectorAll(".recipe-group");
+      var nomatch = document.getElementById("recipe-nomatch");
+      input.addEventListener("input", function () {
+        var q = input.value.trim().toLowerCase();
+        var any = false;
+        groups.forEach(function (g) {
+          var gv = false;
+          g.querySelectorAll(".recipe-row").forEach(function (r) {
+            var m = !q || (r.dataset.title || "").indexOf(q) !== -1;
+            r.hidden = !m; if (m) gv = true;
+          });
+          g.hidden = !gv; if (gv) any = true;
+        });
+        if (nomatch) nomatch.hidden = any || !q;
+      });
+    })();
+  </script>
 {% endblock %}
