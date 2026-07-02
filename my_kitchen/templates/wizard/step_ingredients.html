@@ -19,9 +19,13 @@
   <form method="post" action="{{ url_for('wizard.step_ingredients') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if any_in_stock %}
+      {# Lanes render in the fixed section order (protein, carb, veg, other), so
+         index maps cleanly onto the stock section colours. #}
+      {% set lane_keys = ['protein', 'carb', 'veg', 'other'] %}
       {% for section_label, items in lanes %}
-        <section class="section">
-          <h2>{{ section_label }}</h2>
+        {% set key = lane_keys[loop.index0] if loop.index0 < 4 else 'other' %}
+        <section class="wizard-lane wizard-lane--{{ key }}">
+          <h2 class="lane-head">{{ section_label }}</h2>
           {% if items %}
             <div class="options options--grid">
               {% for ing in items %}
