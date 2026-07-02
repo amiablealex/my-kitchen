@@ -1,7 +1,7 @@
+{% from "_icons.html" import icon %}
 {# Search-to-add results fragment, returned by stock.search and injected into
    #stock-search-results by stock.js. Add buttons carry a url_for-built
-   data-add-url so the JS never constructs a URL itself (keeps sub-path /
-   ProxyFix serving correct). A blank query renders nothing at all. #}
+   data-add-url so the JS never constructs a URL itself. Blank query → nothing. #}
 {% if query and not results %}
   <p class="search-empty">
     <em>No catalogue matches for "{{ query }}" that aren't already in stock.</em>
@@ -10,11 +10,11 @@
   <ul class="search-results">
     {% for ing in results %}
       <li class="search-result" data-ingredient-id="{{ ing.id }}">
-        {{ ing.name }} <small>({{ ing.category.name }})</small>
+        <span class="search-result-name">{{ ing.name }}</span>
+        <small>{{ ing.category.name }}</small>
         <button type="button" class="stock-add"
-                data-add-url="{{ url_for('stock.add', ingredient_id=ing.id) }}">
-          Add to stock
-        </button>
+                aria-label="Add {{ ing.name }} to stock"
+                data-add-url="{{ url_for('stock.add', ingredient_id=ing.id) }}">{{ icon('add') }}</button>
       </li>
     {% endfor %}
   </ul>

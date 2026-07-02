@@ -1,28 +1,43 @@
-{# Shared stock-editing component. Included by /stock and the wizard's
-   /cook/stock step — the SAME markup + JS on both surfaces.
-
-   Pantry: only in-stock, active, non-staple ingredients, grouped by category.
-   Expects `groups` in context: [(category, [ingredients]) ...] from
-   stock.service.in_stock_groups(). Behaviour lives in static/stock.js.
-
-   The "Add to stock" area searches the master catalogue (active, non-staple,
-   not-already-in-stock) and hands off to manage → ingredients for anything not
+{% from "_icons.html" import icon %}
+{# Shared stock-editing component. Included by /stock.
+   Pantry: in-stock, active, non-staple ingredients grouped by category, styled
+   as section-coloured "tables" (colour keyed off category.section → one of the
+   four accents). Compact divided rows; notes collapse to a preview and expand
+   to an input on demand; remove is a minus icon. Behaviour: static/stock.js.
+   The "Add to stock" search hands off to manage → ingredients for anything not
    in the catalogue yet. #}
+
+<div class="pantry-toolbar"{% if not groups %} hidden{% endif %}>
+  <label class="pantry-filter">
+    {{ icon('search') }}
+    <input type="search" id="pantry-filter" placeholder="Filter your stock…" autocomplete="off">
+  </label>
+</div>
+
 <div id="pantry">
   {% for cat, ingredients in groups %}
-    <section class="stock-group" data-category-id="{{ cat.id }}">
-      <h2>{{ cat.name }}</h2>
-      <ul>
+    <section class="stock-group stock-group--{{ cat.section }}" data-category-id="{{ cat.id }}">
+      <header class="stock-group-head">
+        <h2 class="stock-group-name">{{ cat.name }}</h2>
+        <span class="stock-group-count">{{ ingredients|length }}</span>
+      </header>
+      <ul class="stock-list">
         {% for ing in ingredients %}
-          <li class="stock-item" data-ingredient-id="{{ ing.id }}">
+          <li class="stock-item" data-ingredient-id="{{ ing.id }}" data-name="{{ ing.name|lower }}">
             <span class="stock-item-name">{{ ing.name }}</span>
-            <input type="text" class="stock-note"
+            <button type="button" class="stock-note-toggle{% if ing.note %} has-note{% endif %}"
+                    aria-label="{{ 'Edit note' if ing.note else 'Add a note' }}">
+              <span class="stock-note-preview">{{ ing.note or '' }}</span>
+              {{ icon('edit', 'stock-note-icon') }}
+            </button>
+            <input type="text" class="stock-note" hidden
                    placeholder="note (e.g. 1 large, needs using)"
                    value="{{ ing.note or '' }}"
                    data-note-url="{{ url_for('stock.note', ingredient_id=ing.id) }}">
             <button type="button" class="stock-remove"
+                    aria-label="Remove {{ ing.name }} from stock"
                     data-remove-url="{{ url_for('stock.remove', ingredient_id=ing.id) }}">
-              Remove
+              {{ icon('remove') }}
             </button>
           </li>
         {% endfor %}
@@ -32,6 +47,7 @@
   <p class="pantry-empty"{% if groups %} hidden{% endif %}>
     <em>Nothing in stock right now — search below to add what you have in.</em>
   </p>
+  <p class="pantry-nomatch" hidden><em>No stock matches your filter.</em></p>
 </div>
 
 <section id="stock-search">
