@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.0 - Quite a nice little improvement to user experience
+
+- Making a shift from 'functional' to 'intuitive'
+
 ## 0.14.1 - Fixed llm leaning too heavily on "To-buy"
 
 - Prevented llm generated recipes bbeing based around a to_buy not-in-stock ingredient,
