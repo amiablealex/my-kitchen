@@ -15,21 +15,18 @@
   {% else %}
     <ul class="rows">
       {% for r in recipes %}
-        <li class="card">
-          <div class="row-title">
-            {{ source_dot(r.source) }}<a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>
-            <span style="color:var(--accent-2)">{{ icon('star_fill') }}</span>
+        <li class="row recipe-row">
+          <div class="row-main">
+            <div class="row-title">
+              {{ source_dot(r.source) }}<a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>
+            </div>
+            <div class="row-meta">
+              {{ r.created_at | localdt }} ·
+              {% if r.generation %}cooked by {{ r.generation.created_by.name if r.generation.created_by else "unknown" }}
+              {% else %}created by {{ r.author.name if r.author else "unknown" }}{% endif %}
+            </div>
           </div>
-          {% if r.blurb %}<div class="muted">{{ r.blurb }}</div>{% endif %}
-          <div class="row-meta" style="margin-top:var(--space-2)">
-            {{ r.created_at | localdt }}
-            —
-            {% if r.generation %}
-              cooked by {{ r.generation.created_by.name if r.generation.created_by else "unknown" }}
-            {% else %}
-              created by {{ r.author.name if r.author else "unknown" }}
-            {% endif %}
-          </div>
+          <span class="row-star" aria-label="Favourite">{{ icon('star_fill') }}</span>
         </li>
       {% endfor %}
     </ul>

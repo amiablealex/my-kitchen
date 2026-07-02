@@ -373,6 +373,14 @@ th { color: var(--text-muted); font-weight: 600; }
 .row-badges { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-2); }
 .row-actions { display: flex; gap: var(--space-1); flex: none; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .row-actions form { display: inline; }
+
+/* --- compact recipe rows (History + Favourites) --- */
+.recipe-row .row-title { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-2); min-width: 0; }
+.recipe-row .row-title .source-dot { margin: 0; }
+.recipe-row .row-title a { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-star { flex: none; color: var(--accent-2); display: inline-flex; align-items: center; }
+.row-star .icon { width: 1.15em; height: 1.15em; }
+
 /* desktop multi-column grid where it aids scanning (categories, dietary tags) */
 .rows--grid { display: grid; grid-template-columns: 1fr; }
 @media (min-width: 720px) { .rows--grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); } }

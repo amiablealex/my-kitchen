@@ -42,42 +42,56 @@
     <ul class="rows">
       {% for row in rows %}
         {% if row.kind == "user" %}
-          <li class="card">
-            <div class="row-meta">
-              {{ row.recipe.created_at | localdt }}
-              — created by {{ row.recipe.author.name if row.recipe.author else "unknown" }}
+          <li class="row recipe-row">
+            <div class="row-main">
+              <div class="row-title">
+                {{ source_dot(row.recipe.source) }}<a href="{{ url_for('wizard.recipe', recipe_id=row.recipe.id) }}">{{ row.recipe.title }}</a>
+              </div>
+              <div class="row-meta">
+                {{ row.recipe.created_at | localdt }} · created by {{ row.recipe.author.name if row.recipe.author else "unknown" }}
+              </div>
             </div>
-            <div class="row-title" style="margin-top:var(--space-2)">
-              {{ source_dot(row.recipe.source) }}<a href="{{ url_for('wizard.recipe', recipe_id=row.recipe.id) }}">{{ row.recipe.title }}</a>
-              {% if row.recipe.id in fav_ids %} <span style="color:var(--accent-2)">{{ icon('star_fill') }}</span>{% endif %}
-            </div>
-            {% if row.recipe.blurb %}<div class="muted">{{ row.recipe.blurb }}</div>{% endif %}
+            {% if row.recipe.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}
           </li>
-        {% else %}
-          <li class="card">
-            <div class="row-meta">
-              {{ row.gen.created_at | localdt }}
-              — {{ row.gen.cuisine }}, {{ row.gen.time_band }}, serves {{ row.gen.servings }}
-              — cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }}
-            </div>
 
-            {% if row.status == "chosen" %}
-              <div class="row-title" style="margin-top:var(--space-2)">
+        {% elif row.status == "chosen" %}
+          <li class="row recipe-row">
+            <div class="row-main">
+              <div class="row-title">
                 {{ source_dot('ai') }}<a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a>
-                {% if row.chosen.id in fav_ids %} <span style="color:var(--accent-2)">{{ icon('star_fill') }}</span>{% endif %}
               </div>
-            {% elif row.status == "unchosen" %}
-              <div style="margin-top:var(--space-2)">
-                {{ source_dot('ai') }}<span class="muted">Generated (none chosen):</span>
-                <span class="muted">Generated (none chosen):</span>
+              <div class="row-meta">
+                {{ row.gen.created_at | localdt }} · {{ row.gen.cuisine }}, {{ row.gen.time_band }}, serves {{ row.gen.servings }} · cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }}
+              </div>
+            </div>
+            {% if row.chosen.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}
+          </li>
+
+        {% elif row.status == "unchosen" %}
+          <li class="row recipe-row">
+            <div class="row-main">
+              <div class="row-title">
+                {{ source_dot('ai') }}
                 {% for r in row.recipes %}
-                  <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if r.id in fav_ids %} <span style="color:var(--accent-2)">{{ icon('star_fill') }}</span>{% endif %}{% if not loop.last %} · {% endif %}
+                  <a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if r.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}{% if not loop.last %}<span class="muted">·</span>{% endif %}
                 {% endfor %}
-                — <a href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">choose one</a>
               </div>
-            {% else %}
-              <div class="muted" style="margin-top:var(--space-2)">{{ source_dot('ai') }}<em>Generation failed{% if row.gen.error %}: {{ row.gen.error }}{% endif %}</em></div>
-            {% endif %}
+              <div class="row-meta">
+                none chosen · {{ row.gen.created_at | localdt }} · cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }} · <a href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">choose one</a>
+              </div>
+            </div>
+          </li>
+
+        {% else %}
+          <li class="row recipe-row">
+            <div class="row-main">
+              <div class="row-title">
+                {{ source_dot('ai') }}<span class="muted">Generation failed</span>
+              </div>
+              <div class="row-meta">
+                {{ row.gen.created_at | localdt }}{% if row.gen.error %} · {{ row.gen.error }}{% endif %}
+              </div>
+            </div>
           </li>
         {% endif %}
       {% endfor %}
