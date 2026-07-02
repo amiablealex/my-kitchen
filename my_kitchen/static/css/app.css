@@ -763,3 +763,30 @@ th { color: var(--text-muted); font-weight: 600; }
 .sugg-card-tags { display: flex; flex-wrap: wrap; gap: var(--space-1); }
 .sugg-card-serves { font-size: var(--fs-small); }
 @media (min-width: 620px) { .sugg-card { flex-basis: 240px; } }
+
+/* --- manage lists: add-form disclosure, neutral/typed tables, icon actions --- */
+.manage-add { margin-bottom: var(--space-4); }
+.manage-add > summary {
+  list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2);
+  min-height: 36px; padding: 0 var(--space-4); border-radius: var(--radius-pill);
+  background: var(--accent-1); color: var(--on-accent); font-weight: 600;
+}
+.manage-add > summary::-webkit-details-marker { display: none; }
+.manage-add > summary .icon { width: 1.15em; height: 1.15em; }
+.manage-add[open] > summary { background: var(--surface-2); color: var(--text); margin-bottom: var(--space-3); }
+.manage-add .form { background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius); padding: var(--space-4); }
+
+.recipe-group--plain   { --group: var(--divider); --group-tint: rgba(255, 255, 255, 0.04); }
+.recipe-group--allergy { --group: var(--danger); --group-tint: rgba(255, 95, 145, 0.14); }
+.recipe-group--pref    { --group: var(--info);   --group-tint: rgba(86, 208, 187, 0.14); }
+
+.btn--icon { width: 36px; padding: 0; justify-content: center; }
+.btn--icon .icon { width: 1.2em; height: 1.2em; }
+
+.sec-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--accent-1); flex: none; }
+.sec-dot--protein { background: var(--accent-4); }
+.sec-dot--carb    { background: var(--accent-3); }
+.sec-dot--veg     { background: var(--accent-2); }
+.sec-dot--other   { background: var(--accent-1); }
+
+.recipe-row.is-off .row-title { color: var(--text-muted); }

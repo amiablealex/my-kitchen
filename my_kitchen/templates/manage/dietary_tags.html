@@ -2,6 +2,25 @@
 {% from "_icons.html" import icon %}
 {% block title %}Manage dietary tags — My Kitchen{% endblock %}
 {% block page_title %}Dietary tags{% endblock %}
+
+{% macro tag_row(t, counts) %}
+  <li class="recipe-row">
+    <div class="row-main">
+      <div class="row-title">{{ t.name }}</div>
+      <div class="row-meta">{{ counts[t.id] }} user{{ "s" if counts[t.id] != 1 else "" }}</div>
+    </div>
+    <div class="row-actions">
+      <a class="btn btn--sm btn--icon btn--secondary" aria-label="Edit {{ t.name }}"
+         href="{{ url_for('manage.dietary_tag_edit', tag_id=t.id) }}">{{ icon('edit') }}</a>
+      <form method="post" action="{{ url_for('manage.dietary_tag_delete', tag_id=t.id) }}"
+            onsubmit="return confirm('Delete \u201c{{ t.name }}\u201d?{% if counts[t.id] %} It\u2019s assigned to {{ counts[t.id] }} user(s) \u2014 they\u2019ll be unassigned.{% endif %}');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn--sm btn--icon btn--danger" aria-label="Delete {{ t.name }}">{{ icon('delete') }}</button>
+      </form>
+    </div>
+  </li>
+{% endmacro %}
+
 {% block content %}
   <a class="back-link" href="{{ url_for('manage.index') }}">{{ icon('arrow_back') }} Manage</a>
   <h1>Dietary tags</h1>
@@ -9,8 +28,8 @@
      An <strong>allergy</strong> is a hard rule the recipe generator must never break;
      a <strong>preference</strong> is a gentle steer.</p>
 
-  <section class="section">
-    <h2>Add a tag</h2>
+  <details class="manage-add">
+    <summary>{{ icon('add') }} Add a tag</summary>
     <form class="form" method="post" action="{{ url_for('manage.dietary_tag_add') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Name <input type="text" name="name" placeholder="e.g. Vegetarian, Peanut allergy" required></label>
@@ -25,34 +44,34 @@
         <button type="submit" class="btn btn--primary">{{ icon('add') }} Add</button>
       </div>
     </form>
-  </section>
+  </details>
 
-  <section class="section">
-    <h2>All tags ({{ tags|length }})</h2>
-    {% if tags %}
-      <ul class="rows rows--grid">
-        {% for t in tags %}
-          <li class="row">
-            <div class="row-main">
-              <div class="row-title">{{ t.name }}</div>
-              <div class="row-badges">
-                {% if t.type == "allergy" %}<span class="badge badge--allergy">allergy</span>{% else %}<span class="badge badge--pref">preference</span>{% endif %}
-                <span class="badge badge--muted">{{ counts[t.id] }} user{{ "s" if counts[t.id] != 1 else "" }}</span>
-              </div>
-            </div>
-            <div class="row-actions">
-              <a class="btn btn--sm btn--secondary" href="{{ url_for('manage.dietary_tag_edit', tag_id=t.id) }}">{{ icon('edit') }} Edit</a>
-              <form method="post" action="{{ url_for('manage.dietary_tag_delete', tag_id=t.id) }}"
-                    onsubmit="return confirm('Delete \u201c{{ t.name }}\u201d?{% if counts[t.id] %} It\u2019s assigned to {{ counts[t.id] }} user(s) \u2014 they\u2019ll be unassigned.{% endif %}');">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn--sm btn--danger">{{ icon('delete') }} Delete</button>
-              </form>
-            </div>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="muted">No dietary tags yet — add one above.</p>
+  {% if not tags %}
+    <p class="muted">No dietary tags yet — add one above.</p>
+  {% else %}
+    {% set ns = namespace(allergy=[], pref=[]) %}
+    {% for t in tags %}
+      {% if t.type == 'allergy' %}{% set ns.allergy = ns.allergy + [t] %}{% else %}{% set ns.pref = ns.pref + [t] %}{% endif %}
+    {% endfor %}
+
+    {% if ns.allergy %}
+      <section class="recipe-group recipe-group--allergy">
+        <header class="recipe-group-head">
+          <h2 class="recipe-group-name">Allergies</h2>
+          <span class="recipe-group-count">{{ ns.allergy | length }}</span>
+        </header>
+        <ul class="recipe-list">{% for t in ns.allergy %}{{ tag_row(t, counts) }}{% endfor %}</ul>
+      </section>
     {% endif %}
-  </section>
+
+    {% if ns.pref %}
+      <section class="recipe-group recipe-group--pref">
+        <header class="recipe-group-head">
+          <h2 class="recipe-group-name">Preferences</h2>
+          <span class="recipe-group-count">{{ ns.pref | length }}</span>
+        </header>
+        <ul class="recipe-list">{% for t in ns.pref %}{{ tag_row(t, counts) }}{% endfor %}</ul>
+      </section>
+    {% endif %}
+  {% endif %}
 {% endblock %}

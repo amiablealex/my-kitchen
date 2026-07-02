@@ -9,8 +9,8 @@
      <em>sections</em> (Protein / Carb / Veg / Other) — that's the lane its
      ingredients show up in when you cook.</p>
 
-  <section class="section">
-    <h2>Add a category</h2>
+  <details class="manage-add">
+    <summary>{{ icon('add') }} Add a category</summary>
     <form class="form" method="post" action="{{ url_for('manage.category_add') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Name <input type="text" name="name" required></label>
@@ -26,39 +26,37 @@
         <button type="submit" class="btn btn--primary">{{ icon('add') }} Add</button>
       </div>
     </form>
-  </section>
+  </details>
 
-  <section class="section">
-    <h2>All categories ({{ categories|length }})</h2>
-    {% if categories %}
-      <ul class="rows rows--grid">
+  {% if categories %}
+    <section class="recipe-group recipe-group--plain">
+      <header class="recipe-group-head">
+        <h2 class="recipe-group-name">All categories</h2>
+        <span class="recipe-group-count">{{ categories|length }}</span>
+      </header>
+      <ul class="recipe-list">
         {% for c in categories %}
-          <li class="row">
+          <li class="recipe-row">
             <div class="row-main">
-              <div class="row-title">{{ c.name }}</div>
-              <div class="row-meta">order {{ c.display_order }}</div>
-              <div class="row-badges">
-                <span class="badge">{{ c.section }}</span>
-                <span class="badge badge--muted">{{ counts[c.id] }} ingredient{{ "s" if counts[c.id] != 1 else "" }}</span>
-              </div>
+              <div class="row-title"><span class="sec-dot sec-dot--{{ c.section }}"></span>{{ c.name }}</div>
+              <div class="row-meta">{{ c.section }} · order {{ c.display_order }} · {{ counts[c.id] }} ingredient{{ "s" if counts[c.id] != 1 else "" }}</div>
             </div>
             <div class="row-actions">
-              <a class="btn btn--sm btn--secondary" href="{{ url_for('manage.category_edit', category_id=c.id) }}">{{ icon('edit') }} Edit</a>
+              <a class="btn btn--sm btn--icon btn--secondary" aria-label="Edit {{ c.name }}"
+                 href="{{ url_for('manage.category_edit', category_id=c.id) }}">{{ icon('edit') }}</a>
               {% if counts[c.id] == 0 %}
                 <form method="post" action="{{ url_for('manage.category_delete', category_id=c.id) }}"
                       onsubmit="return confirm('Delete category \u201c{{ c.name }}\u201d?');">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="btn btn--sm btn--danger">{{ icon('delete') }} Delete</button>
+                  <button type="submit" class="btn btn--sm btn--icon btn--danger" aria-label="Delete {{ c.name }}">{{ icon('delete') }}</button>
                 </form>
-              {% else %}
-                <span class="help">move its {{ counts[c.id] }} ingredient(s) to delete</span>
               {% endif %}
             </div>
           </li>
         {% endfor %}
       </ul>
-    {% else %}
-      <p class="muted">No categories yet — add one above.</p>
-    {% endif %}
-  </section>
+    </section>
+  {% else %}
+    <p class="muted">No categories yet — add one above.</p>
+  {% endif %}
 {% endblock %}
