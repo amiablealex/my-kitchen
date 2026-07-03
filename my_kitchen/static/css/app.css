@@ -532,8 +532,6 @@ th { color: var(--text-muted); font-weight: 600; }
 .pantry-empty, .pantry-nomatch { color: var(--text-muted); }
 
 /* --- add to stock (search) --- */
-#stock-search { margin-top: var(--space-5); }
-#stock-search-input { width: 100%; min-height: 44px; }
 .search-results { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
 .search-result {
   display: flex; align-items: center; gap: var(--space-2);
