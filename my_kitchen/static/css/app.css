@@ -902,3 +902,22 @@ th { color: var(--text-muted); font-weight: 600; }
 .toast-action:hover { background: rgba(177, 228, 109, 0.14); }
 .toast-close { flex: none; background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 1.3rem; line-height: 1; padding: 0 var(--space-1); }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+
+/* --- tabs (manage ingredients: standard vs staples) --- */
+.tabs { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: var(--space-4);
+  background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius-pill); }
+.tab { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 34px;
+  padding: 0 var(--space-4); border: none; background: none; color: var(--text-muted);
+  border-radius: var(--radius-pill); font-weight: 600; cursor: pointer; }
+.tab.is-active { background: var(--accent-1); color: var(--on-accent); }
+.tab-count { font-size: var(--fs-small); font-variant-numeric: tabular-nums; opacity: 0.85; }
+.tab-panel[hidden] { display: none; }
+
+/* staple pin toggle: lime when active (pinned) */
+.staple-pin.is-on { color: var(--accent-2); border-color: var(--accent-2); }
+.help .icon { width: 1.1em; height: 1.1em; vertical-align: -2px; }
+
+/* let dense action clusters wrap under the name instead of overflowing */
+.recipe-list > .recipe-row { flex-wrap: wrap; }
+
+.edit-danger { margin-top: var(--space-5); border-top: 1px solid var(--divider); padding-top: var(--space-4); }

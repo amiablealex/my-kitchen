@@ -154,6 +154,20 @@ def ingredient_delete(ingredient_id):
     return redirect(url_for("manage.ingredients"))
 
 
+@manage_bp.route("/ingredients/<int:ingredient_id>/toggle-staple", methods=["POST"])
+def ingredient_toggle_staple(ingredient_id):
+    ing = db.session.get(Ingredient, ingredient_id)
+    if ing is None:
+        abort(404)
+    ing.is_staple = not ing.is_staple
+    db.session.commit()
+    if ing.is_staple:
+        flash(f'"{ing.name}" is now a staple — assumed always available.', "success")
+    else:
+        flash(f'"{ing.name}" moved back to standard stock (it\'s still in your catalogue).', "info")
+    return redirect(url_for("manage.ingredients"))
+
+
 # ----------------------------------------------------------------- categories
 
 def _category_name_taken(name, exclude_id=None):

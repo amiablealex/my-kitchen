@@ -21,6 +21,26 @@
       <button type="submit" class="btn btn--primary">Save</button>
     </div>
   </form>
-  <p class="help">Status: {{ "active" if ing.is_active else "retired" }}.
-     In stock and notes are managed on the <a href="{{ url_for('stock.index') }}">Stock</a> page.</p>
+
+  <p class="help">In stock and notes are managed on the <a href="{{ url_for('stock.index') }}">Stock</a> page.</p>
+
+  <section class="section edit-danger">
+    {% if ing.is_active %}
+      <h2>Retire</h2>
+      <p class="help">Retiring hides "{{ ing.name }}" from the stock list and the cook wizard but
+         keeps it in your history — it's not deleted, and you can reactivate it any time.</p>
+      <form method="post" action="{{ url_for('manage.ingredient_retire', ingredient_id=ing.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn--secondary">{{ icon('archive') }} Retire ingredient</button>
+      </form>
+    {% else %}
+      <h2>Retired</h2>
+      <p class="help">This ingredient is retired — hidden from stock and the wizard, but kept in history.</p>
+      <form method="post" action="{{ url_for('manage.ingredient_activate', ingredient_id=ing.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn--secondary">{{ icon('check') }} Reactivate ingredient</button>
+      </form>
+    {% endif %}
+  </section>
+
 {% endblock %}
