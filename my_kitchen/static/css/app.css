@@ -921,3 +921,31 @@ th { color: var(--text-muted); font-weight: 600; }
 .recipe-list > .recipe-row { flex-wrap: wrap; }
 
 .edit-danger { margin-top: var(--space-5); border-top: 1px solid var(--divider); padding-top: var(--space-4); }
+
+/* --- stock: add-to-stock disclosure + state-aware search + inline create --- */
+.pantry-toolbar { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-3); }
+.stock-add-panel.manage-add { margin-bottom: 0; }
+.stock-add-body {
+  margin-top: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3);
+  background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius); padding: var(--space-3);
+}
+.stock-add-search {
+  display: flex; align-items: center; gap: var(--space-2);
+  background: var(--grape); border: 1px solid var(--divider); border-radius: var(--radius); padding: 0 var(--space-3);
+}
+.stock-add-search .icon { width: 1.2em; height: 1.2em; color: var(--text-muted); flex: none; }
+.stock-add-search input { flex: 1; min-height: 40px; background: none; border: none; }
+.stock-add-search input:focus { outline: none; }
+
+.search-result--muted { opacity: 0.7; }
+.search-state { flex: none; display: inline-flex; align-items: center; gap: var(--space-1); color: var(--text-muted); font-size: var(--fs-small); }
+.search-state .icon { width: 1.1em; height: 1.1em; }
+.search-state--ok { color: var(--accent-2); }
+.search-empty { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); color: var(--text-muted); }
+
+.stock-new-form { display: flex; flex-direction: column; gap: var(--space-2); border-top: 1px solid var(--divider); padding-top: var(--space-3); }
+.stock-new-form[hidden] { display: none; }
+.stock-new-head { margin: 0; }
+.stock-new-staple { font-size: var(--fs-small); }
+.stock-new-error { color: var(--danger); font-size: var(--fs-small); }
+.stock-new-actions { display: flex; gap: var(--space-2); }

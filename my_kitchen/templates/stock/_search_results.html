@@ -1,21 +1,39 @@
 {% from "_icons.html" import icon %}
-{# Search-to-add results fragment, returned by stock.search and injected into
-   #stock-search-results by stock.js. Add buttons carry a url_for-built
-   data-add-url so the JS never constructs a URL itself. Blank query → nothing. #}
-{% if query and not results %}
-  <p class="search-empty">
-    <em>No catalogue matches for "{{ query }}" that aren't already in stock.</em>
-  </p>
+{# State-aware catalogue search fragment (stock.search → #stock-search-results).
+   Each match renders by state: addable (＋), already in stock (muted tick), or a
+   staple (muted, informative). When nothing matches, a trigger offers to create a
+   brand-new ingredient inline. JS reads data-* to wire behaviour. #}
+{% if not query %}
 {% elif results %}
   <ul class="search-results">
     {% for ing in results %}
-      <li class="search-result" data-ingredient-id="{{ ing.id }}">
-        <span class="search-result-name">{{ ing.name }}</span>
-        <small>{{ ing.category.name }}</small>
-        <button type="button" class="stock-add"
-                aria-label="Add {{ ing.name }} to stock"
-                data-add-url="{{ url_for('stock.add', ingredient_id=ing.id) }}">{{ icon('add') }}</button>
-      </li>
+      {% if ing.in_stock %}
+        <li class="search-result search-result--muted">
+          <span class="search-result-name">{{ ing.name }}</span>
+          <small>{{ ing.category.name }}</small>
+          <span class="search-state search-state--ok">{{ icon('check') }} in stock</span>
+        </li>
+      {% elif ing.is_staple %}
+        <li class="search-result search-result--muted">
+          <span class="search-result-name">{{ ing.name }}</span>
+          <small>{{ ing.category.name }}</small>
+          <span class="search-state">staple · always available</span>
+        </li>
+      {% else %}
+        <li class="search-result" data-ingredient-id="{{ ing.id }}">
+          <span class="search-result-name">{{ ing.name }}</span>
+          <small>{{ ing.category.name }}</small>
+          <button type="button" class="stock-add" aria-label="Add {{ ing.name }} to stock"
+                  data-add-url="{{ url_for('stock.add', ingredient_id=ing.id) }}">{{ icon('add') }}</button>
+        </li>
+      {% endif %}
     {% endfor %}
   </ul>
+{% else %}
+  <div class="search-empty">
+    <span>No catalogue match for “{{ query }}”.</span>
+    <button type="button" class="btn btn--sm btn--primary" id="stock-new-trigger" data-new-name="{{ query }}">
+      {{ icon('add') }} Add as new ingredient
+    </button>
+  </div>
 {% endif %}

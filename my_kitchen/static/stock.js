@@ -1,15 +1,12 @@
-// Stock editing: filter, inline notes (collapsed→expanded), remove, search-to-add.
-// Endpoint URLs come from data-* attributes built server-side with url_for(), so
-// this works unchanged behind a reverse proxy / sub-path. POSTs carry the CSRF
-// token via X-CSRFToken (from base.html's <meta name="csrf-token">). Search is a
-// GET (read-only), so it needs no token.
+// Stock editing: filter, inline notes, remove (with undo), state-aware search-to-add,
+// and inline create-new-ingredient. Endpoint URLs come from data-* built with
+// url_for() (sub-path safe). POSTs carry X-CSRFToken from base.html's meta tag.
 
 function csrfToken() {
   const meta = document.querySelector('meta[name="csrf-token"]');
   return meta ? meta.getAttribute("content") : "";
 }
 
-// Show the "nothing in stock" line iff the pantry has no items left.
 function refreshEmptyState() {
   const pantry = document.getElementById("pantry");
   if (!pantry) return;
@@ -17,6 +14,15 @@ function refreshEmptyState() {
   if (!empty) return;
   empty.hidden = pantry.querySelectorAll(".stock-item").length > 0;
 }
+
+// Carry the add-panel open state + query across an add/create reload (one-shot).
+var ADD_STATE_KEY = "mk-stock-add";
+function saveAddState(q) { try { sessionStorage.setItem(ADD_STATE_KEY, JSON.stringify({ open: true, q: q || "" })); } catch (e) {} }
+function popAddState() {
+  try { var raw = sessionStorage.getItem(ADD_STATE_KEY); sessionStorage.removeItem(ADD_STATE_KEY); return raw ? JSON.parse(raw) : null; }
+  catch (e) { return null; }
+}
+function persistAddOpen() { var si = document.getElementById("stock-search-input"); saveAddState(si ? si.value.trim() : ""); }
 
 // --- notes: collapsed preview <-> inline input -------------------------------
 function startEditNote(row) {
@@ -39,7 +45,6 @@ function collapseNote(row) {
   if (toggle) toggle.classList.toggle("has-note", !!val);
 }
 
-// Save on change (fires on blur when the value changed), then collapse.
 document.addEventListener("change", function (event) {
   const target = event.target;
   if (!target.classList.contains("stock-note")) return;
@@ -54,8 +59,6 @@ document.addEventListener("change", function (event) {
     .catch(() => { alert("Could not save note."); });
 });
 
-// Collapse on blur even when unchanged (change won't have fired). Capture phase
-// because blur doesn't bubble.
 document.addEventListener("blur", function (event) {
   const target = event.target;
   if (target.classList && target.classList.contains("stock-note")) {
@@ -64,11 +67,10 @@ document.addEventListener("blur", function (event) {
   }
 }, true);
 
-// --- click delegation: note toggle, remove, add ------------------------------
+// --- click delegation: note toggle, remove (undo), add -----------------------
 document.addEventListener("click", function (event) {
   const target = event.target;
 
-  // Open the note editor for this row.
   const noteToggle = target.closest(".stock-note-toggle");
   if (noteToggle) {
     const row = noteToggle.closest(".stock-item");
@@ -76,7 +78,6 @@ document.addEventListener("click", function (event) {
     return;
   }
 
-  // Remove from stock — drop the row, tidy the group, then offer an undo toast.
   const removeBtn = target.closest(".stock-remove");
   if (removeBtn) {
     const li = removeBtn.closest(".stock-item");
@@ -114,14 +115,14 @@ document.addEventListener("click", function (event) {
     return;
   }
 
-  // Add to stock — reload so the new item appears via the normal server render
-  // (also resets the search box).
+  // Add existing catalogue item to stock — keep the panel open + query across
+  // the reload so consecutive adds stay smooth and the item flips to "in stock".
   const addBtn = target.closest(".stock-add");
   if (addBtn) {
     addBtn.disabled = true;
     fetch(addBtn.dataset.addUrl, { method: "POST", headers: { "X-CSRFToken": csrfToken() } })
       .then((r) => { if (!r.ok) throw new Error("add failed"); return r.json(); })
-      .then(() => { window.location.reload(); })
+      .then(() => { persistAddOpen(); window.location.reload(); })
       .catch(() => { addBtn.disabled = false; alert("Could not add item — is the server still running?"); });
     return;
   }
@@ -151,36 +152,101 @@ document.addEventListener("click", function (event) {
   });
 })();
 
-// --- search-to-add ------------------------------------------------------------
-// Debounced catalogue search: GET the server-rendered results fragment and drop
-// it into the results container. Keep the "add a new ingredient" link's ?name=
-// in sync so the manage form arrives pre-filled.
+// --- search-to-add + inline create -------------------------------------------
 (function () {
   const input = document.getElementById("stock-search-input");
   if (!input) return;
   const results = document.getElementById("stock-search-results");
-  const addNew = document.getElementById("stock-add-new-link");
+  const disclosure = document.getElementById("stock-add-panel");
+  const newForm = document.getElementById("stock-new-form");
+  const newName = document.getElementById("stock-new-name");
+  const newNameLabel = document.getElementById("stock-new-name-label");
+  const newCategory = document.getElementById("stock-new-category");
+  const newStaple = document.getElementById("stock-new-staple");
+  const newError = document.getElementById("stock-new-error");
+  const newCancel = document.getElementById("stock-new-cancel");
   let timer = null;
 
-  function updateAddNewLink(q) {
-    if (!addNew) return;
-    const base = addNew.dataset.baseUrl;
-    addNew.href = q ? base + "?name=" + encodeURIComponent(q) : base;
+  function hideNewForm() {
+    if (!newForm) return;
+    newForm.hidden = true;
+    if (newError) { newError.hidden = true; newError.textContent = ""; }
+  }
+  function showNewForm(name) {
+    if (!newForm) return;
+    if (newName) newName.value = name;
+    if (newNameLabel) newNameLabel.textContent = "“" + name + "”";
+    if (newStaple) newStaple.checked = false;
+    if (newCategory && newCategory.options.length) newCategory.selectedIndex = 0;
+    if (newError) { newError.hidden = true; newError.textContent = ""; }
+    newForm.hidden = false;
   }
 
   function runSearch(q) {
     if (!results) return;
+    hideNewForm();
     if (!q) { results.innerHTML = ""; return; }
     fetch(input.dataset.searchUrl + "?q=" + encodeURIComponent(q))
       .then((r) => { if (!r.ok) throw new Error("search failed"); return r.text(); })
       .then((html) => { results.innerHTML = html; })
-      .catch(() => { results.innerHTML = "<p><em>Search is unavailable right now.</em></p>"; });
+      .catch(() => { results.innerHTML = "<p class='search-empty'><em>Search is unavailable right now.</em></p>"; });
   }
 
   input.addEventListener("input", function () {
     const q = input.value.trim();
-    updateAddNewLink(q);
     clearTimeout(timer);
     timer = setTimeout(function () { runSearch(q); }, 200);
   });
+
+  if (results) {
+    results.addEventListener("click", function (ev) {
+      const trig = ev.target.closest("#stock-new-trigger");
+      if (!trig) return;
+      showNewForm(trig.dataset.newName || input.value.trim());
+      if (newCategory) newCategory.focus();
+    });
+  }
+
+  if (newCancel) newCancel.addEventListener("click", hideNewForm);
+
+  if (newForm) {
+    newForm.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      const name = (newName ? newName.value : "").trim();
+      if (!name) return;
+      const submitBtn = newForm.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      fetch(newForm.dataset.createUrl, {
+        method: "POST",
+        headers: { "X-CSRFToken": csrfToken() },
+        body: new URLSearchParams({
+          name: name,
+          category_id: newCategory ? newCategory.value : "",
+          is_staple: newStaple && newStaple.checked ? "on" : "",
+        }),
+      })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (res) {
+          if (!res.ok || !res.data.ok) {
+            if (newError) { newError.textContent = (res.data && res.data.message) || "Could not add."; newError.hidden = false; }
+            if (submitBtn) submitBtn.disabled = false;
+            return;
+          }
+          persistAddOpen();
+          window.location.reload();
+        })
+        .catch(function () {
+          if (newError) { newError.textContent = "Could not add — is the server still running?"; newError.hidden = false; }
+          if (submitBtn) submitBtn.disabled = false;
+        });
+    });
+  }
+
+  // Restore the open panel + query after an add/create reload (one-shot).
+  (function restore() {
+    const st = popAddState();
+    if (!st || !st.open) return;
+    if (disclosure) disclosure.open = true;
+    if (st.q) { input.value = st.q; runSearch(st.q); }
+  })();
 })();

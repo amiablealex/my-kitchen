@@ -1,19 +1,17 @@
 from urllib.parse import urlparse
 
-from flask import Blueprint, render_template, request, jsonify, abort
+from flask import Blueprint, render_template, request, jsonify, abort, flash
 
 from ..extensions import db
-from ..models import Ingredient
-from .service import in_stock_groups, search_addable
+from ..models import Category, Ingredient
+from .service import in_stock_groups, search_catalogue
 
 stock_bp = Blueprint("stock", __name__, url_prefix="/stock")
 
 
 def _safe_return(target):
     """Accept a return-to target only if it's an internal path (open-redirect
-    guard, same spirit as the auth `next` check): no scheme, no host, must start
-    with a single '/'. Lets the wizard round-trip through /stock and back without
-    /stock being able to bounce anyone off-site."""
+    guard): no scheme, no host, must start with a single '/'."""
     if not target:
         return None
     parsed = urlparse(target)
@@ -26,14 +24,10 @@ def _safe_return(target):
 
 @stock_bp.route("/")
 def index():
-    """Standalone pantry view: in-stock items only, grouped by category.
-    The editing UI/logic lives in the shared stock/_editor.html partial.
-
-    `return_to` (validated) lets a caller — currently the cook wizard's
-    ingredient step — round-trip here for stock maintenance and get a link back."""
     return render_template(
         "stock/index.html",
         groups=in_stock_groups(),
+        categories=Category.query.order_by(Category.display_order, Category.name).all(),
         return_to=_safe_return(request.args.get("return_to")),
     )
 
@@ -41,7 +35,7 @@ def index():
 @stock_bp.route("/search")
 def search():
     q = request.args.get("q", "")
-    results = search_addable(q)
+    results = search_catalogue(q)
     return render_template(
         "stock/_search_results.html", results=results, query=q.strip()
     )
@@ -76,3 +70,36 @@ def note(ingredient_id):
     ing.note = note_val or None
     db.session.commit()
     return jsonify(id=ing.id, note=ing.note or "")
+
+
+@stock_bp.route("/create", methods=["POST"])
+def create():
+    """Create a brand-new catalogue ingredient and stock it in one step — the
+    inline 'add as new' path when a catalogue search finds nothing. A staple is
+    created but not stocked (staples are assumed, never in the pantry list)."""
+    name = (request.form.get("name") or "").strip()
+    category_id = request.form.get("category_id", type=int)
+    is_staple = (request.form.get("is_staple") or "").lower() in ("on", "true", "1", "yes")
+    if not name:
+        return jsonify(ok=False, message="Give the ingredient a name."), 400
+    if category_id is None or db.session.get(Category, category_id) is None:
+        return jsonify(ok=False, message="Pick a category."), 400
+    existing = (
+        Ingredient.query
+        .filter(db.func.lower(Ingredient.name) == name.lower())
+        .first()
+    )
+    if existing is not None:
+        return jsonify(ok=False, message=f'"{existing.name}" is already in your catalogue.'), 409
+    ing = Ingredient(
+        name=name, category_id=category_id, is_staple=is_staple, in_stock=not is_staple
+    )
+    db.session.add(ing)
+    db.session.commit()
+    if is_staple:
+        flash(
+            f'Added "{ing.name}" as a staple — assumed always available, '
+            "so it won't appear in your stock list.",
+            "info",
+        )
+    return jsonify(ok=True, id=ing.id, name=ing.name, is_staple=ing.is_staple)

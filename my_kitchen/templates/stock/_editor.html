@@ -1,14 +1,48 @@
 {% from "_icons.html" import icon %}
-{# Shared stock-editing component. Included by /stock.
-   Pantry: in-stock, active, non-staple ingredients grouped by category, styled
-   as section-coloured "tables" (colour keyed off category.section → one of the
-   four accents). Compact divided rows; notes collapse to a preview and expand
-   to an input on demand; remove is a minus icon. Behaviour: static/stock.js.
-   The "Add to stock" search hands off to manage → ingredients for anything not
-   in the catalogue yet. #}
+{# Shared stock-editing component (used by /stock). Pantry = in-stock, active,
+   non-staple items grouped by category as section-coloured tables. Adding lives
+   in a top "Add to stock" disclosure: a state-aware catalogue search (add /
+   already-in-stock / staple) plus an inline "add a brand-new ingredient" form
+   that appears when a search finds nothing. Behaviour: static/stock.js.
+   NB: the caller must pass `categories` for the inline create form. #}
 
-<div class="pantry-toolbar"{% if not groups %} hidden{% endif %}>
-  <label class="pantry-filter">
+<div class="pantry-toolbar">
+  <details class="manage-add stock-add-panel" id="stock-add-panel"{% if not groups %} open{% endif %}>
+    <summary>{{ icon('add') }} Add to stock</summary>
+    <div class="stock-add-body">
+      <label class="stock-add-search">
+        {{ icon('search') }}
+        <input type="search" id="stock-search-input" placeholder="Search your catalogue…"
+               autocomplete="off" data-search-url="{{ url_for('stock.search') }}">
+      </label>
+      <div id="stock-search-results"></div>
+
+      {# Revealed by JS when a search finds no catalogue match. Creates the
+         ingredient and stocks it in one POST. #}
+      <form class="stock-new-form" id="stock-new-form" hidden data-create-url="{{ url_for('stock.create') }}">
+        <p class="stock-new-head">Add <strong id="stock-new-name-label"></strong> as a new ingredient</p>
+        <input type="hidden" id="stock-new-name" name="name">
+        <label>Category
+          <select id="stock-new-category" name="category_id" required>
+            {% for c in categories %}
+              <option value="{{ c.id }}">{{ c.name }} ({{ c.section }})</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="stock-new-staple">
+          <input type="checkbox" id="stock-new-staple" name="is_staple">
+          It's a staple (always available; won't show in the stock list)
+        </label>
+        <p class="stock-new-error" id="stock-new-error" hidden></p>
+        <div class="stock-new-actions">
+          <button type="submit" class="btn btn--sm btn--primary">{{ icon('add') }} Add &amp; stock</button>
+          <button type="button" class="btn btn--sm" id="stock-new-cancel">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </details>
+
+  <label class="pantry-filter"{% if not groups %} hidden{% endif %}>
     {{ icon('search') }}
     <input type="search" id="pantry-filter" placeholder="Filter your stock…" autocomplete="off">
   </label>
@@ -46,26 +80,7 @@
     </section>
   {% endfor %}
   <p class="pantry-empty"{% if groups %} hidden{% endif %}>
-    <em>Nothing in stock right now — search below to add what you have in.</em>
+    <em>Nothing in stock right now — use “Add to stock” above to add what you've got in.</em>
   </p>
   <p class="pantry-nomatch" hidden><em>No stock matches your filter.</em></p>
 </div>
-
-<section id="stock-search">
-  <h2>Add to stock</h2>
-  <label>
-    Search your catalogue:
-    <input type="search" id="stock-search-input"
-           placeholder="start typing an ingredient…"
-           autocomplete="off"
-           data-search-url="{{ url_for('stock.search') }}">
-  </label>
-  {# Results fragment (server-rendered by stock.search) is injected here. #}
-  <div id="stock-search-results"></div>
-  <p>
-    Not in your catalogue yet?
-    <a id="stock-add-new-link"
-       href="{{ url_for('manage.ingredients') }}"
-       data-base-url="{{ url_for('manage.ingredients') }}">Add a new ingredient →</a>
-  </p>
-</section>
