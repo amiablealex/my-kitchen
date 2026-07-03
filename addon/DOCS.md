@@ -17,8 +17,9 @@ Self-hosted, LLM-powered household recipe generator.
    (or pick `mock` to try it without a key). Save.
 2. **Start** the add-on, then open the **Log** tab. On first run you'll see a
    one-time block with a login user and temporary password.
-3. Open the app (host port for now; ingress is added in the next version) and
-   log in. Change the password in the app.
+3. Open **My Kitchen** from the Home Assistant sidebar (ingress, over HTTPS) and
+   log in. Change the password in the app. (A direct-LAN port is also exposed,
+   but the installable PWA only comes fully alive over the HTTPS ingress URL.)
 
 ## Data & backups
 - The SQLite database lives in the add-on's `/data` and is included in Home
