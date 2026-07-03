@@ -1,25 +1,53 @@
-# My Kitchen
+# My Kitchen (Home Assistant add-on)
 
-Personal, self-hosted recipe generator for one household. Walk a short wizard
-(stock → ingredients → cuisine → time → servings), get two LLM-generated recipes,
-pick one, and it's saved to history. Flask + SQLite, generation via a swappable
+[![Add repository to your Home Assistant instance.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Famiablealex%2Fmy-kitchen)
+
+A self-hosted, LLM-powered recipe brain for one household. Keep a shared stock list of
+what's in your kitchen, then walk a quick wizard to resurface a saved recipe you can cook right now, or
+turn the brief into two distinctly different recipes to choose from, that you can cook right now, from your
+live stock list.
+
+Runs as a Home Assistant add-on (ingress + sidebar panel, remote access via
+Nabu Casa), or standalone on any machine with Python. Built for phones and used
+daily in the kitchen.
+
+Flask + SQLite, generation via a swappable
 provider adapter (mock / Anthropic / Gemini).
 
 Runs on a Raspberry Pi on the local network.
 
 <img width="1200" height="920" alt="example" src="https://github.com/user-attachments/assets/f7a9f215-47f9-4b38-8b2d-02bc06ea9219" />
 
-## Setup
+## What it does
 
-```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env          # then edit (see below)
-flask seed                    # create tables + placeholder ingredients
-python run.py                 # dev server
-```
+- **Simple inventory tracking** A simple in/out toggle for what you've got, grouped
+  and colour-coded by section, with quick notes ("needs using").
+- **What's cookable right now** Surfaces your saved recipes you
+  can make *right now* with what's in stock.
+- **Real ingredient catalogue.** Every recipe links to a structured catalogue
+  via a deterministic resolver.
+- **Your household.** Multi-user with per-person favourites and dietary tags
+  (allergies are hard exclusions; preferences are soft steers).
+- **Hand-written recipes too.** Add your own, tag them, favourite them — they
+  live alongside the AI ones and show up in the Let's Cook wizard.
+- **Swappable LLM.** Gemini or Anthropic in production; a `mock` provider runs
+  the whole flow offline with no key.
 
-Open `http://<pi-ip>:<port>/`.
+## Install (Home Assistant add-on)
+
+1. Click the button above, or in Home Assistant go to **Settings → Add-ons →
+   Add-on Store → ⋮ → Repositories** and add
+   `https://github.com/amiablealex/my-kitchen`.
+2. Find **My Kitchen** in the store and **Install** (the first build takes a few
+   minutes on a Pi — it builds the image locally).
+3. On the **Configuration** tab, set `llm_provider` and the matching API key
+   (or choose `mock` to try it keyless). **Save**, then **Start**.
+4. Open the **Log** tab — on first run it prints a one-time login user and
+   temporary password.
+5. Open **My Kitchen** from the sidebar and log in. Change the password in-app.
+
+> Add-ons require Home Assistant **OS** or **Supervised** (not Container/Core).
+
 
 ## Configuration (.env)
 
@@ -56,18 +84,31 @@ After pulling a change that includes a new migration:
 
 `flask shell` opens a shell with `db` and all models pre-imported.
 
-## Running under gunicorn
+## Run standalone / develop
 
-```bash
-gunicorn --bind 0.0.0.0:<port> --workers 2 --timeout 120 wsgi:app
-```
+Not on Home Assistant? It's a normal Flask app. See **[DEPLOY.md](DEPLOY.md)**
+for Docker and bare-metal, or for a quick dev loop:
 
-`--timeout 120` is required: LLM calls take 15–60s+ and gunicorn's default 30s
-timeout will kill the worker mid-generation. (Dev server uses `MY_KITCHEN_PORT`;
-gunicorn takes the port from `--bind`.)
+\`\`\`bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env            # then edit
+flask db upgrade && flask seed  # schema + starter catalogue
+python run.py
+\`\`\`
 
-## Scope
+## Tech
 
-This is the MVP ("prove the loop"): single user, no auth, deliberately unstyled.
-Dietary tags, accounts, favourites, equipment, theming, and Docker are later phases.
-See the design spec for the full roadmap.
+Flask (app-factory + blueprints), SQLAlchemy + SQLite + Alembic, gunicorn,
+server-rendered Jinja with a plain-CSS design system (no build step). Generation
+runs on a background thread and streams in via a polling page.
+
+## Contributing & issues
+
+Bugs and ideas welcome via [Issues](https://github.com/amiablealex/my-kitchen/issues).
+This is a personal household project shared in the hope it's useful. No
+guarantees, but PRs and questions are read.
+
+## License
+
+[MIT](LICENSE) © amiablealex
