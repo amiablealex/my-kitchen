@@ -1,3 +1,4 @@
+
 # My Kitchen (Home Assistant add-on)
 
 [![Add repository to your Home Assistant instance.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Famiablealex%2Fmy-kitchen)
@@ -16,7 +17,7 @@ provider adapter (mock / Anthropic / Gemini).
 
 Runs on a Raspberry Pi on the local network.
 
-<img width="1200" height="920" alt="example" src="https://github.com/user-attachments/assets/f7a9f215-47f9-4b38-8b2d-02bc06ea9219" />
+<img width="1950" height="704" alt="Screenshot 2026-07-03 185234" src="https://github.com/user-attachments/assets/c5b4cb87-b2ea-47af-b1ca-a396f89c6903" />
 
 ## What it does
 
