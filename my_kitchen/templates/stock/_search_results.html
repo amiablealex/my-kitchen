@@ -1,20 +1,24 @@
 {% from "_icons.html" import icon %}
-{# Catalogue fragment (stock.search → #stock-search-results) for the merged
-   single-box search. In-stock matches are omitted (they show in the pantry
-   above). Renders addable items (＋) and staples (informative); when the
-   catalogue has NO match at all, offers to create a new ingredient. #}
+{# Catalogue fragment (stock.search → #stock-search-results) for the single-box
+   search. Non-staple in-stock matches are omitted (they show in the pantry
+   above). Staples are ALWAYS shown (they never appear in the pantry), with the
+   tick·staple treatment; addable items get a ＋. When nothing in the catalogue
+   matches at all, offer to create a new ingredient. #}
 {% if not query %}
 {% else %}
-  {% set addable = results | rejectattr('in_stock') | list %}
-  {% if addable %}
+  {% set ns = namespace(items=[]) %}
+  {% for ing in results %}
+    {% if ing.is_staple or not ing.in_stock %}{% set ns.items = ns.items + [ing] %}{% endif %}
+  {% endfor %}
+  {% if ns.items %}
     <p class="catalogue-head">From your catalogue</p>
     <ul class="search-results">
-      {% for ing in addable %}
+      {% for ing in ns.items %}
         {% if ing.is_staple %}
           <li class="search-result search-result--muted">
             <span class="search-result-name">{{ ing.name }}</span>
             <small>{{ ing.category.name }}</small>
-            <span class="search-state">staple · always available</span>
+            <span class="search-state search-state--ok">{{ icon('check') }} staple</span>
           </li>
         {% else %}
           <li class="search-result" data-ingredient-id="{{ ing.id }}">

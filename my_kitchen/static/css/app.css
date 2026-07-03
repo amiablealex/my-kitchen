@@ -458,13 +458,20 @@ th { color: var(--text-muted); font-weight: 600; }
 .pantry-toolbar { margin-bottom: var(--space-3); }
 .pantry-filter {
   display: flex; align-items: center; gap: var(--space-2);
+  min-height: 44px;
   background: var(--surface); border: 1px solid var(--divider);
   border-radius: var(--radius); padding: 0 var(--space-3);
 }
 .pantry-filter .icon { width: 1.2em; height: 1.2em; color: var(--text-muted); flex: none; }
-.pantry-filter input { flex: 1; min-height: 40px; background: none; border: none; }
-#stock-search-input { width: 100%; min-height: 40px; }
-.pantry-filter input:focus { outline: none; }
+.pantry-filter input[type="search"] {
+  flex: 1 1 auto; min-width: 0; box-sizing: border-box;
+  height: 44px; line-height: 44px;
+  min-height: 0; margin: 0; padding: 0;
+  background: none; border: none; box-shadow: none; outline: none;
+  -webkit-appearance: none; -moz-appearance: none; appearance: none;
+}
+.pantry-filter input[type="search"]:focus { outline: none; box-shadow: none; border-color: transparent; }
+.pantry-filter:focus-within { border-color: var(--accent-1); box-shadow: 0 0 0 3px rgba(86, 208, 187, 0.35); }
 
 .stock-group {
   --group: var(--accent-1); --group-tint: rgba(86, 208, 187, 0.14);
