@@ -8,6 +8,7 @@ arch:
   - amd64
 startup: application
 boot: auto
+stage: stable
 
 # Primary access is HA ingress (HTTPS, sidebar panel, no exposed port needed).
 ingress: true
