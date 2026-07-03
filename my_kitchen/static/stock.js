@@ -76,15 +76,17 @@ document.addEventListener("click", function (event) {
     return;
   }
 
-  // Remove from stock — drop the row in place, update the group count, tidy an
-  // emptied group, and reveal the empty-state line if the pantry clears out.
+  // Remove from stock — drop the row, tidy the group, then offer an undo toast.
   const removeBtn = target.closest(".stock-remove");
   if (removeBtn) {
+    const li = removeBtn.closest(".stock-item");
+    const nameEl = li ? li.querySelector(".stock-item-name") : null;
+    const name = nameEl ? nameEl.textContent.trim() : "the ingredient";
+    const addUrl = li ? li.dataset.addUrl : null;
     removeBtn.disabled = true;
     fetch(removeBtn.dataset.removeUrl, { method: "POST", headers: { "X-CSRFToken": csrfToken() } })
       .then((r) => { if (!r.ok) throw new Error("remove failed"); return r.json(); })
       .then(() => {
-        const li = removeBtn.closest(".stock-item");
         const group = removeBtn.closest(".stock-group");
         const ul = li ? li.parentElement : null;
         if (li) li.remove();
@@ -95,6 +97,18 @@ document.addEventListener("click", function (event) {
           if (remaining === 0) group.remove();
         }
         refreshEmptyState();
+        if (window.showToast && addUrl) {
+          window.showToast({
+            message: "Removed " + name + " from stock",
+            actionLabel: "Undo",
+            onAction: function () {
+              fetch(addUrl, { method: "POST", headers: { "X-CSRFToken": csrfToken() } })
+                .then((r) => { if (!r.ok) throw new Error("undo failed"); return r.json(); })
+                .then(() => { window.location.reload(); })
+                .catch(() => { alert("Could not undo — is the server still running?"); });
+            },
+          });
+        }
       })
       .catch(() => { removeBtn.disabled = false; alert("Could not remove item — is the server still running?"); });
     return;

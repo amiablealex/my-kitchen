@@ -23,7 +23,8 @@
       </header>
       <ul class="stock-list">
         {% for ing in ingredients %}
-          <li class="stock-item" data-ingredient-id="{{ ing.id }}" data-name="{{ ing.name|lower }}">
+          <li class="stock-item" data-ingredient-id="{{ ing.id }}" data-name="{{ ing.name|lower }}"
+              data-add-url="{{ url_for('stock.add', ingredient_id=ing.id) }}">
             <span class="stock-item-name">{{ ing.name }}</span>
             <button type="button" class="stock-note-toggle{% if ing.note %} has-note{% endif %}"
                     aria-label="{{ 'Edit note' if ing.note else 'Add a note' }}">
