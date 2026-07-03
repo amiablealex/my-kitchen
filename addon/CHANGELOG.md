@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.16.0 - Much more intuitive stock management
+
+- Shared search bar to filter existing stock and add from catalogue.
+
+- Clear distinction of staples showing up in search
+
+- Management of staples separated in the manage route
+
 ## 0.15.1 - Polka hero
 
 - Little styling update on home page and generating spinner
