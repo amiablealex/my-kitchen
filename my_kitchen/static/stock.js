@@ -1,6 +1,7 @@
-// Stock editing: filter, inline notes, remove (with undo), state-aware search-to-add,
-// and inline create-new-ingredient. Endpoint URLs come from data-* built with
-// url_for() (sub-path safe). POSTs carry X-CSRFToken from base.html's meta tag.
+// Stock editing: single-box search (filters the pantry AND surfaces catalogue
+// adds), inline notes, remove-with-undo, and inline create-new-ingredient.
+// URLs come from data-* built with url_for() (sub-path safe). POSTs carry
+// X-CSRFToken from base.html's meta tag.
 
 function csrfToken() {
   const meta = document.querySelector('meta[name="csrf-token"]');
@@ -15,14 +16,14 @@ function refreshEmptyState() {
   empty.hidden = pantry.querySelectorAll(".stock-item").length > 0;
 }
 
-// Carry the add-panel open state + query across an add/create reload (one-shot).
-var ADD_STATE_KEY = "mk-stock-add";
-function saveAddState(q) { try { sessionStorage.setItem(ADD_STATE_KEY, JSON.stringify({ open: true, q: q || "" })); } catch (e) {} }
-function popAddState() {
-  try { var raw = sessionStorage.getItem(ADD_STATE_KEY); sessionStorage.removeItem(ADD_STATE_KEY); return raw ? JSON.parse(raw) : null; }
+// Carry the current query across an add/create reload (one-shot).
+var SEARCH_KEY = "mk-stock-search";
+function saveSearch(q) { try { sessionStorage.setItem(SEARCH_KEY, q || ""); } catch (e) {} }
+function popSearch() {
+  try { var v = sessionStorage.getItem(SEARCH_KEY); sessionStorage.removeItem(SEARCH_KEY); return v; }
   catch (e) { return null; }
 }
-function persistAddOpen() { var si = document.getElementById("stock-search-input"); saveAddState(si ? si.value.trim() : ""); }
+function persistSearch() { var si = document.getElementById("stock-search"); saveSearch(si ? si.value.trim() : ""); }
 
 // --- notes: collapsed preview <-> inline input -------------------------------
 function startEditNote(row) {
@@ -115,28 +116,39 @@ document.addEventListener("click", function (event) {
     return;
   }
 
-  // Add existing catalogue item to stock — keep the panel open + query across
-  // the reload so consecutive adds stay smooth and the item flips to "in stock".
+  // Add an existing catalogue item to stock — persist the query so the reload
+  // keeps your search, and the item moves up into the pantry.
   const addBtn = target.closest(".stock-add");
   if (addBtn) {
     addBtn.disabled = true;
     fetch(addBtn.dataset.addUrl, { method: "POST", headers: { "X-CSRFToken": csrfToken() } })
       .then((r) => { if (!r.ok) throw new Error("add failed"); return r.json(); })
-      .then(() => { persistAddOpen(); window.location.reload(); })
+      .then(() => { persistSearch(); window.location.reload(); })
       .catch(() => { addBtn.disabled = false; alert("Could not add item — is the server still running?"); });
     return;
   }
 });
 
-// --- instant filter over the rendered pantry ---------------------------------
+// --- one search box: filter the pantry + surface catalogue adds --------------
 (function () {
-  const input = document.getElementById("pantry-filter");
+  const input = document.getElementById("stock-search");
   if (!input) return;
   const pantry = document.getElementById("pantry");
   const nomatch = pantry ? pantry.querySelector(".pantry-nomatch") : null;
+  const catalogue = document.getElementById("stock-catalogue");
+  const results = document.getElementById("stock-search-results");
+  const newForm = document.getElementById("stock-new-form");
+  const newName = document.getElementById("stock-new-name");
+  const newNameLabel = document.getElementById("stock-new-name-label");
+  const newCategory = document.getElementById("stock-new-category");
+  const newStaple = document.getElementById("stock-new-staple");
+  const newError = document.getElementById("stock-new-error");
+  const newCancel = document.getElementById("stock-new-cancel");
+  let timer = null;
 
-  input.addEventListener("input", function () {
-    const q = input.value.trim().toLowerCase();
+  function filterPantry(q) {
+    if (!pantry) return;
+    const hasGroups = pantry.querySelectorAll(".stock-group").length > 0;
     let anyVisible = false;
     pantry.querySelectorAll(".stock-group").forEach(function (group) {
       let groupVisible = false;
@@ -148,24 +160,8 @@ document.addEventListener("click", function (event) {
       group.hidden = !groupVisible;
       if (groupVisible) anyVisible = true;
     });
-    if (nomatch) nomatch.hidden = anyVisible || !q;
-  });
-})();
-
-// --- search-to-add + inline create -------------------------------------------
-(function () {
-  const input = document.getElementById("stock-search-input");
-  if (!input) return;
-  const results = document.getElementById("stock-search-results");
-  const disclosure = document.getElementById("stock-add-panel");
-  const newForm = document.getElementById("stock-new-form");
-  const newName = document.getElementById("stock-new-name");
-  const newNameLabel = document.getElementById("stock-new-name-label");
-  const newCategory = document.getElementById("stock-new-category");
-  const newStaple = document.getElementById("stock-new-staple");
-  const newError = document.getElementById("stock-new-error");
-  const newCancel = document.getElementById("stock-new-cancel");
-  let timer = null;
+    if (nomatch) nomatch.hidden = anyVisible || !q || !hasGroups;
+  }
 
   function hideNewForm() {
     if (!newForm) return;
@@ -182,20 +178,28 @@ document.addEventListener("click", function (event) {
     newForm.hidden = false;
   }
 
-  function runSearch(q) {
-    if (!results) return;
+  function runCatalogue(q) {
     hideNewForm();
-    if (!q) { results.innerHTML = ""; return; }
+    if (!results) return;
+    if (!q) { results.innerHTML = ""; if (catalogue) catalogue.hidden = true; return; }
     fetch(input.dataset.searchUrl + "?q=" + encodeURIComponent(q))
       .then((r) => { if (!r.ok) throw new Error("search failed"); return r.text(); })
-      .then((html) => { results.innerHTML = html; })
-      .catch(() => { results.innerHTML = "<p class='search-empty'><em>Search is unavailable right now.</em></p>"; });
+      .then((html) => {
+        results.innerHTML = html;
+        const hasContent = !!results.querySelector(".search-results, .search-empty");
+        if (catalogue) catalogue.hidden = !hasContent;
+      })
+      .catch(() => {
+        results.innerHTML = "<p class='search-empty'><em>Search is unavailable right now.</em></p>";
+        if (catalogue) catalogue.hidden = false;
+      });
   }
 
   input.addEventListener("input", function () {
-    const q = input.value.trim();
+    const raw = input.value.trim();
+    filterPantry(raw.toLowerCase());
     clearTimeout(timer);
-    timer = setTimeout(function () { runSearch(q); }, 200);
+    timer = setTimeout(function () { runCatalogue(raw); }, 200);
   });
 
   if (results) {
@@ -232,7 +236,7 @@ document.addEventListener("click", function (event) {
             if (submitBtn) submitBtn.disabled = false;
             return;
           }
-          persistAddOpen();
+          persistSearch();
           window.location.reload();
         })
         .catch(function () {
@@ -242,11 +246,12 @@ document.addEventListener("click", function (event) {
     });
   }
 
-  // Restore the open panel + query after an add/create reload (one-shot).
+  // Restore the query after an add/create reload (one-shot): refilter + refetch.
   (function restore() {
-    const st = popAddState();
-    if (!st || !st.open) return;
-    if (disclosure) disclosure.open = true;
-    if (st.q) { input.value = st.q; runSearch(st.q); }
+    const q = popSearch();
+    if (!q) return;
+    input.value = q;
+    filterPantry(q.toLowerCase());
+    runCatalogue(q);
   })();
 })();
