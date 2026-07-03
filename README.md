@@ -35,8 +35,8 @@ Runs on a Raspberry Pi on the local network.
 
 ## Install (Home Assistant add-on)
 
-1. Click the button above, or in Home Assistant go to **Settings → Add-ons →
-   Add-on Store → ⋮ → Repositories** and add
+1. Click the button above, or in Home Assistant go to **Settings → Apps →
+   Install App → ⋮ → Repositories** and add
    `https://github.com/amiablealex/my-kitchen`.
 2. Find **My Kitchen** in the store and **Install** (the first build takes a few
    minutes on a Pi — it builds the image locally).
