@@ -16,6 +16,8 @@ provider adapter (mock / Anthropic / Gemini).
 
 Runs on a Raspberry Pi on the local network.
 
+[my-kitchen.io](https://my-kitchen.io)
+
 <img width="1369" height="704" alt="Screenshot 2026-07-03 185234" src="https://github.com/user-attachments/assets/57d77159-6cc1-44d8-b0d5-dff2a0b26c19" />
 
 ## What it does
