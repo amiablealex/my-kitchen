@@ -824,3 +824,54 @@ th { color: var(--text-muted); font-weight: 600; }
 /* --- choice: a little accent differentiation between the two picks --- */
 .choice-grid > .choice-card:nth-child(1) { border-top: 3px solid var(--accent-1); }
 .choice-grid > .choice-card:nth-child(2) { border-top: 3px solid var(--accent-4); }
+
+/* ============================================================ personality === */
+/* One reusable four-colour polka field. Tune alpha/size here and it changes
+   everywhere it's used (home hero, login hero, generating card). */
+:root {
+  --polka:
+    radial-gradient(circle at 25% 28%, rgba(86, 208, 187, 0.22) 3px, transparent 3.5px),
+    radial-gradient(circle at 72% 38%, rgba(177, 228, 109, 0.22) 3px, transparent 3.5px),
+    radial-gradient(circle at 45% 75%, rgba(254, 155, 70, 0.20) 3px, transparent 3.5px),
+    radial-gradient(circle at 88% 82%, rgba(255, 95, 145, 0.20) 3px, transparent 3.5px);
+}
+.polka { background-image: var(--polka); background-size: 120px 120px; }
+
+/* Home hero — a soft polka panel behind the (already-rainbow) title + CTA. */
+.home-hero {
+  padding: var(--space-6) var(--space-4);
+  border-radius: var(--radius-lg);
+  background-color: rgba(255, 255, 255, 0.03);
+  background-image: var(--polka);
+  background-size: 120px 120px;
+  margin-bottom: var(--space-5);
+}
+
+/* Home tiles — colour-coded across the four accents (icon + left spine). */
+.card-grid .home-link { --tile: var(--accent-1); border-left: 3px solid var(--tile); }
+.card-grid .home-link:nth-child(2) { --tile: var(--accent-2); }
+.card-grid .home-link:nth-child(3) { --tile: var(--accent-3); }
+.card-grid .home-link:nth-child(4) { --tile: var(--accent-4); }
+.card-grid .home-link .icon { color: var(--tile); }
+
+/* Empty states — friendlier: the icon sits in a soft accent disc. */
+.empty .icon {
+  box-sizing: content-box; width: 1.9em; height: 1.9em; padding: var(--space-3);
+  color: var(--accent-1); background: rgba(86, 208, 187, 0.14);
+  border-radius: 50%; opacity: 1; margin-bottom: var(--space-4);
+}
+
+/* Generating — four-colour dots doing a little kitchen bounce, on a polka card. */
+.gen-card {
+  padding: var(--space-6) var(--space-5); border-radius: var(--radius-lg);
+  background-color: rgba(255, 255, 255, 0.03);
+  background-image: var(--polka); background-size: 120px 120px;
+}
+.gen-dots { display: flex; gap: var(--space-2); justify-content: center; margin: 0 auto var(--space-5); }
+.gen-dots span { width: 14px; height: 14px; border-radius: 50%; animation: gen-bounce 1s ease-in-out infinite; }
+.gen-dots span:nth-child(1) { background: var(--accent-1); animation-delay: 0s; }
+.gen-dots span:nth-child(2) { background: var(--accent-2); animation-delay: 0.12s; }
+.gen-dots span:nth-child(3) { background: var(--accent-3); animation-delay: 0.24s; }
+.gen-dots span:nth-child(4) { background: var(--accent-4); animation-delay: 0.36s; }
+@keyframes gen-bounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.55; } 40% { transform: translateY(-12px); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .gen-dots span { animation: none; opacity: 1; } }

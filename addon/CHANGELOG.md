@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.1 - Polka hero
+
+- Little styling update on home page and generating spinner
+
 ## 0.15.0 - Quite a nice little improvement to user experience
 
 - Making a shift from 'functional' to 'intuitive'
