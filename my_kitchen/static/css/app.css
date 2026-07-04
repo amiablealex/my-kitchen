@@ -697,13 +697,15 @@ th { color: var(--text-muted); font-weight: 600; }
 .rf-section { margin-top:var(--space-4); }
 .rf-ing-list, .rf-step-list { list-style:none; padding:0; margin:0 0 var(--space-2);
   display:flex; flex-direction:column; gap:var(--space-2); }
-.rf-ing-row, .rf-step-row { background:var(--surface); border-radius:var(--radius); padding:var(--space-3); }
+.rf-ing-row, .rf-step-row { background:var(--surface); border-radius:var(--radius); padding:var(--space-3);
+  display:flex; align-items:stretch; gap:var(--space-2); }
+.rf-row-body { flex:1 1 auto; min-width:0; }
 .rf-ing-pick { display:flex; align-items:center; gap:var(--space-2); flex-wrap:wrap; }
 .rf-ing-chosen { font-weight:600; }
 .rf-ing-chosen--empty { color:var(--text-muted); font-weight:400; font-style:italic; }
 .rf-ing-fields { display:flex; align-items:center; gap:var(--space-2); margin-top:var(--space-2); flex-wrap:wrap; }
 .rf-ing-fields input[type="text"] { max-width:9rem; }
-.rf-step-row { display:flex; flex-direction:column; gap:var(--space-2); }
+.rf-step-row .rf-row-body { display:flex; flex-direction:column; gap:var(--space-2); }
 .rf-step-row .rf-step-timer { max-width:9rem; }
 .rf-row-remove { margin-left:auto; background:none; border:none; color:var(--text-muted);
   font-size:1.4rem; line-height:1; cursor:pointer; }
@@ -719,6 +721,15 @@ th { color: var(--text-muted); font-weight: 600; }
 .rf-actions { display:flex; gap:var(--space-3); margin-top:var(--space-5); }
 @media (max-width:480px){ .rf-grid{ grid-template-columns:1fr; } }
 .rf-head-actions { display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap; }
+/* drag-to-reorder handle + states (SortableJS) */
+.rf-drag-handle { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+  color:var(--text-muted); cursor:grab; touch-action:none; padding:2px; margin:-2px 0; }
+.rf-drag-handle:hover { color:var(--text); }
+.rf-drag-handle:active { cursor:grabbing; }
+.rf-drag-handle svg { fill:currentColor; display:block; }
+.rf-sort-ghost { opacity:.45; }
+.rf-sort-chosen { box-shadow:0 2px 10px rgba(0,0,0,.35); }
+.rf-sort-drag { opacity:.9; }
 
 /* ---- recipe tags (Phase 17) ---- */
 .recipe-tags { margin:var(--space-3) 0 var(--space-4); }

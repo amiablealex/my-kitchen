@@ -4,6 +4,14 @@
 // recipe link editor, which AJAX-edits already-saved rows. The shared catalogue
 // picker mirrors the 4a panel; "Add & use" creates a catalogue ingredient via
 // the create-only endpoint (url injected, ingress-safe) and selects it.
+//
+// Drag-to-reorder: each list is its own SortableJS instance with NO shared
+// group, so rows stay contained within their section (a prep step can't be
+// dragged into cook). Because the server parses rows by the integer baked into
+// each field name (sorted ascending), DOM order alone would be ignored — so we
+// renumber every row's name attributes to contiguous DOM order on submit
+// (reindexRows). After that, ascending index == on-screen order == saved order
+// (recipe_ingredients.position and the *_steps_json array order both follow).
 (function () {
   function readJSON(id, fallback) {
     var el = document.getElementById(id);
@@ -13,6 +21,17 @@
   var catalogue = readJSON("rf-catalogue-data", []);
   var prefill = readJSON("rf-prefill-data", {});
   var urls = readJSON("rf-urls", {});
+
+  // Six-dot grip, themed via currentColor. Sortable's `handle` option targets
+  // this, so dragging only starts from the grip — inputs stay fully tappable.
+  var DRAG_HANDLE =
+    '<span class="rf-drag-handle" title="Drag to reorder" aria-hidden="true">' +
+      '<svg viewBox="0 0 20 20" width="18" height="18" focusable="false">' +
+        '<circle cx="7" cy="4" r="1.5"/><circle cx="13" cy="4" r="1.5"/>' +
+        '<circle cx="7" cy="10" r="1.5"/><circle cx="13" cy="10" r="1.5"/>' +
+        '<circle cx="7" cy="16" r="1.5"/><circle cx="13" cy="16" r="1.5"/>' +
+      '</svg>' +
+    '</span>';
 
   function csrfToken() {
     var m = document.querySelector('meta[name="csrf-token"]');
@@ -69,17 +88,20 @@
     var row = el("li", "rf-ing-row");
     row.dataset.idx = String(i);
     row.innerHTML =
-      '<div class="rf-ing-pick">' +
-        '<span class="rf-ing-chosen rf-ing-chosen--empty">No ingredient selected</span>' +
-        '<input type="hidden" class="rf-ing-id" name="ing-' + i + '-ingredient_id" value="">' +
-        '<input type="hidden" class="rf-ing-name" name="ing-' + i + '-name" value="">' +
-        '<button type="button" class="btn btn--sm rf-ing-choose">Pick</button>' +
-      '</div>' +
-      '<div class="rf-ing-fields">' +
-        '<input type="text" class="rf-ing-amount" name="ing-' + i + '-amount" placeholder="amount" value="">' +
-        '<input type="text" class="rf-ing-unit" name="ing-' + i + '-unit" placeholder="unit" value="">' +
-        '<label class="rf-ing-tobuy"><input type="checkbox" class="rf-ing-tobuycb" name="ing-' + i + '-to_buy"> optional extra</label>' +
-        '<button type="button" class="rf-row-remove" aria-label="Remove ingredient">&times;</button>' +
+      DRAG_HANDLE +
+      '<div class="rf-row-body">' +
+        '<div class="rf-ing-pick">' +
+          '<span class="rf-ing-chosen rf-ing-chosen--empty">No ingredient selected</span>' +
+          '<input type="hidden" class="rf-ing-id" name="ing-' + i + '-ingredient_id" value="">' +
+          '<input type="hidden" class="rf-ing-name" name="ing-' + i + '-name" value="">' +
+          '<button type="button" class="btn btn--sm rf-ing-choose">Pick</button>' +
+        '</div>' +
+        '<div class="rf-ing-fields">' +
+          '<input type="text" class="rf-ing-amount" name="ing-' + i + '-amount" placeholder="amount" value="">' +
+          '<input type="text" class="rf-ing-unit" name="ing-' + i + '-unit" placeholder="unit" value="">' +
+          '<label class="rf-ing-tobuy"><input type="checkbox" class="rf-ing-tobuycb" name="ing-' + i + '-to_buy"> optional extra</label>' +
+          '<button type="button" class="rf-row-remove" aria-label="Remove ingredient">&times;</button>' +
+        '</div>' +
       '</div>';
     ingList.appendChild(row);
     if (data.ingredient_id) setRowLink(row, data.ingredient_id, data.name || "");
@@ -127,7 +149,9 @@
     if (pAddCategory.options.length) pAddCategory.selectedIndex = 0;
     hideAddError();
     if (pAddDetails) pAddDetails.open = false;
-    row.appendChild(picker);
+    // Append inside the row BODY (not the <li> itself) so the picker drops
+    // full-width below the fields and never becomes a stray flex/sort sibling.
+    (row.querySelector(".rf-row-body") || row).appendChild(picker);
     picker.hidden = false;
     pSearch.focus();
   }
@@ -210,14 +234,14 @@
     var i = stepIdx[prefix]++;
     var row = el("li", "rf-step-row");
     row.dataset.idx = String(i);
-    var html =
+    var body =
       '<input type="text" class="rf-step-title" name="' + prefix + '-' + i + '-title" placeholder="title (optional)" value="">' +
       '<textarea class="rf-step-text" name="' + prefix + '-' + i + '-text" rows="2" placeholder="what to do"></textarea>';
     if (withTimer) {
-      html += '<input type="number" class="rf-step-timer" name="' + prefix + '-' + i + '-timer" min="0" placeholder="timer (min)" value="">';
+      body += '<input type="number" class="rf-step-timer" name="' + prefix + '-' + i + '-timer" min="0" placeholder="timer (min)" value="">';
     }
-    html += '<button type="button" class="rf-row-remove" aria-label="Remove step">&times;</button>';
-    row.innerHTML = html;
+    body += '<button type="button" class="rf-row-remove" aria-label="Remove step">&times;</button>';
+    row.innerHTML = DRAG_HANDLE + '<div class="rf-row-body">' + body + '</div>';
     listEl.appendChild(row);
     row.querySelector(".rf-step-title").value = data.title || "";
     row.querySelector(".rf-step-text").value = data.text || "";
@@ -253,8 +277,43 @@
     if (!(prefill.cook || []).length) addStepRow(cookList, {});       // cook is required
   })();
 
+  // ---- drag-to-reorder (SortableJS; per-list, no shared group) -------------
+  function initSortable(listEl) {
+    if (!listEl || !window.Sortable) return;
+    window.Sortable.create(listEl, {
+      handle: ".rf-drag-handle",
+      animation: 150,
+      ghostClass: "rf-sort-ghost",
+      chosenClass: "rf-sort-chosen",
+      dragClass: "rf-sort-drag",
+    });
+  }
+  [ingList,
+   document.getElementById("rf-prep-list"),
+   document.getElementById("rf-cook-list"),
+   document.getElementById("rf-tips-list")].forEach(initSortable);
+
+  // Renumber every row's index-keyed name attributes to contiguous DOM order,
+  // so the server (which sorts rows by that integer) honours the arrangement.
+  // Only the middle number changes: ing-3-amount -> ing-0-amount, etc. The
+  // picker holds no name attributes, so it's untouched wherever it's parked.
+  function reindexRows(listEl) {
+    if (!listEl) return;
+    Array.prototype.forEach.call(listEl.children, function (row, p) {
+      Array.prototype.forEach.call(row.querySelectorAll("[name]"), function (inp) {
+        inp.name = inp.name.replace(/^([a-z]+)-\d+-/, "$1-" + p + "-");
+      });
+      row.dataset.idx = String(p);
+    });
+  }
+
   // ---- light client guard (server validates regardless) -------------------
   document.getElementById("recipe-form").addEventListener("submit", function (ev) {
+    reindexRows(ingList);
+    reindexRows(document.getElementById("rf-prep-list"));
+    reindexRows(document.getElementById("rf-cook-list"));
+    reindexRows(document.getElementById("rf-tips-list"));
+
     var hasIng = false;
     ingList.querySelectorAll(".rf-ing-id").forEach(function (h) { if (h.value) hasIng = true; });
     if (!hasIng) {
