@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.1 - made recipe editing orderable
+
+- Ingredients, prep, cook, tips sections now reoderable within their sections
+
 ## 0.16.0 - Much more intuitive stock management
 
 - Shared search bar to filter existing stock and add from catalogue.
