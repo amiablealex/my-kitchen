@@ -71,6 +71,26 @@ SYSTEM_PROMPT = f"""{ROLE}
 """
 
 
+# Clarifying glosses for meal types the model can misread. "Baking" alone reads
+# as a technique (pasta bake, oven-baked veg) as easily as the sweet/bread/pastry
+# craft we mean. Only ambiguous types need an entry; everything else emits the
+# bare line unchanged.
+MEAL_TYPE_GLOSS = {
+    "Baking": (
+        "This means home baking in the sweet, bread and pastry sense — cakes, "
+        "biscuits, cookies, loaves, breads, buns, scones, muffins, tarts and "
+        "pastries. Do NOT produce savoury oven-baked dishes (pasta bakes, "
+        "gratins, traybakes, roasted or oven-baked vegetables); here \"baking\" "
+        "is the craft, not the cooking method."
+    ),
+    "Sauce or dressing": (
+        "The recipe IS the sauce or dressing itself — not a full dish that happens to include one. Treat "
+        "the sauce or dressing as the finished product; you may note briefly "
+        "what it pairs with, but don't build a main course around it."
+    ),
+}
+
+
 def build_user_prompt(brief):
     lines = []
 
@@ -138,7 +158,8 @@ def build_user_prompt(brief):
     # nothing, so today's behaviour and the existing goldens are unchanged.
     meal_type = brief.get("meal_type")
     if meal_type and meal_type != "Dinner":
-        lines.append(f"Meal type: {meal_type}.")
+        gloss = MEAL_TYPE_GLOSS.get(meal_type, "")
+        lines.append(f"Meal type: {meal_type}." + (f" {gloss}" if gloss else ""))
     # Cuisine: three cases. None -> emit NOTHING (non-cuisine meal types);
     # "Surprise me" -> the open-choice line; anything else -> name it.
     cuisine = brief.get("cuisine")

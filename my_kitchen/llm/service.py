@@ -8,7 +8,7 @@ from ..models import (
 from .prompt import SYSTEM_PROMPT, build_user_prompt
 from .schema import extract_json, validate_and_normalize
 from .providers import get_provider, ProviderError
-from .seeds import pick_seed
+from .seeds import pick_seed_for
 # Deterministic free-text -> catalogue resolver (Phase 3a), wired into the write
 # path here in 3b. build_index is built ONCE per generation and reused; the index
 # is plain data (no ORM objects), so it's safe to use across both recipes.
@@ -155,7 +155,7 @@ def build_brief(wizard_state, time_label, app_config):
         "recent_titles": recent_recipe_titles(
             int(app_config.get("LLM_RECENT_TITLES_N", 10))
         ),
-        "creative_seed": pick_seed(),
+        "creative_seed": pick_seed_for(meal_type),
     }
 
 
