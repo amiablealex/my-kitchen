@@ -1,0 +1,9 @@
+{# _ingredients.html — shared render helpers for recipe ingredient lines. #}
+
+{# Join amount + unit + text into a display line, dropping any part that is
+   None or empty. A missing unit therefore renders as "0.5 avocado", never
+   "0.5 None avocado" or a stray double space. Single source of truth for the
+   structured (recipe_ingredients) and legacy (ingredients_json) renders. #}
+{% macro ingredient_line(amount, unit, text) -%}
+{{ [amount, unit, text] | reject('in', [none, '']) | join(' ') }}
+{%- endmacro %}

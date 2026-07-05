@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
 {% from "_source.html" import source_dot %}
+{% from "_ingredients.html" import ingredient_line %}
 {% block title %}{{ recipe.title }} — My Kitchen{% endblock %}
 {% block page_title %}Recipe{% endblock %}
 {% block content %}
@@ -86,7 +87,7 @@
           <li class="ingredient-row" data-ri-id="{{ ri.id }}" data-raw-text="{{ ri.raw_text }}"
               data-link-url="{{ url_for('wizard.recipe_ingredient_link', recipe_id=recipe.id, ri_id=ri.id) }}"
               data-add-link-url="{{ url_for('wizard.recipe_ingredient_add_and_link', recipe_id=recipe.id, ri_id=ri.id) }}">
-            {% if ri.amount not in (none, '') %}{{ ri.amount }} {% endif %}{{ ri.unit }} {{ ri.raw_text }}
+            {{ ingredient_line(ri.amount, ri.unit, ri.raw_text) }}
             {% if ri.to_buy %} <span class="to-buy">(optional extra)</span>{% endif %}
             {% if ri.ingredient %}
               <span class="link-pill" data-linked-id="{{ ri.ingredient.id }}">{{ ri.ingredient.name }}</span>
@@ -139,7 +140,7 @@
       <ul class="ingredient-list">
         {% for ing in recipe.ingredients_json %}
           <li>
-            {% if ing.amount not in (none, '') %}{{ ing.amount }} {% endif %}{{ ing.unit }} {{ ing.item }}
+            {{ ingredient_line(ing.amount, ing.unit, ing.item) }}
             {% if ing.to_buy %} <span class="to-buy">(optional extra)</span>{% endif %}
           </li>
         {% endfor %}
