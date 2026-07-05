@@ -10,7 +10,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <h2 class="card-title">Meal type</h2>
-    <div class="options">
+    <div class="options options--chips">
       {% for name, takes in meal_types %}
         <label class="option">
           <input type="radio" name="meal_type" value="{{ name }}"
@@ -23,7 +23,7 @@
 
     <div id="cuisine-block">
       <h2 class="card-title">Cuisine</h2>
-      <div class="options">
+      <div class="options options--chips">
         {% for c in cuisines %}
           <label class="option">
             <input type="radio" name="cuisine" value="{{ c }}" {% if c == current_cuisine %}checked{% endif %}>

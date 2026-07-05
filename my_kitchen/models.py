@@ -51,8 +51,8 @@ _MEAL_TYPE_TAKES_CUISINE = {name: takes for name, takes in MEAL_TYPES}
 # CUISINES are the real, taggable cuisines; the wizard additionally offers
 # "Surprise me" — an open-choice request, NOT a tag.
 CUISINES = [
-    "British", "Italian", "French", "Mediterranean", "Middle Eastern",
-    "Indian", "Thai", "Chinese", "Mexican",
+    "British", "Italian", "French", "Mediterranean",
+    "Middle Eastern & North African", "Indian", "Asian", "Mexican",
 ]
 SURPRISE_ME = "Surprise me"
 WIZARD_CUISINES = CUISINES + [SURPRISE_ME]

@@ -960,3 +960,9 @@ th { color: var(--text-muted); font-weight: 600; }
 /* --- stock: merged single-box search — catalogue matches below the pantry --- */
 .stock-catalogue { margin-top: var(--space-4); border-top: 1px solid var(--divider); padding-top: var(--space-3); }
 .catalogue-head { margin: 0 0 var(--space-2); color: var(--text-muted); font-size: var(--fs-small); font-weight: 600; }
+
+/* Compact wrap for short single-select labels (cuisine, meal type). Chips size
+   to content and wrap into a few rows instead of a tall stack — same on mobile
+   and desktop. Touch target preserved (.option keeps min-height: var(--touch)). */
+.options--chips { flex-direction: row; flex-wrap: wrap; }
+.options--chips .option { flex: 0 0 auto; }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.1 - Tidier cuisine choices
+- Condensed the cuisine list into clearer groups, so more recipes get a fitting tag.
+- Cuisine and meal type now shown as compact chips rather than a long stacked list.
+
 ## 0.17.0 - Richer cuisines & smarter recipe variety
 - Expanded the cuisine choices: added French, Middle Eastern, Indian, Thai, Chinese and Mexican, and split the old catch-all "Asian" into its distinct cuisines.
 - Creative variety is now tailored to the meal type. Desserts and baking draw on sweet-leaning ideas rather than savoury ones, and sauces are left to their own devices.
