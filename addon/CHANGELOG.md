@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.0 - Richer cuisines & smarter recipe variety
+- Expanded the cuisine choices: added French, Middle Eastern, Indian, Thai, Chinese and Mexican, and split the old catch-all "Asian" into its distinct cuisines.
+- Creative variety is now tailored to the meal type. Desserts and baking draw on sweet-leaning ideas rather than savoury ones, and sauces are left to their own devices.
+- Regional flavour nudges no longer pull against a cuisine you've specifically chosen.
+- When no cuisine is chosen, generations now vary between a creative nudge and a completely free hand for more variety across recipes.
+- Sharpened how "Sauce or dressing" is interpreted, so you get the sauce itself rather than a dish built around one.
+
 ## 0.16.2 - Fixes
 
 - Fixed recipe display for ingredients without specified unit

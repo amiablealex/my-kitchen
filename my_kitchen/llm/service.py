@@ -155,7 +155,7 @@ def build_brief(wizard_state, time_label, app_config):
         "recent_titles": recent_recipe_titles(
             int(app_config.get("LLM_RECENT_TITLES_N", 10))
         ),
-        "creative_seed": pick_seed_for(meal_type),
+        "creative_seed": pick_seed_for(meal_type, cuisine),
     }
 
 

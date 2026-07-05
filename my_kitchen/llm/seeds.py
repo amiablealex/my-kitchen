@@ -1,22 +1,26 @@
 """Creative seeds — small curated lists of flavour angles, techniques and
 regional sub-styles used purely to nudge variety across generations.
 
-One seed is picked at random per generation and offered to the FIRST recipe
-only, as an *optional bias*: the model is explicitly told it may ignore it, and
-the user-chosen cuisine always takes priority. The seeds exist for randomness,
-not to dictate the dish. The chosen seed is stored on Generation.creative_seed
-for reproducibility/debugging.
+One seed is (sometimes) picked per generation and offered to the FIRST recipe
+only, as an *optional bias*: the model is told it may ignore it, and the chosen
+cuisine always takes priority. Seeds exist for randomness, not to dictate the
+dish. The chosen seed (or None) is stored on Generation.creative_seed.
 
-Seeds are meal-type aware:
-  * SAVOURY_SEEDS — the default pool, for the cuisine-bearing meal types
-                    (Breakfast, Lunch, Dinner, Snack, Side dish).
-  * SWEET_SEEDS   — for Dessert and Baking, where a savoury angle
-                    ("go garlicky", "lean into umami") is actively wrong.
-  * No seed       — for "Sauce or dressing": a sauce is small and focused, so a
-                    random creative angle is noise rather than variety.
+Meal-type + cuisine aware:
+  * SAVOURY_SEEDS          — cuisine-neutral technique/flavour angles. Safe on
+                             ANY savoury brief, including a specific cuisine.
+  * SAVOURY_REGIONAL_SEEDS — mini-cuisine leanings (Levantine, Japanese…). Only
+                             eligible when NO specific cuisine is chosen, or
+                             they'd pull against the user's pick.
+  * SWEET_SEEDS            — for Dessert and Baking, where a savoury angle is
+                             actively wrong.
+  * No seed                — for "Sauce or dressing" (a random angle is noise on
+                             something small and focused), AND ~half the time on
+                             an open-cuisine savoury brief, to leave the model a
+                             free hand.
 
-SAVOURY_SEEDS content is deliberately unchanged from the original single list,
-so the tuned savoury/Dinner goldens render byte-identically.
+SAVOURY_SEEDS + SAVOURY_REGIONAL_SEEDS is the original single list, in the
+original order, so the legacy pick_seed() below stays byte-identical.
 """
 import random
 
@@ -40,7 +44,9 @@ SAVOURY_SEEDS = [
     "work in nutty browned butter or toasted nuts",
     "go garlicky and aromatic",
     "build a smoky-sweet, gently spiced warmth",
-    # Regional sub-styles (gentle leanings, never overrides)
+]
+
+SAVOURY_REGIONAL_SEEDS = [
     "take a Levantine / Eastern Mediterranean lean",
     "borrow a Japanese-inspired lightness",
     "keep it rustic and Italian-simple",
@@ -65,22 +71,42 @@ SWEET_SEEDS = [
     "add a gentle boozy lift (rum, amaretto, whisky)",
 ]
 
-# Meal types that draw from the sweet pool instead of the savoury default.
+# Meal types that draw from the sweet pool instead of a savoury one.
 _SWEET_MEAL_TYPES = {"Dessert", "Baking"}
 # Meal types that get NO creative seed at all.
 _NO_SEED_MEAL_TYPES = {"Sauce or dressing"}
+# On an open-cuisine savoury brief, probability we pass a seed at all; the rest
+# of the time we pass None and let the model design with a free hand.
+OPEN_CUISINE_SEED_PROB = 0.5
 
 
-def pick_seed_for(meal_type, rng=None):
-    """Return one randomly chosen creative seed appropriate to `meal_type`, or
-    None when the meal type should get no seed. `rng` is injectable for tests."""
+def pick_seed_for(meal_type, cuisine, rng=None):
+    """Return one creative seed appropriate to (meal_type, cuisine), or None when
+    the brief should get none. `rng` is injectable for tests/eval determinism.
+
+    - Sauce or dressing            -> None.
+    - Dessert / Baking             -> a sweet seed.
+    - Savoury, specific cuisine    -> a cuisine-neutral savoury seed (never a
+                                      regional one — it'd fight the chosen cuisine).
+    - Savoury, open cuisine        -> ~half the time a seed (regional included),
+      (Any / Surprise me / None)      otherwise None (free hand).
+    """
+    rng = rng or random
     if meal_type in _NO_SEED_MEAL_TYPES:
         return None
-    pool = SWEET_SEEDS if meal_type in _SWEET_MEAL_TYPES else SAVOURY_SEEDS
-    return (rng or random).choice(pool)
+    if meal_type in _SWEET_MEAL_TYPES:
+        return rng.choice(SWEET_SEEDS)
+
+    open_cuisine = cuisine is None or cuisine.strip().lower() == "surprise me"
+    if open_cuisine:
+        if rng.random() < OPEN_CUISINE_SEED_PROB:
+            return rng.choice(SAVOURY_SEEDS + SAVOURY_REGIONAL_SEEDS)
+        return None
+    return rng.choice(SAVOURY_SEEDS)
 
 
 def pick_seed(rng=None):
-    """Backwards-compatible savoury pick, kept so any existing caller (e.g. the
-    eval tooling) importing `pick_seed` keeps working with unchanged behaviour."""
-    return (rng or random).choice(SAVOURY_SEEDS)
+    """Legacy savoury pick — the full original pool (core + regional) in the
+    original order, kept byte-identical for any caller (e.g. eval tooling) that
+    imports it. Drop it if a grep shows nothing uses it."""
+    return (rng or random).choice(SAVOURY_SEEDS + SAVOURY_REGIONAL_SEEDS)
