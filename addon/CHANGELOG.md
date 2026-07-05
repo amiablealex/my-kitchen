@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.2 - Fixes
+
+- Fixed recipe display for ingredients without specified unit
+
+- Adjusted 'baking' meal type generations to actually result in the craft, not just the technique.
+
 ## 0.16.1 - made recipe editing orderable
 
 - Ingredients, prep, cook, tips sections now reoderable within their sections
