@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.18.1 - Print / share polish
+
+- The share view is now presented as **Print / share this recipe**, with a
+  printer icon — printing or saving to PDF is the reliable way to send a recipe
+  to someone.
+- Added a short hint on the page explaining how to print from a phone.
+
 ## 0.18.0 - Share a recipe
 
 - New **Share this recipe** button on every recipe: opens a clean, chrome-free

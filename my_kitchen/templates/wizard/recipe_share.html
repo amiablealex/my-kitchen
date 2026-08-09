@@ -84,5 +84,11 @@
   {% endif %}
 
   <p class="share-foot">Made with My Kitchen · a self-hosted household recipe app</p>
+  <p class="share-hint">
+    {{ icon('print') }}
+    Print this page, or save it as a PDF, to share the recipe.
+    On a phone: browser menu → Share → Print.
+  </p>
   <p class="share-exit"><a href="{{ url_for('wizard.recipe', recipe_id=recipe.id) }}">← Back to the recipe</a></p>
+
 {% endblock %}

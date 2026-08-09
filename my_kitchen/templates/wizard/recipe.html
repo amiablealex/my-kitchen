@@ -195,7 +195,7 @@
   {% endif %}
 
   <p style="margin-top:var(--space-3)">
-    <a class="btn btn--secondary" href="{{ url_for('wizard.recipe_share', recipe_id=recipe.id) }}">Share this recipe</a>
+    <a class="btn btn--secondary" href="{{ url_for('wizard.recipe_share', recipe_id=recipe.id) }}">{{ icon('print') }} Print / share this recipe</a>
   </p>
 
   <p style="margin-top:var(--space-4)"><a class="back-link" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Cook something else</a></p>
