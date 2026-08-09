@@ -10,9 +10,10 @@ from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
 from ..models import (
-    Ingredient, Category, Generation, Recipe, RecipeIngredient, User,
-    SECTION_CHOICES, DEFAULT_MEAL_TYPE, MEAL_TYPES, MEAL_TYPE_NAMES,
+    Ingredient, Category, Generation, Recipe, RecipeIngredient, RecipeComment,
+    User, SECTION_CHOICES, DEFAULT_MEAL_TYPE, MEAL_TYPES, MEAL_TYPE_NAMES,
     meal_type_takes_cuisine, CUISINES, WIZARD_CUISINES, SURPRISE_ME,
+    COMMENT_MAX_CHARS,
 )
 from ..llm.service import start_generation, combined_dietary
 from .suggestions import suggest_recipes
@@ -376,7 +377,33 @@ def recipe(recipe_id):
         cuisines=CUISINES,
         cuisine_meal_types=CUISINE_MEAL_TYPES,
         cuisine_allowed=bool(recipe.meal_type and meal_type_takes_cuisine(recipe.meal_type)),
+        comment_max_chars=COMMENT_MAX_CHARS,
     )
+
+
+@wizard_bp.route("/recipe/<int:recipe_id>/comment", methods=["POST"])
+def recipe_comment_add(recipe_id):
+    """Post a household note on a recipe (Phase 19).
+
+    Plain form POST -> redirect, not AJAX: unlike the tag/link editors this is a
+    page-level submission, so POST-redirect-GET with a #notes anchor lands the
+    user back where they posted, uses the standard hidden CSRF field, and needs
+    no JS (and so no client-side path construction under HA ingress).
+    """
+    recipe = db.session.get(Recipe, recipe_id)
+    if recipe is None:
+        abort(404)
+    body = (request.form.get("body") or "").strip()
+    if not body:
+        flash("Write something first — an empty note isn't saved.", "error")
+    elif len(body) > COMMENT_MAX_CHARS:
+        flash(f"That note is too long (max {COMMENT_MAX_CHARS} characters).", "error")
+    else:
+        db.session.add(RecipeComment(
+            recipe_id=recipe.id, user_id=current_user.id, body=body,
+        ))
+        db.session.commit()
+    return redirect(url_for("wizard.recipe", recipe_id=recipe.id, _anchor="notes"))
 
 
 @wizard_bp.route("/recipe/<int:recipe_id>/share")

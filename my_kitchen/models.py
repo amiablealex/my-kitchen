@@ -57,6 +57,11 @@ CUISINES = [
 SURPRISE_ME = "Surprise me"
 WIZARD_CUISINES = CUISINES + [SURPRISE_ME]
 
+# Max length of a recipe note (Phase 19). Lives here, not in wizard/routes.py,
+# so the route and the template's maxlength hint share one source of truth —
+# same pattern as MEAL_TYPES. Server-side check is authoritative; the HTML
+# attribute is only a courtesy to the browser.
+COMMENT_MAX_CHARS = 2000
 
 def recipe_cuisine_from(value):
     """Map a generation's requested cuisine to a recipe cuisine TAG. 'Surprise me'
@@ -260,6 +265,16 @@ class Recipe(db.Model):
         order_by="RecipeIngredient.position",
         cascade="all, delete-orphan",
     )
+    # Household notes on this recipe (Phase 19). order_by created_at gives the
+    # oldest-first chronology for free, so no template or route can get the
+    # order wrong. delete-orphan: a deleted recipe takes its notes with it
+    # (recipe_id is NOT NULL — no orphans), mirroring `ingredients` above.
+    comments = db.relationship(
+        "RecipeComment",
+        backref="recipe",
+        order_by="RecipeComment.created_at",
+        cascade="all, delete-orphan",
+    )
     # Read-only link to the author. The created_by_user_id FK column carries the
     # value; this is ORM-level only, so it reports no schema diff.
     author = db.relationship("User")
@@ -292,3 +307,36 @@ class RecipeIngredient(db.Model):
 
     # Read-only link to the catalogue ingredient (None when unmatched).
     ingredient = db.relationship("Ingredient")
+
+class RecipeComment(db.Model):
+    """One household note on a recipe (Phase 19).
+
+    Free-text cooking log — "cooked 5/6, needed longer in the oven" — attributed
+    to the member who wrote it and timestamped. Many per user per recipe: a
+    second cook gets a second note rather than overwriting the first, so the
+    history of a recipe reads chronologically.
+
+    A real entity, not a join table. The roadmap's "per-person values are join
+    tables" rule covers *one value per (user, thing)* — favourites, dietary
+    tags. A note is many-per-pair with its own content and timestamp, so it
+    needs its own PK.
+
+    Notes are SHARED and attributed (like ingredient links), not per-user (like
+    favourites). Deliberately NOT wired into the generation brief or the
+    suggestions query — feeding the household's own verdicts back to the model
+    is the same leading-the-witness trap the roadmap recorded for ratings.
+
+    No updated_at: notes aren't editable. A timestamp on editable text is a
+    small lie, and the correction mechanism is a second note.
+    """
+    __tablename__ = "recipe_comments"
+    id = db.Column(db.Integer, primary_key=True)
+    recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id"), nullable=False)
+    # Nullable to match recipes.created_by_user_id / generations.created_by_user_id
+    # — display guards for None with the same "unknown" fallback.
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
+    # Read-only link to the note's author (None if the user was removed).
+    author = db.relationship("User")

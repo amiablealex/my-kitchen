@@ -198,6 +198,38 @@
     <a class="btn btn--secondary" href="{{ url_for('wizard.recipe_share', recipe_id=recipe.id) }}">{{ icon('print') }} Print / share this recipe</a>
   </p>
 
+  <section class="recipe-section notes-section" id="notes">
+    <h2>Notes</h2>
+    {% if recipe.comments %}
+      <ul class="notes-list">
+        {% for c in recipe.comments %}
+          <li class="note">
+            <div class="note-head">
+              <span class="note-author">{{ c.author.name if c.author else "unknown" }}</span>
+              <span class="note-when">{{ c.created_at | localdt }}</span>
+            </div>
+            {# Autoescaped; newlines preserved by white-space: pre-wrap in CSS.
+               Never |safe — this is user input. #}
+            <p class="note-body">{{ c.body }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="note-empty">No notes yet. Add one after you've cooked this.</p>
+    {% endif %}
+
+    <form method="post" class="note-form"
+          action="{{ url_for('wizard.recipe_comment_add', recipe_id=recipe.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="note-form-label" for="note-body">Add a note</label>
+      <textarea id="note-body" name="body" rows="3" maxlength="{{ comment_max_chars }}"
+                placeholder="How did it go? Any tweaks for next time?"></textarea>
+      <div>
+        <button type="submit" class="btn btn--secondary btn--sm">{{ icon('add') }} Add note</button>
+      </div>
+    </form>
+  </section>
+
   <p style="margin-top:var(--space-4)"><a class="back-link" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Cook something else</a></p>
 
 {% endblock %}
