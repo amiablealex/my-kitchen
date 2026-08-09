@@ -406,6 +406,35 @@ def recipe_comment_add(recipe_id):
     return redirect(url_for("wizard.recipe", recipe_id=recipe.id, _anchor="notes"))
 
 
+def _recipe_comment_or_404(recipe_id, comment_id):
+    """Fetch a RecipeComment, enforcing that it belongs to the given recipe —
+    a comment id from another recipe 404s rather than being deletable via a
+    mismatched URL. Mirrors _recipe_ingredient_or_404."""
+    comment = db.session.get(RecipeComment, comment_id)
+    if comment is None or comment.recipe_id != recipe_id:
+        abort(404)
+    return comment
+
+
+@wizard_bp.route("/recipe/<int:recipe_id>/comment/<int:comment_id>/delete", methods=["POST"])
+def recipe_comment_delete(recipe_id, comment_id):
+    """Delete one's own note. Author-only, and there is deliberately no edit.
+
+    A note is a signed, timestamped statement; another member removing it — or
+    anyone silently rewriting it — reads wrong even in a trusting household.
+    Delete exists for typos and mis-posts; the correction mechanism for a
+    changed opinion is a second note. An author-less note (user_id NULL, only
+    possible via a removed user) fails the check and can't be deleted here.
+    """
+    comment = _recipe_comment_or_404(recipe_id, comment_id)
+    if comment.user_id != current_user.id:
+        abort(403)
+    db.session.delete(comment)
+    db.session.commit()
+    flash("Note deleted.", "success")
+    return redirect(url_for("wizard.recipe", recipe_id=recipe_id, _anchor="notes"))
+
+
 @wizard_bp.route("/recipe/<int:recipe_id>/share")
 def recipe_share(recipe_id):
     """Chrome-free render of a recipe for screenshotting / print-to-PDF.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.19.0 - Notes on your recipes
+
+- Leave **notes** on any recipe — how it went, what you changed, whether to make
+  it again. Notes show who wrote them and when, oldest first, and everyone in the
+  household sees them.
+- Cooked it more than once? Add another note. Your own notes can be deleted.
+- Notes don't appear on the print / share view, so a printed recipe stays clean.
+
 ## 0.18.2 - Little fixes to share page
 
 - Added border around timer pills for better visibility

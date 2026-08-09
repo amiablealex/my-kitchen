@@ -1045,6 +1045,9 @@ th { color: var(--text-muted); font-weight: 600; }
 }
 .note-author { font-weight: 700; }
 .note-when { color: var(--text-muted); }
+.note-delete { margin-left: auto; }
+.note-delete .btn { color: var(--text-muted); border-color: transparent; }
+.note-delete .btn:hover { color: var(--danger); border-color: var(--danger); }
 /* pre-wrap keeps the author's line breaks without ever needing |safe. */
 .note-body { margin: 0; white-space: pre-wrap; }
 .note-empty { color: var(--text-muted); }
