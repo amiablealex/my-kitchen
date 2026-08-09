@@ -32,6 +32,10 @@ Runs on a Raspberry Pi on the local network.
   (allergies are hard exclusions; preferences are soft steers).
 - **Hand-written recipes too.** Add your own, tag them, favourite them — they
   live alongside the AI ones and show up in the Let's Cook wizard.
+- **Notes on what you cooked.** Leave dated, attributed notes on any recipe —
+  what you changed, how it went, whether to make it again.
+- **Print or share a recipe.** A clean, chrome-free view that prints or saves to
+  PDF properly.
 - **Swappable LLM.** Gemini or Anthropic in production; a `mock` provider runs
   the whole flow offline with no key.
 

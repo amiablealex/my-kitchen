@@ -214,7 +214,7 @@
                       action="{{ url_for('wizard.recipe_comment_delete', recipe_id=recipe.id, comment_id=c.id) }}"
                       onsubmit="return confirm('Delete this note?');">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="btn btn--sm btn--icon" aria-label="Delete this note">{{ icon('delete') }}</button>
+                  <button type="submit" class="note-delete-btn" aria-label="Delete this note">{{ icon('delete') }}</button>
                 </form>
               {% endif %}
             </div>

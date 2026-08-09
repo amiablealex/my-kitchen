@@ -1039,15 +1039,26 @@ th { color: var(--text-muted); font-weight: 600; }
   background: var(--surface); border-radius: var(--radius);
   padding: var(--space-3) var(--space-4); margin-bottom: var(--space-2);
 }
+/* align-items: center, not baseline — the delete button holds only an SVG, so
+   it has no baseline and flexbox synthesises one from its bottom edge, which
+   hoists it above the text line and pads the row out. */
 .note-head {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2);
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2);
   font-size: var(--fs-small); margin-bottom: var(--space-1);
 }
+.note-delete { margin-left: auto; display: flex; }
+/* Compact icon button, matching .ri-edit-btn — .btn--sm's 36px min-height is
+   taller than the note header's text line. */
+.note-delete-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 32px; min-width: 32px; padding: 0 var(--space-2);
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.note-delete-btn .icon { width: 1.05em; height: 1.05em; }
+.note-delete-btn:hover { background: var(--surface-2); color: var(--danger); filter: none; }
 .note-author { font-weight: 700; }
 .note-when { color: var(--text-muted); }
-.note-delete { margin-left: auto; }
-.note-delete .btn { color: var(--text-muted); border-color: transparent; }
-.note-delete .btn:hover { color: var(--danger); border-color: var(--danger); }
 /* pre-wrap keeps the author's line breaks without ever needing |safe. */
 .note-body { margin: 0; white-space: pre-wrap; }
 .note-empty { color: var(--text-muted); }
