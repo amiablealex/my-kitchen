@@ -1,0 +1,20 @@
+{# Minimal shell for the share/export view. Deliberately NOT base.html: no nav
+   rail, no topbar, no bottom nav — nothing sticky or fixed. Anything positioned
+   gets stitched into the middle of an Android scrolling screenshot, which is the
+   whole problem this view exists to solve. No SW/manifest/CSRF meta either:
+   this page never posts. #}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#3B1058">
+  <title>{% block title %}My Kitchen{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="share-body">
+  <div class="share-page">
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

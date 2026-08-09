@@ -966,3 +966,47 @@ th { color: var(--text-muted); font-weight: 600; }
    and desktop. Touch target preserved (.option keeps min-height: var(--touch)). */
 .options--chips { flex-direction: row; flex-wrap: wrap; }
 .options--chips .option { flex: 0 0 auto; }
+
+/* ============================================== share / export view ====== */
+/* A single recipe with no app chrome. Nothing here may be fixed or sticky:
+   Android's scrolling screenshot stitches positioned elements into the middle
+   of the capture, which is exactly the defect this view fixes. Top/bottom
+   furniture is fine — the capture UI can crop the ends, not the middle. */
+.share-page {
+  width: 100%; max-width: var(--content-max); margin: 0 auto;
+  padding: var(--space-5) var(--space-4) var(--space-6);
+}
+.share-page .method { margin: 0 0 var(--space-4); }
+
+.share-mark {
+  font-family: var(--font-display); font-size: 1.15rem; font-weight: 800;
+  margin: 0 0 var(--space-3);
+}
+.share-foot {
+  margin: var(--space-6) 0 0; padding-top: var(--space-4);
+  border-top: 1px solid var(--divider);
+  color: var(--text-muted); font-size: var(--fs-small);
+}
+.share-exit { margin: var(--space-3) 0 0; font-size: var(--fs-small); }
+
+/* Print / save-as-PDF: flip the tokens light (dark grape prints as invisible
+   text on white) and drop the gradient title, which background-clip won't
+   render reliably in print. Redefining the tokens on .share-body cascades to
+   every descendant, so no per-component overrides are needed. */
+@media print {
+  .share-body {
+    --grape: #ffffff;
+    --surface: #f4f2f7;
+    --surface-2: #ebe7f0;
+    --text: #1a1220;
+    --text-muted: #5a5266;
+    --divider: rgba(0, 0, 0, 0.18);
+    background: #fff;
+  }
+  .share-page .display, .share-page .rainbow {
+    background: none; -webkit-text-fill-color: currentColor; color: var(--text);
+  }
+  .share-exit { display: none; }
+  .recipe-section { break-inside: avoid; }
+  @page { margin: 14mm; }
+}

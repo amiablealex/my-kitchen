@@ -1,0 +1,88 @@
+{# Read-only, chrome-free render of one recipe, for screenshotting / printing.
+   Mirrors the display half of wizard/recipe.html minus every interactive
+   surface (tag editor, link pills, ri-editor, favourite form, source dot).
+   NOTE: the ingredient line itself comes from the shared _ingredients.html
+   macro, so formatting fixes there reach both pages. If you change the recipe
+   *body* markup in recipe.html, mirror it here. #}
+{% extends "share_base.html" %}
+{% from "_icons.html" import icon %}
+{% from "_ingredients.html" import ingredient_line %}
+{% block title %}{{ recipe.title }} — My Kitchen{% endblock %}
+{% block content %}
+  <p class="share-mark rainbow">My Kitchen</p>
+
+  <h1 class="display recipe-title">{{ recipe.title }}</h1>
+  {% if recipe.blurb %}
+    <p class="recipe-blurb">{{ recipe.blurb }}</p>
+  {% endif %}
+  <p class="recipe-serves">
+    Serves {{ recipe.servings }}
+    {%- if recipe.meal_type %} · {{ recipe.meal_type }}{% endif %}
+    {%- if recipe.cuisine %} · {{ recipe.cuisine }}{% endif %}
+    {%- if recipe.time_band == 'quick' %} · Quick{% elif recipe.time_band == 'relaxed' %} · Relaxed{% endif %}
+  </p>
+
+  {% if recipe.intro %}
+    <p class="recipe-intro">{{ recipe.intro }}</p>
+  {% endif %}
+
+  {% if allergy_caveat %}
+    <div class="notice notice--warn">
+      {{ icon('info') }}
+      <div class="notice-body">
+        <strong>Allergy note:</strong> this recipe was generated with an allergy in the brief,
+        but an AI is not a safety guarantee — please check the ingredients yourself before cooking.
+      </div>
+    </div>
+  {% endif %}
+
+  <section class="recipe-section">
+    <h2>Ingredients</h2>
+    <ul class="ingredient-list">
+      {% if recipe.ingredients %}
+        {% for ri in recipe.ingredients %}
+          <li>{{ ingredient_line(ri.amount, ri.unit, ri.raw_text) }}{% if ri.to_buy %} <span class="to-buy">(optional extra)</span>{% endif %}</li>
+        {% endfor %}
+      {% else %}
+        {# Legacy row-less fallback, same as the main recipe page. #}
+        {% for ing in recipe.ingredients_json %}
+          <li>{{ ingredient_line(ing.amount, ing.unit, ing.item) }}{% if ing.to_buy %} <span class="to-buy">(optional extra)</span>{% endif %}</li>
+        {% endfor %}
+      {% endif %}
+    </ul>
+  </section>
+
+  {% if recipe.prep_steps_json %}
+  <section class="recipe-section">
+    <h2>Prep</h2>
+    <ol class="method">
+      {% for step in recipe.prep_steps_json %}
+        <li>{% if step.title %}<span class="step-title">{{ step.title }}.</span> {% endif %}{{ step.text }}{% if step.timer_minutes %} <span class="timer">{{ step.timer_minutes }} min</span>{% endif %}</li>
+      {% endfor %}
+    </ol>
+  </section>
+  {% endif %}
+
+  <section class="recipe-section">
+    <h2>Cook</h2>
+    <ol class="method">
+      {% for step in recipe.cook_steps_json %}
+        <li>{% if step.title %}<span class="step-title">{{ step.title }}.</span> {% endif %}{{ step.text }}{% if step.timer_minutes %} <span class="timer">{{ step.timer_minutes }} min</span>{% endif %}</li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  {% if recipe.tips_json %}
+  <section class="recipe-section">
+    <h2>Tips</h2>
+    <ul class="tips-list">
+      {% for tip in recipe.tips_json %}
+        <li>{% if tip.title %}<span class="step-title">{{ tip.title }}.</span> {% endif %}{{ tip.text }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <p class="share-foot">Made with My Kitchen · a self-hosted household recipe app</p>
+  <p class="share-exit"><a href="{{ url_for('wizard.recipe', recipe_id=recipe.id) }}">← Back to the recipe</a></p>
+{% endblock %}

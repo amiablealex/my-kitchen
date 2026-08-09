@@ -379,6 +379,26 @@ def recipe(recipe_id):
     )
 
 
+@wizard_bp.route("/recipe/<int:recipe_id>/share")
+def recipe_share(recipe_id):
+    """Chrome-free render of a recipe for screenshotting / print-to-PDF.
+
+    Export, not publication: same login gate, same instance, no token, no public
+    route — the user captures an image and shares that. Deliberately keeps the
+    roadmap's 'no community/sharing platform' guardrail intact.
+    """
+    recipe = db.session.get(Recipe, recipe_id)
+    if recipe is None:
+        abort(404)
+    if recipe.generation is not None:
+        allergies, _ = combined_dietary(recipe.generation.cooking_for_user_ids or [])
+    else:
+        allergies = []
+    return render_template(
+        "wizard/recipe_share.html", recipe=recipe, allergy_caveat=bool(allergies),
+    )
+
+
 def _recipe_ingredient_or_404(recipe_id, ri_id):
     """Fetch a RecipeIngredient, enforcing that it belongs to the given recipe.
     Guards the recipe-scoped link endpoints — a ri_id from another recipe 404s

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.18.0 - Share a recipe
+
+- New **Share this recipe** button on every recipe: opens a clean, chrome-free
+  version of the recipe with no navigation bars, so a scrolling screenshot
+  captures the whole thing uninterrupted.
+- The same page prints (or saves to PDF) properly on a light background.
+
 ## 0.17.1 - Tidier cuisine choices
 - Condensed the cuisine list into clearer groups, so more recipes get a fitting tag.
 - Cuisine and meal type now shown as compact chips rather than a long stacked list.
