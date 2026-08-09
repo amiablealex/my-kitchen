@@ -1014,6 +1014,18 @@ th { color: var(--text-muted); font-weight: 600; }
     background: none; -webkit-text-fill-color: currentColor; color: var(--text);
   }
   .share-exit, .share-hint { display: none; }
-  .recipe-section { break-inside: avoid; }
+
+  /* Backgrounds don't print unless the user enables background graphics, so
+     the timer pill would collapse to bare faint text. A border keeps its shape
+     regardless. (.recipe-intro / .notice already survive on their left border.) */
+  .timer { border: 1px solid var(--divider); }
+
+  /* Keep each heading with its content and stop a step splitting across pages.
+     break-inside on the whole section was a no-op — browsers ignore it on
+     anything taller than a page, which is exactly the long Cook list. */
+  .recipe-section h2 { break-after: avoid; }
+  .method li, .ingredient-list li, .tips-list li { break-inside: avoid; }
+  .share-foot { break-before: avoid; }
+
   @page { margin: 14mm; }
 }

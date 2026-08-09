@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.2 - Little fixes to share page
+
+- Added border around timer pills for better visibility
+- Fixed double-line closing render
+- Improved overlap behaviour on long pages (now constrained to sections)
+
 ## 0.18.1 - Print / share polish
 
 - The share view is now presented as **Print / share this recipe**, with a
