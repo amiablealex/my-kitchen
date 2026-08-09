@@ -977,6 +977,7 @@ th { color: var(--text-muted); font-weight: 600; }
   padding: var(--space-5) var(--space-4) var(--space-6);
 }
 .share-page .method { margin: 0 0 var(--space-4); }
+.share-page .tips-list li:last-child { border-bottom: 0; }
 
 .share-mark {
   font-family: var(--font-display); font-size: 1.15rem; font-weight: 800;
