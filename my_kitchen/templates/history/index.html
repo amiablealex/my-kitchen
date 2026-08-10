@@ -11,32 +11,20 @@
   </p>
 
   <div class="recipe-toolbar">
-    <label class="recipe-filter">
-      {{ icon('search') }}
-      <input type="search" id="recipe-filter" placeholder="Filter recipes…" autocomplete="off">
-    </label>
-    <form method="get" action="{{ url_for('history.index') }}" class="recipe-cook-filter">
-      {% if selected_source %}<input type="hidden" name="source" value="{{ selected_source }}">{% endif %}
-      <label>Cook
-        <select name="user" onchange="this.form.submit()">
-          <option value="">All cooks</option>
-          {% for u in users %}
-            <option value="{{ u.id }}" {% if u.id == selected_user_id %}selected{% endif %}>{{ u.name }}</option>
-          {% endfor %}
-        </select>
+    <div class="facet-box" id="facet-box">
+      <div class="facet-chips" id="facet-chips" hidden></div>
+      <label class="recipe-filter">
+        {{ icon('search') }}
+        <input type="search" id="facet-input" autocomplete="off"
+               placeholder="Filter by name, cuisine, meal type, cook…">
       </label>
-      <noscript><button type="submit" class="btn btn--secondary btn--sm">Filter</button></noscript>
-    </form>
+      <ul class="facet-suggest" id="facet-suggest" hidden></ul>
+    </div>
   </div>
 
   {% if not rows %}
-    {% if selected_user_id or selected_source %}
-      <div class="empty">{{ icon('menu_book') }}<p>No recipes match these filters.</p>
-        <a class="btn btn--secondary" href="{{ url_for('history.index') }}">Show all</a></div>
-    {% else %}
-      <div class="empty">{{ icon('menu_book') }}<p>Nothing here yet.</p>
-        <a class="btn btn--primary" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Lets cook</a></div>
-    {% endif %}
+    <div class="empty">{{ icon('menu_book') }}<p>Nothing here yet.</p>
+      <a class="btn btn--primary" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Lets cook</a></div>
   {% else %}
     {# Bucket the merged rows by source. AI rows lack kind=='user'. #}
     {% set ns = namespace(ai=[], hand=[]) %}
@@ -53,16 +41,20 @@
         <ul class="recipe-list">
           {% for row in ns.ai %}
             {% if row.status == "chosen" %}
-              <li class="recipe-row" data-title="{{ row.chosen.title | lower }}">
+              <li class="recipe-row" data-title="{{ row.f_title }}"
+                  data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
+                  data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
                 <div class="row-main">
                   <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a></div>
-                  <div class="row-meta">{{ row.gen.created_at | localdt }} · {{ row.gen.cuisine }}, {{ row.gen.time_band }}, serves {{ row.gen.servings }} · cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }}</div>
+                  <div class="row-meta">{{ row.gen.created_at | localdt }} · {% if row.chosen.cuisine %}{{ row.chosen.cuisine }}, {% endif %}{{ row.gen.time_band }}, serves {{ row.gen.servings }} · cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }}</div>
                 </div>
                 {% if row.chosen.id in noted_ids %}<span class="row-note" title="Has notes">{{ icon('comment') }}</span>{% endif %}
                 {% if row.chosen.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}
               </li>
             {% elif row.status == "unchosen" %}
-              <li class="recipe-row" data-title="{% for r in row.recipes %}{{ r.title | lower }} {% endfor %}">
+              <li class="recipe-row" data-title="{{ row.f_title }}"
+                  data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
+                  data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
                 <div class="row-main">
                   <div class="row-title">
                     {% for r in row.recipes %}<a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if r.id in noted_ids %}<span class="row-note" title="Has notes">{{ icon('comment') }}</span>{% endif %}{% if r.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}{% if not loop.last %}<span class="muted">·</span>{% endif %}{% endfor %}
@@ -71,7 +63,8 @@
                 </div>
               </li>
             {% else %}
-              <li class="recipe-row" data-title="generation failed">
+              <li class="recipe-row" data-title="generation failed"
+                  data-cuisine="" data-meal="" data-cook="{{ row.f_cook }}" data-source="">
                 <div class="row-main">
                   <div class="row-title"><span class="muted">Generation failed</span></div>
                   <div class="row-meta">{{ row.gen.created_at | localdt }}{% if row.gen.error %} · {{ row.gen.error }}{% endif %}</div>
@@ -91,7 +84,9 @@
         </header>
         <ul class="recipe-list">
           {% for row in ns.hand %}
-            <li class="recipe-row" data-title="{{ row.recipe.title | lower }}">
+            <li class="recipe-row" data-title="{{ row.f_title }}"
+                 data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
+                data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
               <div class="row-main">
                 <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.recipe.id) }}">{{ row.recipe.title }}</a></div>
                 <div class="row-meta">{{ row.recipe.created_at | localdt }} · created by {{ row.recipe.author.name if row.recipe.author else "unknown" }}</div>
@@ -109,5 +104,6 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='recipe_filter.js') }}"></script>
+  <script type="application/json" id="facet-options">{{ facet_options | tojson }}</script>
+  <script src="{{ url_for('static', filename='recipe_facets.js') }}"></script>
 {% endblock %}

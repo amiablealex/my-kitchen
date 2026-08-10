@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.21.0 - Smarter recipe filtering
+
+- The recipes search box now filters by **cuisine, meal type, cook and source**
+  as well as by name. Start typing and tap a suggestion to add it as a filter —
+  stack several to narrow things down, tap one to remove it.
+- Works on Favourites too. The old Cook dropdown is gone, folded into the search.
+
 ## 0.20.0 - Build a meal around your staples
 
 - You can now pick **staples** when choosing what to use up — handy when you want

@@ -2,7 +2,9 @@
 // more .recipe-group tables, and (optionally) a #recipe-nomatch line gets live
 // filtering: rows whose data-title doesn't match are hidden, and a group with no
 // visible rows hides entirely. Groups marked [data-no-filter] are skipped (e.g.
-// the retired drawer). Used by History, Favourites and Manage → Ingredients.
+// the retired drawer). Used by Manage → Ingredients. (History and Favourites
+// moved to recipe_facets.js in Phase 21; this file was deliberately left alone
+// rather than extended, to keep the blast radius off Manage.)
 (function () {
   var input = document.getElementById("recipe-filter");
   if (!input) return;

@@ -38,6 +38,10 @@ Runs on a Raspberry Pi on the local network.
   PDF properly.
 - **Swappable LLM.** Gemini or Anthropic in production; a `mock` provider runs
   the whole flow offline with no key.
+- **Build around anything.** Pick what to use up — including staples, if you want
+  a meal built around the oregano.
+- **Find it fast.** Filter your recipes by cuisine, meal type, cook or source —
+  or just type a name — all from one search box.
 
 ## Install (Home Assistant add-on)
 

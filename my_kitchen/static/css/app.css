@@ -388,7 +388,6 @@ th { color: var(--text-muted); font-weight: 600; }
 .recipe-filter .icon { width: 1.2em; height: 1.2em; color: var(--text-muted); flex: none; }
 .recipe-filter input { flex: 1; min-height: 40px; background: none; border: none; }
 .recipe-filter input:focus { outline: none; }
-.recipe-cook-filter { flex: none; }
 
 .recipe-group {
   --group: var(--accent-2); --group-tint: rgba(177, 228, 109, 0.14);
@@ -1096,3 +1095,47 @@ th { color: var(--text-muted); font-weight: 600; }
 /* Notes marker on recipe rows — muted so the favourite star stays the loud one. */
 .row-note { display: inline-flex; align-items: center; color: var(--text-muted); }
 .row-note .icon { width: 1em; height: 1em; }
+
+/* ================================================== facet filter ========= */
+/* One input, chips for tag filters, free text for titles (Phase 21). */
+/* The box now owns the row-stretch that .recipe-filter used to do. Also resets
+   .recipe-filter's flex: its 12rem basis was written for the row-direction
+   toolbar, and inside this column container that basis becomes a HEIGHT. */
+.facet-box { position: relative; display: flex; flex-direction: column; gap: var(--space-2); flex: 1 1 22rem; }
+.facet-box .recipe-filter { flex: none; }
+.facet-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.facet-chips[hidden] { display: none; }
+
+.facet-chip {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  padding: 0.3rem 0.6rem; min-height: 32px;
+  background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--divider); border-radius: 999px;
+  font-size: var(--fs-small); cursor: pointer;
+}
+.facet-chip:hover { border-color: var(--accent-4); }
+.facet-chip-facet { color: var(--text-muted); text-transform: uppercase; font-size: 0.7em; letter-spacing: 0.06em; }
+.facet-chip-value { font-weight: 600; }
+.facet-chip-x { color: var(--text-muted); font-size: 1.1em; line-height: 1; }
+.facet-chip--cuisine { border-color: var(--accent-1); }
+.facet-chip--meal    { border-color: var(--accent-2); }
+.facet-chip--cook    { border-color: var(--accent-3); }
+.facet-chip--source  { border-color: var(--accent-4); }
+
+.facet-suggest {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
+  margin: var(--space-1) 0 0; padding: var(--space-1); list-style: none;
+  background: var(--surface-2); border: 1px solid var(--divider);
+  border-radius: var(--radius-sm); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  max-height: 300px; overflow-y: auto;
+}
+.facet-suggest[hidden] { display: none; }
+.facet-suggest li { margin: 0; }
+.facet-suggest-btn {
+  display: flex; align-items: baseline; gap: var(--space-2);
+  width: 100%; min-height: 44px; padding: var(--space-2) var(--space-3);
+  background: transparent; border: 0; border-radius: var(--radius-sm);
+  color: var(--text); text-align: left; cursor: pointer; font-size: var(--fs-body);
+}
+.facet-suggest-btn:hover { background: var(--surface); }
+.facet-suggest-facet { color: var(--text-muted); text-transform: uppercase; font-size: 0.7em; letter-spacing: 0.06em; flex: none; }
