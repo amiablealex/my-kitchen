@@ -58,13 +58,14 @@
                   <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a></div>
                   <div class="row-meta">{{ row.gen.created_at | localdt }} · {{ row.gen.cuisine }}, {{ row.gen.time_band }}, serves {{ row.gen.servings }} · cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }}</div>
                 </div>
+                {% if row.chosen.id in noted_ids %}<span class="row-note" title="Has notes">{{ icon('comment') }}</span>{% endif %}
                 {% if row.chosen.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}
               </li>
             {% elif row.status == "unchosen" %}
               <li class="recipe-row" data-title="{% for r in row.recipes %}{{ r.title | lower }} {% endfor %}">
                 <div class="row-main">
                   <div class="row-title">
-                    {% for r in row.recipes %}<a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if r.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}{% if not loop.last %}<span class="muted">·</span>{% endif %}{% endfor %}
+                    {% for r in row.recipes %}<a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if r.id in noted_ids %}<span class="row-note" title="Has notes">{{ icon('comment') }}</span>{% endif %}{% if r.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}{% if not loop.last %}<span class="muted">·</span>{% endif %}{% endfor %}
                   </div>
                   <div class="row-meta">none chosen · {{ row.gen.created_at | localdt }} · cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }} · <a href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">choose one</a></div>
                 </div>
@@ -95,6 +96,7 @@
                 <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.recipe.id) }}">{{ row.recipe.title }}</a></div>
                 <div class="row-meta">{{ row.recipe.created_at | localdt }} · created by {{ row.recipe.author.name if row.recipe.author else "unknown" }}</div>
               </div>
+              {% if row.recipe.id in noted_ids %}<span class="row-note" title="Has notes">{{ icon('comment') }}</span>{% endif %}
               {% if row.recipe.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}
             </li>
           {% endfor %}

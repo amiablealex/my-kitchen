@@ -107,10 +107,39 @@ def step_ingredients():
     for section_key, section_label in SECTIONS:
         items = sorted([i for i in in_stock if i.category.section == section_key], key=lambda i: i.name.lower())
         lanes.append((section_label, items))
+
+    # Staples are selectable too (Phase 20). Selection means "build the meal
+    # around this" — a statement about creative direction, not availability — so
+    # excluding staples was conflating the two: "tomato, bread, oregano" is a
+    # perfectly good brief. They live in their own drawer rather than in the
+    # four lanes because (a) the four sections are a fixed guardrail and folding
+    # ~40 spices/oils into "Other" would swamp it, and (b) the app already draws
+    # this line everywhere else (stock excludes staples; Manage handles them
+    # separately). Grouped by CATEGORY, not section — there's no lane semantics
+    # to preserve here and category is the meaningful axis for staples.
+    staple_rows = (
+        Ingredient.query
+        .filter_by(is_staple=True, is_active=True)
+        .join(Category, Ingredient.category_id == Category.id)
+        .order_by(Category.display_order, db.func.lower(Category.name),
+                  db.func.lower(Ingredient.name))
+        .all()
+    )
+    staple_groups = []
+    for ing in staple_rows:
+        if not staple_groups or staple_groups[-1][0] != ing.category.name:
+            staple_groups.append((ing.category.name, []))
+        staple_groups[-1][1].append(ing)
+
+    selected = set(w["selected_ingredient_ids"])
     return render_template(
         "wizard/step_ingredients.html",
-        lanes=lanes, selected=set(w["selected_ingredient_ids"]),
+        lanes=lanes, selected=selected,
         any_in_stock=bool(in_stock),
+        staple_groups=staple_groups,
+        # Surfaced on the closed drawer — a collapsed section must never hide an
+        # active selection.
+        staple_selected_count=sum(1 for i in staple_rows if i.id in selected),
     )
 
 

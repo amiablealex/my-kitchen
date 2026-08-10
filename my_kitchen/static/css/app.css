@@ -1066,3 +1066,33 @@ th { color: var(--text-muted); font-weight: 600; }
 .note-form { display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
 .note-form-label { font-weight: 600; font-size: var(--fs-small); color: var(--text-muted); }
 .note-form textarea { width: 100%; min-height: 88px; resize: vertical; }
+
+/* ================================================ wizard staples drawer === */
+/* Staples are selectable as must-use (Phase 20) but live apart from the four
+   fixed lanes: ~40 spices and oils would swamp the "Other" lane, and the app
+   already separates staples in stock and in Manage. */
+.wizard-staples {
+  margin: var(--space-5) 0 var(--space-4);
+  background: var(--surface); border: 1px solid var(--divider);
+  border-radius: var(--radius);
+}
+.wizard-staples > summary {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer; list-style: none; font-weight: 600;
+}
+.wizard-staples > summary::-webkit-details-marker { display: none; }
+.wizard-staples > summary .icon { color: var(--text-muted); }
+.staples-hint, .staples-count { font-weight: 400; font-size: var(--fs-small); }
+.staples-hint { color: var(--text-muted); }
+.staples-count { color: var(--accent-2); }
+.wizard-staples-body { padding: 0 var(--space-4) var(--space-4); }
+.staple-group + .staple-group { margin-top: var(--space-4); }
+.staple-group-name {
+  margin: 0 0 var(--space-2); font-size: var(--fs-small);
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+/* Notes marker on recipe rows — muted so the favourite star stays the loud one. */
+.row-note { display: inline-flex; align-items: center; color: var(--text-muted); }
+.row-note .icon { width: 1em; height: 1em; }

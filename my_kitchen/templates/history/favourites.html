@@ -3,7 +3,7 @@
 {% block title %}Favourites — My Kitchen{% endblock %}
 {% block page_title %}Favourites{% endblock %}
 
-{% macro fav_row(r) %}
+{% macro fav_row(r, noted_ids) %}
   <li class="recipe-row" data-title="{{ r.title | lower }}">
     <div class="row-main">
       <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a></div>
@@ -13,6 +13,7 @@
         {% else %}created by {{ r.author.name if r.author else "unknown" }}{% endif %}
       </div>
     </div>
+    {% if r.id in noted_ids %}<span class="row-note" title="Has notes">{{ icon('comment') }}</span>{% endif %}
     <span class="row-star" aria-label="Favourite">{{ icon('star_fill') }}</span>
   </li>
 {% endmacro %}
@@ -48,7 +49,7 @@
           <h2 class="recipe-group-name">AI generated</h2>
           <span class="recipe-group-count">{{ ns.ai | length }}</span>
         </header>
-        <ul class="recipe-list">{% for r in ns.ai %}{{ fav_row(r) }}{% endfor %}</ul>
+        <ul class="recipe-list">{% for r in ns.ai %}{{ fav_row(r, noted_ids) }}{% endfor %}</ul>
       </section>
     {% endif %}
 
@@ -58,7 +59,7 @@
           <h2 class="recipe-group-name">Created by hand</h2>
           <span class="recipe-group-count">{{ ns.hand | length }}</span>
         </header>
-        <ul class="recipe-list">{% for r in ns.hand %}{{ fav_row(r) }}{% endfor %}</ul>
+        <ul class="recipe-list">{% for r in ns.hand %}{{ fav_row(r, noted_ids) }}{% endfor %}</ul>
       </section>
     {% endif %}
 
@@ -68,7 +69,7 @@
           <h2 class="recipe-group-name">Imported</h2>
           <span class="recipe-group-count">{{ ns.imported | length }}</span>
         </header>
-        <ul class="recipe-list">{% for r in ns.imported %}{{ fav_row(r) }}{% endfor %}</ul>
+        <ul class="recipe-list">{% for r in ns.imported %}{{ fav_row(r, noted_ids) }}{% endfor %}</ul>
       </section>
     {% endif %}
 

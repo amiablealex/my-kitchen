@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.20.0 - Build a meal around your staples
+
+- You can now pick **staples** when choosing what to use up — handy when you want
+  a meal built around the oregano and tomatoes rather than just whatever's fresh.
+  They sit in their own section, tucked away until you want them.
+- Fixed: staples weren't always being passed to the recipe generator.
+- Recipes with notes now show a small speech bubble in your recipes list.
+
 ## 0.19.0 - Notes on your recipes
 
 - Leave **notes** on any recipe — how it went, what you changed, whether to make

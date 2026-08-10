@@ -1,3 +1,5 @@
+from ..models import SURPRISE_ME
+
 ROLE = """You are an experienced home cook helping a UK household decide what to \
 cook. You turn the ingredients someone has on hand into two delicious, \
 achievable recipes — and you write them up with the warmth and know-how of a friend \
@@ -154,18 +156,23 @@ def build_user_prompt(brief):
 
     # --- MEAL TYPE / CUISINE / TIME / SERVINGS ---
     lines.append("")
-    # Meal type: emit ONLY for non-Dinner picks. Dinner (the default) emits
-    # nothing, so today's behaviour and the existing goldens are unchanged.
+    # Meal type: emit ONLY for non-Dinner picks — deliberately the VALUE "Dinner",
+    # not DEFAULT_MEAL_TYPE. The model already leans dinner, so naming it adds
+    # nothing; the two coincide today but the rule is about the model's bias, not
+    # about which type happens to be default.
     meal_type = brief.get("meal_type")
     if meal_type and meal_type != "Dinner":
         gloss = MEAL_TYPE_GLOSS.get(meal_type, "")
         lines.append(f"Meal type: {meal_type}." + (f" {gloss}" if gloss else ""))
-    # Cuisine: three cases. None -> emit NOTHING (non-cuisine meal types);
-    # "Surprise me" -> the open-choice line; anything else -> name it.
+    # Cuisine: three cases. None/empty -> emit NOTHING (non-cuisine meal types);
+    # the Surprise sentinel -> the open-choice line; anything else -> name it.
+    # SURPRISE_ME is imported, not hardcoded: it's the same sentinel suggestions.py
+    # and recipe_cuisine_from() key off, and a silent mismatch here would emit
+    # "Cuisine: Surprise me." as if it were a real cuisine.
     cuisine = brief.get("cuisine")
-    if cuisine is None:
+    if not cuisine:
         pass
-    elif cuisine.lower() == "surprise me":
+    elif cuisine == SURPRISE_ME:
         lines.append("Cuisine: your choice — surprise me.")
     else:
         lines.append(f"Cuisine: {cuisine}.")

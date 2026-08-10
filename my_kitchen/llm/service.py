@@ -112,11 +112,23 @@ def build_brief(wizard_state, time_label, app_config):
         for r in available_rows if r.id not in must_use_ids
     ]
 
-    # STAPLES: active, in-stock staples, assumed available and used freely.
+    # STAPLES: active staples, assumed available and used freely.
+    #
+    # No in_stock filter (fixed Phase 20). "Assumed always available" IS the
+    # definition of a staple — and staples are excluded from /stock, so there was
+    # no UI to set the flag they were being filtered on. The toggle in Manage
+    # doesn't set it and new ingredients default to False, so a staple added the
+    # obvious way was silently invisible to the model. suggestions.py already got
+    # this right (`_is_cookable` skips staples outright); this aligns the brief
+    # with it, so both halves of the app agree on what "staple" means.
+    #
+    # Must-use wins: a staple the user explicitly selected is dropped from this
+    # tier so the brief can't both mandate it and list it as free-to-use filler.
     staples = [
         r.name for r in Ingredient.query.filter_by(
-            is_staple=True, in_stock=True, is_active=True
+            is_staple=True, is_active=True
         ).all()
+        if r.id not in must_use_ids
     ]
 
     # EQUIPMENT: only what's currently available (is_available = true).

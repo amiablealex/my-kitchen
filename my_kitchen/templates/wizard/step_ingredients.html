@@ -6,8 +6,9 @@
 {% block content %}
   {{ step_dots(1) }}
   <h1>Choose ingredients to use up</h1>
-  <p class="lead">Pick the in-stock items to build the meal around. Staples (oil, salt,
-     spices) are assumed — no need to choose them.</p>
+  <p class="lead">Pick the in-stock items to build the meal around. Staples are always
+     assumed available — but you can pick those too if you want the meal built around
+     one (oregano and tomato, say).</p>
 
   {# Persistent hand-off to stock maintenance, round-tripping back to this step. #}
   <p>
@@ -42,16 +43,55 @@
           {% endif %}
         </section>
       {% endfor %}
-      <p><button type="submit" class="btn btn--primary">Continue {{ icon('arrow_forward') }}</button></p>
     {% else %}
-      {# Empty pantry — the wizard's first impression; point at stock. #}
+      {# Empty pantry — the wizard's first impression; point at stock. Staples
+         stay selectable below, so this is no longer a dead end. #}
       <div class="empty">
         {{ icon('shelves') }}
         <p>Nothing's in stock yet.</p>
         <a class="btn btn--primary" href="{{ url_for('stock.index', return_to=url_for('wizard.step_ingredients')) }}">Update stock</a>
         <p class="help">Or continue anyway — recipes will lean on staples and a couple of suggested extras.</p>
       </div>
-      <p><button type="submit" class="btn btn--secondary">Continue without choosing {{ icon('arrow_forward') }}</button></p>
     {% endif %}
+
+    {# Staples drawer: collapsed by default so the common case (pick perishables
+       from the lanes) costs nothing, but opened automatically when a staple is
+       already selected so a collapsed section never hides an active choice. #}
+    {% if staple_groups %}
+      <details class="wizard-staples"{% if staple_selected_count %} open{% endif %}>
+        <summary>
+          {{ icon('shelves') }}
+          <span>Staples</span>
+          {% if staple_selected_count %}
+            <span class="staples-count">{{ staple_selected_count }} selected</span>
+          {% else %}
+            <span class="staples-hint">assumed available — pick one to build around it</span>
+          {% endif %}
+        </summary>
+        <div class="wizard-staples-body">
+          {% for group_name, items in staple_groups %}
+            <section class="staple-group">
+              <h3 class="staple-group-name">{{ group_name }}</h3>
+              <div class="options options--grid">
+                {% for ing in items %}
+                  <label class="option">
+                    <input type="checkbox" name="ingredient_ids" value="{{ ing.id }}"
+                           {% if ing.id in selected %}checked{% endif %}>
+                    <span>{{ ing.name }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </section>
+          {% endfor %}
+        </div>
+      </details>
+    {% endif %}
+
+    <p>
+      <button type="submit" class="btn {% if any_in_stock %}btn--primary{% else %}btn--secondary{% endif %}">
+        {% if any_in_stock %}Continue{% else %}Continue without choosing{% endif %} {{ icon('arrow_forward') }}
+      </button>
+    </p>
+
   </form>
 {% endblock %}

@@ -3,7 +3,7 @@ from flask_login import current_user
 from datetime import datetime
 
 from ..extensions import db
-from ..models import Generation, Recipe, User
+from ..models import Generation, Recipe, RecipeComment, User
 
 history_bp = Blueprint("history", __name__, url_prefix="/history")
 
@@ -55,6 +55,13 @@ def index():
 
     users = User.query.order_by(db.func.lower(User.name)).all()
     fav_ids = {r.id for r in current_user.favourite_recipes}
+    # One aggregate query for the whole page — checking recipe.comments per row
+    # would be an N+1 that grows with the bank. Same shape as fav_ids.
+    noted_ids = {rid for (rid,) in db.session.query(RecipeComment.recipe_id).distinct()}
+    return render_template("history/index.html", rows=rows, users=users,
+                           selected_user_id=user_id, selected_source=source,
+                           fav_ids=fav_ids, noted_ids=noted_ids)
+
     return render_template("history/index.html", rows=rows, users=users,
                            selected_user_id=user_id, selected_source=source,
                            fav_ids=fav_ids)
@@ -67,4 +74,5 @@ def favourites():
     recipes = (Recipe.query
                .filter(Recipe.favourited_by.any(id=current_user.id))
                .order_by(Recipe.created_at.desc()).all())
-    return render_template("history/favourites.html", recipes=recipes)
+    noted_ids = {rid for (rid,) in db.session.query(RecipeComment.recipe_id).distinct()}
+    return render_template("history/favourites.html", recipes=recipes, noted_ids=noted_ids)
