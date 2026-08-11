@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.22.0
+
+**Dietary tags now come in three kinds: Allergy, Dislike and Diet.**
+
+Dislikes are new, and they fix a real problem. If you'd added something like
+"Pesto" as a preference, the recipe generator was being told to lean *towards*
+it — and the instruction couldn't reach anything that wasn't already in your
+stock anyway. A Dislike is now kept out of the whole recipe: ingredients,
+optional extras, even serving suggestions.
+
+- **Allergy** — never used, in any form. Overrides everything.
+- **Dislike** — a food someone doesn't like. Left out entirely, but an
+  ingredient you deliberately choose in the wizard still wins.
+- **Diet** — how someone eats generally (vegetarian, gluten-free, nothing too
+  spicy). Steers the whole recipe.
+
+**Please check your existing tags.** Everything you'd added as a "preference"
+is now filed under **Diet**. Anything that's really a disliked food should be
+switched to **Dislike** on Manage → Dietary tags.
+
+Also in this release:
+- Choosing a tag type now explains what each one does, with examples.
+- You can assign a tag to people as you create it, instead of making a second
+  trip to the Household page.
+- The "Who's eating?" step shows each person's tags as colour-coded badges, so
+  you can see an allergy at a glance.
+- The review page lists allergies, dislikes and diets separately.
+
+No database changes in this release.
+
 ## 0.21.0 - Smarter recipe filtering
 
 - The recipes search box now filters by **cuisine, meal type, cook and source**
