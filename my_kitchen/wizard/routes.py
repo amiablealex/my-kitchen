@@ -13,7 +13,7 @@ from ..models import (
     Ingredient, Category, Generation, Recipe, RecipeIngredient, RecipeComment,
     User, SECTION_CHOICES, DEFAULT_MEAL_TYPE, MEAL_TYPES, MEAL_TYPE_NAMES,
     meal_type_takes_cuisine, CUISINES, WIZARD_CUISINES, SURPRISE_ME,
-    COMMENT_MAX_CHARS,
+    COMMENT_MAX_CHARS, TAG_TYPE_CHOICES, TAG_TYPE_HINTS,
 )
 from ..llm.service import start_generation, combined_dietary
 from .suggestions import suggest_recipes
@@ -211,6 +211,7 @@ def step_cooking_for():
         users=active_users,
         selected=set(w.get("cooking_for_user_ids") or []),
         guest_count=w.get("guest_count") or 0,
+        tag_types=TAG_TYPE_CHOICES,
     )
 
 
@@ -248,6 +249,7 @@ def review():
         servings=len(cooking_for_ids) + guests,
         cooking_for_users=cooking_for_users, guest_count=guests,
         allergies=allergies, avoid=avoid, preferences=preferences,
+        tag_hints=TAG_TYPE_HINTS,
         suggestions=suggestions,
     )
 

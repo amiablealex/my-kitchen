@@ -18,7 +18,7 @@ from flask_login import current_user
 from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
-from ..models import User, DietaryTag, TAG_TYPE_CHOICES
+from ..models import User, DietaryTag, TAG_TYPE_CHOICES, TAG_TYPE_HINTS
 
 users_bp = Blueprint("users", __name__, url_prefix="/users")
 

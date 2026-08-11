@@ -365,6 +365,8 @@ th { color: var(--text-muted); font-weight: 600; }
 .opt-name { font-weight: 600; }
 .option--stacked .opt-meta { line-height: 1.4; }
 .opt-eg { color: var(--text-muted); font-size: var(--fs-small); font-style: italic; }
+/* dietary badges on the cooking-for options — push right, wrap on narrow screens */
+.opt-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; justify-content: flex-end; }
 @media (min-width: 620px) { .options--grid { grid-template-columns: 1fr 1fr; } }
 
 /* --- list-row component (Manage / Users / History) --- */

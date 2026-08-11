@@ -53,15 +53,25 @@
       <div class="brief-row">
         <span class="brief-label">Cooking for</span>
         <span class="brief-val">
-          {% for u in cooking_for_users %}{{ u.name }}{% if u.dietary_tags %} <span class="muted">({{ u.dietary_tags | map(attribute='name') | join(', ') }})</span>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}{% if guest_count %}{% if cooking_for_users %}, {% endif %}{{ guest_count }} guest{{ "s" if guest_count != 1 else "" }}{% endif %}
+          {% for u in cooking_for_users %}{{ u.name }}{% if not loop.last %}, {% endif %}{% endfor %}{% if guest_count %}{% if cooking_for_users %}, {% endif %}{{ guest_count }} guest{{ "s" if guest_count != 1 else "" }}{% endif %}
           <span class="muted">· serves {{ servings }}</span>
         </span>
       </div>
+      {# Three rows in precedence order, labelled from TAG_TYPE_HINTS so the
+         wizard, Manage and the prompt all use the same words. The trailing note
+         states what each type actually does, since that's the thing people were
+         guessing at. #}
       {% if allergies %}
-        <div class="brief-row"><span class="brief-label">Allergies</span><span class="brief-val">{{ allergies | join(', ') }} <span class="muted">(avoided entirely)</span></span></div>
+        <div class="brief-row"><span class="brief-label">{{ tag_hints.allergy.group }}</span>
+          <span class="brief-val">{{ allergies | join(', ') }} <span class="muted">· never used</span></span></div>
+      {% endif %}
+      {% if avoid %}
+        <div class="brief-row"><span class="brief-label">{{ tag_hints.avoid.group }}</span>
+          <span class="brief-val">{{ avoid | join(', ') }} <span class="muted">· left out</span></span></div>
       {% endif %}
       {% if preferences %}
-        <div class="brief-row"><span class="brief-label">Preferences</span><span class="brief-val">{{ preferences | join(', ') }}</span></div>
+        <div class="brief-row"><span class="brief-label">{{ tag_hints.preference.group }}</span>
+          <span class="brief-val">{{ preferences | join(', ') }} <span class="muted">· steered towards</span></span></div>
       {% endif %}
       <div class="brief-row"><span class="brief-label">Meal</span><span class="brief-val">{{ meal_type }}</span></div>
       {% if cuisine_label %}

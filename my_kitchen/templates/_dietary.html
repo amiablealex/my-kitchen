@@ -1,0 +1,15 @@
+{# Typed dietary-tag badges, ordered by TAG_TYPE_CHOICES (severity order) rather
+   than by name, so an allergy always reads first. `types` is passed in explicitly
+   so this stays a plain import with no `with context`. Badge modifier is the type
+   key, matching the group modifier on the Manage page. #}
+{% macro tag_badges(tags, types) %}
+  {% if tags %}
+    <span class="opt-tags">
+      {% for key, label in types %}
+        {% for t in tags if t.type == key %}
+          <span class="badge badge--{{ key }}" title="{{ label }}">{{ t.name }}</span>
+        {% endfor %}
+      {% endfor %}
+    </span>
+  {% endif %}
+{% endmacro %}

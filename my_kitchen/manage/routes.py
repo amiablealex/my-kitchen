@@ -87,7 +87,8 @@ def ingredient_add():
         db.session.rollback()
         flash(f'"{data["name"]}" already exists.', "error")
         return redirect(url_for("manage.ingredients"))
-    flash(f'Added "{data["name"]}".', "success")
+    flash(f'Added "{data["name"]}" — now assign it to someone on the Household '
+          'page, or it won\'t reach any recipe.', "success")
     return redirect(url_for("manage.ingredients"))
 
 

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
 {% from "_components.html" import step_dots %}
+{% from "_dietary.html" import tag_badges %}
 {% block title %}Cook — Who's eating?{% endblock %}
 {% block page_title %}Lets Cook{% endblock %}
 {% block content %}
@@ -21,9 +22,7 @@
               <input type="checkbox" name="cooking_for_user_ids" value="{{ u.id }}"
                      {% if u.id in selected %}checked{% endif %}>
               <span>{{ u.name }}</span>
-              {% if u.dietary_tags %}
-                <span class="opt-meta">{{ u.dietary_tags | map(attribute='name') | join(', ') }}</span>
-              {% endif %}
+              {{ tag_badges(u.dietary_tags, tag_types) }}
             </label>
           {% endfor %}
         </div>
