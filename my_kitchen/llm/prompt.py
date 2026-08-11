@@ -17,10 +17,11 @@ RULES = """Rules:
 
 - Dietary precedence — strongest first. Apply in this exact order whenever signals conflict:
   1. ALLERGIES are absolute and override EVERY tier, including MUST-USE. Never include an allergen, or anything derived from or containing it, in either recipe. If a must-use item is itself a stated allergen, OMIT it entirely — do not use it.
-  2. MUST-USE overrides soft preferences. A deliberately chosen ingredient is used even when it clashes with a preference (e.g. chicken chosen while cooking for a vegetarian -> use the chicken).
-  3. PREFERENCES steer the AVAILABLE tier only, and yield to must-use. Lean away from preference-breaking available items, but never drop a must-use item to honour a preference.
+  2. MUST-USE overrides DISLIKES and PREFERENCES. A deliberately chosen ingredient is used even when it clashes (e.g. chicken chosen while cooking for a vegetarian -> use the chicken).
+  3. DISLIKES are foods these people don't like. Leave anything on that list out of BOTH recipes entirely — not as an ingredient, not as an optional extra, not in a serving suggestion or tip, and not as the dish a recipe is a version of. Don't offer it as a substitute or alternative either. This is taste, not safety, so an explicit MUST-USE selection is the one thing that overrides it.
+  4. PREFERENCES are how these people eat generally (vegetarian, gluten-free, nothing too spicy). Honour them across the WHOLE recipe — every tier plus optional extras — wherever you sensibly can, but never drop a must-use item to honour one.
 
-- Optional extras ("to_buy": true): you may suggest at most two items not currently in MUST-USE/AVAILABLE/STAPLES. These must be genuinely optional — a garnish, a finishing touch, a small flavour lift — NEVER the ingredient the dish is built or named around. The recipe MUST be fully cookable and satisfying using ONLY MUST-USE, AVAILABLE and STAPLES. mark each optional extra "to_buy": true. Everything else is "to_buy": false.
+- Optional extras ("to_buy": true): you may suggest at most two items not currently in MUST-USE/AVAILABLE/STAPLES. These must be genuinely optional — a garnish, a finishing touch, a small flavour lift — NEVER the ingredient the dish is built or named around. The recipe MUST be fully cookable and satisfying using ONLY MUST-USE, AVAILABLE and STAPLES. An optional extra must respect the ALLERGIES and DISLIKES lists as strictly as any other ingredient — never suggest one that appears on either. mark each optional extra "to_buy": true. Everything else is "to_buy": false.
 - Respect the requested time band and serving count.
 - Return TWO genuinely distinct recipes that differ in technique or flavour direction, not minor variants. The first may follow an optional creative angle if one is supplied; the second is given no angle and must be designed freely as a real alternative, not a variation of the first.
 - Respond with VALID JSON ONLY, matching the schema exactly. No markdown, no commentary, no code fences."""
@@ -135,8 +136,12 @@ def build_user_prompt(brief):
         lines.append("Equipment available (feel free to make use of these): "
                      + ", ".join(equipment) + ".")
 
-    # --- DIETARY (split is computed upstream by combined_dietary) ---
+    # --- DIETARY (three-way split computed upstream by combined_dietary) ---
+    # Order matters: allergies, then dislikes, then preferences — the same
+    # precedence the RULES block states, so the brief reads in the order the
+    # model is told to apply it.
     allergies = brief.get("allergies") or []
+    avoid = brief.get("avoid") or []
     preferences = brief.get("preferences") or []
     if allergies:
         lines.append("")
@@ -146,13 +151,25 @@ def build_user_prompt(brief):
             "containing them, in any form: " + ", ".join(allergies)
             + ". If a must-use item is one of these, omit it."
         )
+    if avoid:
+        lines.append("")
+        lines.append(
+            "DISLIKES — the people eating do not like these foods. Leave them out of "
+            "both recipes completely: not as an ingredient, not as an optional extra, "
+            "not in a serving suggestion or tip, and not as the dish a recipe is a "
+            "version of. Don't offer them as a substitute either. This is taste, not "
+            "safety, so an explicitly chosen must-use item still wins: "
+            + ", ".join(avoid) + "."
+        )
     if preferences:
         lines.append("")
         lines.append(
-            "Dietary preferences (steer the AVAILABLE items this way where you sensibly "
-            "can; do NOT drop a must-use item to honour these): "
+            "Dietary preferences — how these people eat generally. Honour these across "
+            "the whole recipe, including any optional extras, wherever you sensibly "
+            "can; do NOT drop a must-use item to honour one: "
             + ", ".join(preferences) + "."
         )
+
 
     # --- MEAL TYPE / CUISINE / TIME / SERVINGS ---
     lines.append("")

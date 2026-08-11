@@ -226,7 +226,7 @@ def review():
         if cooking_for_ids else []
     )
     guests = int(w.get("guest_count") or 0)
-    allergies, preferences = combined_dietary(cooking_for_ids)
+    allergies, avoid, preferences = combined_dietary(cooking_for_ids)
 
     meal_type = w.get("meal_type", DEFAULT_MEAL_TYPE)
     cuisine = w["cuisine"]
@@ -247,7 +247,7 @@ def review():
         cuisine=cuisine, cuisine_label=cuisine_label, time_label=time_label,
         servings=len(cooking_for_ids) + guests,
         cooking_for_users=cooking_for_users, guest_count=guests,
-        allergies=allergies, preferences=preferences,
+        allergies=allergies, avoid=avoid, preferences=preferences,
         suggestions=suggestions,
     )
 
@@ -382,7 +382,7 @@ def recipe(recipe_id):
     # generation_id NULL, so no generation and no caveat. This is the first
     # place a recipe can lack a generation, so the deref is guarded here.
     if recipe.generation is not None:
-        allergies, _ = combined_dietary(recipe.generation.cooking_for_user_ids or [])
+        allergies, _, _ = combined_dietary(recipe.generation.cooking_for_user_ids or [])
     else:
         allergies = []
     # The inline link editor (Phase 4a) needs the live catalogue to search
@@ -476,7 +476,7 @@ def recipe_share(recipe_id):
     if recipe is None:
         abort(404)
     if recipe.generation is not None:
-        allergies, _ = combined_dietary(recipe.generation.cooking_for_user_ids or [])
+        allergies, _, _ = combined_dietary(recipe.generation.cooking_for_user_ids or [])
     else:
         allergies = []
     return render_template(

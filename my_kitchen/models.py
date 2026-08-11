@@ -16,13 +16,20 @@ SECTION_CHOICES = [
 ]
 SECTION_KEYS = {key for key, _ in SECTION_CHOICES}
 
-# Dietary tag types (spec section 3): an allergy is a hard, must-never-include
-# exclusion; a preference is a soft steer. Single source of truth, shared by the
-# tag manager form and the brief-building split. Mirrors SECTION_CHOICES.
+# Dietary tag types, in severity order — this list IS the display order in Manage
+# and on the user edit page, so a new type slots in here and nowhere else.
+#
+# "preference" keeps its key (it's the column default and the value on every
+# existing row) but changed meaning at 0.22.0: it is now a *diet style* — how
+# someone eats generally — not a catch-all. Per-food dislikes moved to "avoid",
+# because one type could never be worded correctly for both: "leave this out"
+# is right for Pesto and nonsense for Vegetarian.
 TAG_TYPE_CHOICES = [
-    ("allergy", "Allergy (hard exclusion)"),
-    ("preference", "Preference (soft steer)"),
+    ("allergy", "Allergy — never use this"),
+    ("avoid", "Dislike — leave it out"),
+    ("preference", "Diet — how they eat generally"),
 ]
+
 TAG_TYPE_KEYS = {key for key, _ in TAG_TYPE_CHOICES}
 
 # Meal types for the cook wizard (Phase 11). Hardcoded single source of truth —
@@ -136,7 +143,7 @@ class DietaryTag(db.Model):
     __tablename__ = "dietary_tags"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, unique=True, nullable=False)
-    # type: "preference" | "allergy"  (string for create_all flexibility)
+    # type: "allergy" | "avoid" | "preference"  (string for create_all flexibility)
     type = db.Column(db.String, nullable=False, default="preference")
 
 

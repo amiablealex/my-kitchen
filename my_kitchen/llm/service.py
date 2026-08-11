@@ -45,11 +45,16 @@ def _is_truncated(finish_reason):
 
 def combined_dietary(user_ids):
     """Union of the selected users' dietary tags, de-duplicated, split into
-    (allergies, preferences) name lists. The single source of truth for the
-    dietary split — used both by the review screen and the brief."""
-    allergies, preferences = [], []
+    (allergies, avoid, preferences) name lists. The single source of truth for the
+    dietary split — used both by the review screen and the brief.
+
+    An unrecognised type falls into preferences, which is what the pre-0.22.0
+    two-way split did with everything that wasn't an allergy — so a hand-edited
+    or future value degrades to a soft steer rather than vanishing from the brief.
+    """
+    buckets = {"allergy": [], "avoid": [], "preference": []}
     if not user_ids:
-        return allergies, preferences
+        return [], [], []
     users = User.query.filter(User.id.in_(user_ids)).all()
     seen = set()
     for u in users:
@@ -58,8 +63,12 @@ def combined_dietary(user_ids):
             if key in seen:
                 continue
             seen.add(key)
-            (allergies if tag.type == "allergy" else preferences).append(tag.name)
-    return sorted(allergies), sorted(preferences)
+            buckets.get(tag.type, buckets["preference"]).append(tag.name)
+    return (
+        sorted(buckets["allergy"]),
+        sorted(buckets["avoid"]),
+        sorted(buckets["preference"]),
+    )
 
 
 def recent_recipe_titles(limit):
@@ -139,7 +148,7 @@ def build_brief(wizard_state, time_label, app_config):
 
     cooking_for_ids = wizard_state.get("cooking_for_user_ids") or []
     guest_count = int(wizard_state.get("guest_count") or 0)
-    allergies, preferences = combined_dietary(cooking_for_ids)
+    allergies, avoid, preferences = combined_dietary(cooking_for_ids)
 
     # Meal type (Phase 11) + defensive cuisine suppression. The wizard's step-2
     # POST already nulls cuisine for non-cuisine meal types; we re-assert it here
@@ -163,6 +172,7 @@ def build_brief(wizard_state, time_label, app_config):
         "cooking_for_user_ids": cooking_for_ids,
         "guest_count": guest_count,
         "allergies": allergies,
+        "avoid": avoid,
         "preferences": preferences,
         "recent_titles": recent_recipe_titles(
             int(app_config.get("LLM_RECENT_TITLES_N", 10))
