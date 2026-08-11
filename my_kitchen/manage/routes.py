@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
 from ..models import (
-    Category, Ingredient, Equipment, DietaryTag,
+    Category, Ingredient, Equipment, DietaryTag, User,
     SECTION_CHOICES, SECTION_KEYS, TAG_TYPE_CHOICES, TAG_TYPE_KEYS, TAG_TYPE_HINTS,
 )
 
@@ -394,10 +394,18 @@ def dietary_tags():
     for t in tags:
         by_type.get(t.type, by_type["preference"]).append(t)
     groups = [(key, label, by_type[key]) for key, label in TAG_TYPE_CHOICES]
+    # Active users only, for the assign-on-create checkboxes. Retired users are
+    # excluded deliberately: they can't be cooked for, and users/routes.py
+    # refuses to change a retired user's tags — offering them here would create
+    # state that the Household page then won't let you edit.
+    active_users = User.query.filter_by(is_active=True).order_by(
+        db.func.lower(User.name)
+    ).all()
     return render_template(
         "manage/dietary_tags.html",
         groups=groups, counts=counts,
         types=TAG_TYPE_CHOICES, hints=TAG_TYPE_HINTS,
+        users=active_users,
     )
 
 
@@ -410,14 +418,37 @@ def dietary_tag_add():
     if _tag_name_taken(data["name"]):
         flash(f'"{data["name"]}" already exists.', "error")
         return redirect(url_for("manage.dietary_tags"))
-    db.session.add(DietaryTag(**data))
+
+    # Assign-on-create. A tag assigned to nobody reaches no brief at all, which
+    # is the trap this closes: creating and assigning were two screens apart and
+    # people stopped after the first. Parsed here rather than in _parse_tag_form
+    # because the EDIT form deliberately has no assignment controls — that stays
+    # on the Household page, where you edit one person's whole set at once.
+    #
+    # Ids are re-filtered against active users server-side: the checkbox list is
+    # only a UI, and a stale page could post an id that's since been retired.
+    requested_ids = {int(x) for x in request.form.getlist("user_ids") if x.isdigit()}
+    assignees = (
+        User.query.filter(User.id.in_(requested_ids), User.is_active.is_(True)).all()
+        if requested_ids else []
+    )
+
+    tag = DietaryTag(**data)
+    tag.users = assignees  # backref of User.dietary_tags — writes the join rows
+    db.session.add(tag)
     try:
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
         flash(f'"{data["name"]}" already exists.', "error")
         return redirect(url_for("manage.dietary_tags"))
-    flash(f'Added "{data["name"]}".', "success")
+
+    if assignees:
+        names = ", ".join(sorted(u.name for u in assignees))
+        flash(f'Added "{data["name"]}" and assigned it to {names}.', "success")
+    else:
+        flash(f'Added "{data["name"]}" — assign it to someone on the Household '
+              'page, or it won\'t reach any recipe.', "success")
     return redirect(url_for("manage.dietary_tags"))
 
 

@@ -37,9 +37,31 @@
       <label>Name <input type="text" name="name" placeholder="e.g. Pesto" required></label>
       <p class="help">Name the food itself — “Pesto”, not “no pesto” or “doesn't like pesto”.</p>
       {{ tag_type_picker(types, hints) }}
+
+      {# Assign-on-create: a tag that isn't assigned to anyone never reaches a
+         recipe brief, so the two steps are one form. Editing an existing tag's
+         assignment still lives on the Household page, per person. #}
+      {% if users %}
+        <span class="field-label">Who does this apply to?</span>
+        <div class="options">
+          {% for u in users %}
+            <label class="option">
+              <input type="checkbox" name="user_ids" value="{{ u.id }}">
+              <span>{{ u.name }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        <p class="help">You can change this later on the
+           <a href="{{ url_for('users.index') }}">Household</a> page.</p>
+      {% else %}
+        <p class="help">No active users to assign this to yet — add someone on the
+           <a href="{{ url_for('users.index') }}">Household</a> page first.</p>
+      {% endif %}
+
       <div class="form-actions">
         <button type="submit" class="btn btn--primary">{{ icon('add') }} Add</button>
       </div>
+
     </form>
   </details>
 
