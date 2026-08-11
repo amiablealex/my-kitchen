@@ -15,7 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from ..extensions import db
 from ..models import (
     Category, Ingredient, Equipment, DietaryTag,
-    SECTION_CHOICES, SECTION_KEYS, TAG_TYPE_CHOICES, TAG_TYPE_KEYS,
+    SECTION_CHOICES, SECTION_KEYS, TAG_TYPE_CHOICES, TAG_TYPE_KEYS, TAG_TYPE_HINTS,
 )
 
 manage_bp = Blueprint("manage", __name__, url_prefix="/manage")
@@ -382,12 +382,21 @@ def _parse_tag_form():
 
 @manage_bp.route("/dietary-tags")
 def dietary_tags():
-    tags = DietaryTag.query.order_by(DietaryTag.type, db.func.lower(DietaryTag.name)).all()
+    tags = DietaryTag.query.order_by(db.func.lower(DietaryTag.name)).all()
     # how many users each tag is assigned to — drives the delete confirmation
     counts = {t.id: len(t.users) for t in tags}
+    # Group in TAG_TYPE_CHOICES order — the constant IS the display order, so the
+    # template never names a type. An unrecognised value falls into "preference",
+    # mirroring combined_dietary()'s fallback so the page and the brief agree
+    # about where a stray type lands rather than silently hiding the tag.
+    by_type = {key: [] for key, _ in TAG_TYPE_CHOICES}
+    for t in tags:
+        by_type.get(t.type, by_type["preference"]).append(t)
+    groups = [(key, label, by_type[key]) for key, label in TAG_TYPE_CHOICES]
     return render_template(
         "manage/dietary_tags.html",
-        tags=tags, counts=counts, types=TAG_TYPE_CHOICES,
+        groups=groups, counts=counts,
+        types=TAG_TYPE_CHOICES, hints=TAG_TYPE_HINTS,
     )
 
 
@@ -436,7 +445,8 @@ def dietary_tag_edit(tag_id):
         return redirect(url_for("manage.dietary_tags"))
     return render_template(
         "manage/dietary_tag_edit.html",
-        tag=tag, types=TAG_TYPE_CHOICES, user_count=len(tag.users),
+        tag=tag, types=TAG_TYPE_CHOICES, hints=TAG_TYPE_HINTS,
+        user_count=len(tag.users),
     )
 
 

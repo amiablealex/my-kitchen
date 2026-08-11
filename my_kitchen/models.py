@@ -32,6 +32,31 @@ TAG_TYPE_CHOICES = [
 
 TAG_TYPE_KEYS = {key for key, _ in TAG_TYPE_CHOICES}
 
+# Per-type UI copy. Kept next to TAG_TYPE_CHOICES so the labels, the help text
+# and the prompt semantics can't drift apart, and so the wizard can reuse the
+# same words the Manage page teaches. "group" is the plural heading; "help" is
+# the one-line explanation of what the type actually does to a recipe.
+TAG_TYPE_HINTS = {
+    "allergy": {
+        "group": "Allergies",
+        "help": "Never used, in any form, and nothing made with it. Overrides "
+                "everything else — including an ingredient you've deliberately chosen.",
+        "examples": "Peanuts, shellfish, gluten",
+    },
+    "avoid": {
+        "group": "Dislikes",
+        "help": "A food someone simply doesn't like. Kept out of the whole recipe — "
+                "ingredients, optional extras, even serving suggestions.",
+        "examples": "Pesto, olives, coriander",
+    },
+    "preference": {
+        "group": "Diets",
+        "help": "How someone eats generally. Steers the whole recipe, but won't "
+                "override an ingredient you've deliberately chosen.",
+        "examples": "Vegetarian, gluten-free, nothing too spicy",
+    },
+}
+
 # Meal types for the cook wizard (Phase 11). Hardcoded single source of truth —
 # the DB-backed configurable version is deferred to the keystone phase. Each
 # entry carries a `takes_cuisine` flag: cuisine-bearing types show the cuisine

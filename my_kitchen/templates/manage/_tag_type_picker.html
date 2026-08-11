@@ -1,0 +1,21 @@
+{# Shared three-way type picker for the dietary-tag add and edit forms.
+   Radios rather than a <select> so the help text for every type is visible at
+   the moment of choosing — the whole point of the 0.22.0 change is that people
+   were picking the wrong type. Takes types/hints explicitly so it stays a plain
+   import with no `with context`. #}
+{% macro tag_type_picker(types, hints, current=None) %}
+  <span class="field-label">Type</span>
+  <div class="options">
+    {% for key, label in types %}
+      <label class="option option--stacked">
+        <input type="radio" name="type" value="{{ key }}" required
+               {% if key == current %}checked{% endif %}>
+        <span class="opt-body">
+          <span class="opt-name">{{ label }}</span>
+          <span class="opt-meta">{{ hints[key].help }}</span>
+          <span class="opt-eg">e.g. {{ hints[key].examples }}</span>
+        </span>
+      </label>
+    {% endfor %}
+  </div>
+{% endmacro %}

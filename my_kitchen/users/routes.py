@@ -110,10 +110,12 @@ def edit(user_id):
         return redirect(url_for("users.index"))
     # Tags grouped by type for the assignment UI (active users only — controls
     # are hidden for retired users, who show their tags read-only).
+    # Plural group names, not the choice labels — the labels are instructional
+    # ("Allergy — never use this"), which reads oddly as a section heading here.
     tags_by_type = [
-        (label, DietaryTag.query.filter_by(type=key)
-                                .order_by(db.func.lower(DietaryTag.name)).all())
-        for key, label in TAG_TYPE_CHOICES
+        (TAG_TYPE_HINTS[key]["group"], DietaryTag.query.filter_by(type=key)
+                                       .order_by(db.func.lower(DietaryTag.name)).all())
+        for key, _ in TAG_TYPE_CHOICES
     ]
     assigned_ids = {t.id for t in user.dietary_tags}
     return render_template(

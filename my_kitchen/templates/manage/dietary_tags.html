@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "manage/_tag_type_picker.html" import tag_type_picker %}
 {% block title %}Manage dietary tags — My Kitchen{% endblock %}
 {% block page_title %}Dietary tags{% endblock %}
 
@@ -24,54 +25,38 @@
 {% block content %}
   <a class="back-link" href="{{ url_for('manage.index') }}">{{ icon('arrow_back') }} Manage</a>
   <h1>Dietary tags</h1>
-  <p class="lead">Tags you can assign to people on the <a href="{{ url_for('users.index') }}">Household</a> page.
-     An <strong>allergy</strong> is a hard rule the recipe generator must never break;
-     a <strong>preference</strong> is a gentle steer.</p>
+  <p class="lead">Foods and diets you can assign to people on the
+     <a href="{{ url_for('users.index') }}">Household</a> page. A person's tags are sent to the
+     recipe generator only when they're picked at the “Cooking for” step, so they apply to
+     the meal you're actually cooking for them.</p>
 
   <details class="manage-add">
     <summary>{{ icon('add') }} Add a tag</summary>
     <form class="form" method="post" action="{{ url_for('manage.dietary_tag_add') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <label>Name <input type="text" name="name" placeholder="e.g. Vegetarian, Peanut allergy" required></label>
-      <label>Type
-        <select name="type" required>
-          {% for key, label in types %}
-            <option value="{{ key }}">{{ label }}</option>
-          {% endfor %}
-        </select>
-      </label>
+      <label>Name <input type="text" name="name" placeholder="e.g. Pesto" required></label>
+      <p class="help">Name the food itself — “Pesto”, not “no pesto” or “doesn't like pesto”.</p>
+      {{ tag_type_picker(types, hints) }}
       <div class="form-actions">
         <button type="submit" class="btn btn--primary">{{ icon('add') }} Add</button>
       </div>
     </form>
   </details>
 
-  {% if not tags %}
+  {% if not groups | map(attribute=2) | map('length') | sum %}
     <p class="muted">No dietary tags yet — add one above.</p>
   {% else %}
-    {% set ns = namespace(allergy=[], pref=[]) %}
-    {% for t in tags %}
-      {% if t.type == 'allergy' %}{% set ns.allergy = ns.allergy + [t] %}{% else %}{% set ns.pref = ns.pref + [t] %}{% endif %}
+    {% for key, label, tags in groups %}
+      {% if tags %}
+        <section class="recipe-group recipe-group--{{ key }}">
+          <header class="recipe-group-head">
+            <h2 class="recipe-group-name">{{ hints[key].group }}</h2>
+            <span class="recipe-group-count">{{ tags | length }}</span>
+          </header>
+          <p class="group-help">{{ hints[key].help }}</p>
+          <ul class="recipe-list">{% for t in tags %}{{ tag_row(t, counts) }}{% endfor %}</ul>
+        </section>
+      {% endif %}
     {% endfor %}
-
-    {% if ns.allergy %}
-      <section class="recipe-group recipe-group--allergy">
-        <header class="recipe-group-head">
-          <h2 class="recipe-group-name">Allergies</h2>
-          <span class="recipe-group-count">{{ ns.allergy | length }}</span>
-        </header>
-        <ul class="recipe-list">{% for t in ns.allergy %}{{ tag_row(t, counts) }}{% endfor %}</ul>
-      </section>
-    {% endif %}
-
-    {% if ns.pref %}
-      <section class="recipe-group recipe-group--pref">
-        <header class="recipe-group-head">
-          <h2 class="recipe-group-name">Preferences</h2>
-          <span class="recipe-group-count">{{ ns.pref | length }}</span>
-        </header>
-        <ul class="recipe-list">{% for t in ns.pref %}{{ tag_row(t, counts) }}{% endfor %}</ul>
-      </section>
-    {% endif %}
   {% endif %}
 {% endblock %}

@@ -357,6 +357,14 @@ th { color: var(--text-muted); font-weight: 600; }
 .option .opt-meta { color: var(--text-muted); font-weight: 400; font-size: var(--fs-small); }
 .option:has(input:checked) { border-color: var(--accent-1); box-shadow: inset 0 0 0 1px var(--accent-1); }
 .options--grid { display: grid; grid-template-columns: 1fr; }
+/* stacked option rows: name + explanation + example, for the dietary type picker */
+.field-label { display: block; font-weight: 600; margin-bottom: var(--space-3); }
+.option--stacked { align-items: flex-start; padding: var(--space-3); font-weight: 400; }
+.option--stacked input { margin-top: 4px; flex: none; }
+.opt-body { display: flex; flex-direction: column; gap: 2px; }
+.opt-name { font-weight: 600; }
+.option--stacked .opt-meta { line-height: 1.4; }
+.opt-eg { color: var(--text-muted); font-size: var(--fs-small); font-style: italic; }
 @media (min-width: 620px) { .options--grid { grid-template-columns: 1fr 1fr; } }
 
 /* --- list-row component (Manage / Users / History) --- */
@@ -427,6 +435,8 @@ th { color: var(--text-muted); font-weight: 600; }
   background: var(--surface-2); color: var(--text-muted);
 }
 .badge--allergy { background: rgba(255, 95, 145, 0.16); color: #ffd0de; }
+.badge--avoid      { background: rgba(254, 155, 70, 0.16); color: #ffe0c4; }
+.badge--preference { background: rgba(86, 208, 187, 0.16); color: #c8f3ea; }
 .badge--pref    { background: rgba(86, 208, 187, 0.16); color: #c8f3ea; }
 .badge--staple  { background: rgba(177, 228, 109, 0.16); color: #e2f5c5; }
 .badge--warn    { background: rgba(254, 155, 70, 0.18); color: #ffe0c4; }
@@ -792,8 +802,18 @@ th { color: var(--text-muted); font-weight: 600; }
 .manage-add .form { background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius); padding: var(--space-4); }
 
 .recipe-group--plain   { --group: var(--divider); --group-tint: rgba(255, 255, 255, 0.04); }
-.recipe-group--allergy { --group: var(--danger); --group-tint: rgba(255, 95, 145, 0.14); }
-.recipe-group--pref    { --group: var(--info);   --group-tint: rgba(86, 208, 187, 0.14); }
+/* dietary tag types — modifier name IS the type key (see TAG_TYPE_CHOICES),
+   so a new type needs one line here and no template change. Severity reads
+   pink -> orange -> teal, matching the order of the constant. */
+.recipe-group--allergy    { --group: var(--danger);  --group-tint: rgba(255, 95, 145, 0.14); }
+.recipe-group--avoid      { --group: var(--warning); --group-tint: rgba(254, 155, 70, 0.14); }
+.recipe-group--preference { --group: var(--info);    --group-tint: rgba(86, 208, 187, 0.14); }
+
+.group-help {
+  margin: 0; padding: var(--space-2) var(--space-3);
+  color: var(--text-muted); font-size: var(--fs-small);
+  border-bottom: 1px solid var(--divider);
+}
 
 .btn--icon { width: 36px; padding: 0; justify-content: center; }
 .btn--icon .icon { width: 1.2em; height: 1.2em; }
