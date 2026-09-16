@@ -1,4 +1,6 @@
+import json
 import re
+import unicodedata
 from datetime import datetime, timezone
 
 from flask import (
@@ -483,6 +485,83 @@ def recipe_share(recipe_id):
         allergies = []
     return render_template(
         "wizard/recipe_share.html", recipe=recipe, allergy_caveat=bool(allergies),
+    )
+
+
+def _export_slug(title):
+    """Title -> a lowercase-hyphenated filename stem ("Caramelised 'Assassin's'
+    Spaghetti" -> "caramelised-assassins-spaghetti"). The website uses the
+    filename as the recipe's URL, so this only has to be a sensible default."""
+    text = unicodedata.normalize("NFKD", title or "").encode("ascii", "ignore").decode()
+    text = re.sub(r"['\u2019]", "", text.lower())
+    slug = re.sub(r"[^a-z0-9]+", "-", text).strip("-")
+    if len(slug) > 60:
+        slug = slug[:60].rsplit("-", 1)[0]
+    return slug or "recipe"
+
+
+def _recipe_export_payload(recipe):
+    """One recipe as portable JSON, for publishing on the website.
+
+    The recipe contract plus its tags, and nothing household-specific: no
+    notes, no author or cook names, no generation brief, no allergy caveat.
+    """
+    if recipe.ingredients:
+        ingredients = [
+            {"amount": ri.amount, "unit": ri.unit, "text": ri.raw_text, "to_buy": bool(ri.to_buy)}
+            for ri in recipe.ingredients
+        ]
+    else:  # legacy row-less recipe, same fallback as the display
+        ingredients = [
+            {"amount": i.get("amount"), "unit": i.get("unit"), "text": i.get("item"),
+             "to_buy": bool(i.get("to_buy"))}
+            for i in (recipe.ingredients_json or [])
+        ]
+
+    def steps(items, with_timer=True):
+        out = []
+        for s in items or []:
+            row = {"title": s.get("title") or "", "text": s.get("text") or ""}
+            if with_timer:
+                row["timer_minutes"] = s.get("timer_minutes") or None
+            out.append(row)
+        return out
+
+    return {
+        "format": "my-kitchen-recipe",
+        "version": 1,
+        "exported_at": datetime.now(timezone.utc).date().isoformat(),
+        "source": recipe.source or "ai",
+        "title": recipe.title or "",
+        "blurb": recipe.blurb or "",
+        "intro": recipe.intro or "",
+        "servings": recipe.servings,
+        "meal_type": recipe.meal_type,
+        "cuisine": recipe.cuisine,
+        "time_band": recipe.time_band,
+        "ingredients": ingredients,
+        "prep": steps(recipe.prep_steps_json),
+        "cook": steps(recipe.cook_steps_json),
+        "tips": steps(recipe.tips_json, with_timer=False),
+    }
+
+
+@wizard_bp.route("/recipe/<int:recipe_id>/export.json")
+def recipe_export(recipe_id):
+    """Download one recipe as JSON, for the website's recipe pages.
+
+    Same login gate as every other route, and the same export-not-publication
+    stance as the share view: the user downloads a file and publishes it
+    themselves. Nothing is exposed from the instance.
+    """
+    recipe = db.session.get(Recipe, recipe_id)
+    if recipe is None:
+        abort(404)
+    body = json.dumps(_recipe_export_payload(recipe), ensure_ascii=False, indent=2) + "\n"
+    return current_app.response_class(
+        body,
+        mimetype="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{_export_slug(recipe.title)}.json"'},
     )
 
 

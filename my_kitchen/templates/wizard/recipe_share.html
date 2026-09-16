@@ -3,7 +3,8 @@
    surface (tag editor, link pills, ri-editor, favourite form, source dot).
    NOTE: the ingredient line itself comes from the shared _ingredients.html
    macro, so formatting fixes there reach both pages. If you change the recipe
-   *body* markup in recipe.html, mirror it here. #}
+   *body* markup in recipe.html, mirror it here — and in the website's
+   templates/recipe.html, which renders published recipes as the same sheet. #}
 {% extends "share_base.html" %}
 {% from "_icons.html" import icon %}
 {% from "_ingredients.html" import ingredient_line %}
@@ -89,6 +90,9 @@
     Print this page, or save it as a PDF, to share the recipe.
     On a phone: browser menu → Share → Print.
   </p>
-  <p class="share-exit"><a href="{{ url_for('wizard.recipe', recipe_id=recipe.id) }}">← Back to the recipe</a></p>
+  <p class="share-exit">
+    <a href="{{ url_for('wizard.recipe', recipe_id=recipe.id) }}">← Back to the recipe</a>
+    · <a href="{{ url_for('wizard.recipe_export', recipe_id=recipe.id) }}">Download recipe data (JSON)</a>
+  </p>
 
 {% endblock %}

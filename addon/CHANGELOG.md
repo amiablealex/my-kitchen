@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.23.0 — Recipe data export
+- The print / share view has a new "Download recipe data (JSON)" link, which saves the recipe (title, intro, ingredients, method, tips and tags) as a file for publishing elsewhere. Household notes and names are not included.
+
 ## 0.22.0
 
 **Dietary tags now come in three kinds: Allergy, Dislike and Diet.**
