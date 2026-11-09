@@ -7,3 +7,15 @@
 {% macro ingredient_line(amount, unit, text) -%}
 {{ [amount, unit, text] | reject('in', [none, '']) | join(' ') }}
 {%- endmacro %}
+
+{# Same text as ingredient_line, but with the amount wrapped in a span the
+   servings scaler (Phase 24, servings.js) can rewrite. The recipe page only —
+   the print/share view keeps ingredient_line, so prints stay at the recipe's
+   own serving count. Renders identically when the scaler isn't running. #}
+{% macro scalable_line(amount, unit, text) -%}
+{%- set rest = [unit, text] | reject('in', [none, '']) | join(' ') -%}
+{%- if amount is not none and amount != '' -%}
+<span class="ing-amt" data-amount="{{ amount }}">{{ amount }}</span>{% if rest %} {% endif %}
+{%- endif -%}
+{{ rest }}
+{%- endmacro %}

@@ -230,6 +230,10 @@ class Generation(db.Model):
     # history/choice). Set "running" by the synchronous starter, then "done" or
     # "error" by the background thread (or by the poll's stale guard).
     status = db.Column(db.String, nullable=True)
+    # archived_at (Phase 24): used ONLY for failed generations, which have no
+    # recipes to archive. A generation with recipes is archived through its
+    # recipes (recipes.archived_at is the truth for anything with content).
+    archived_at = db.Column(db.DateTime, nullable=True)
 
     recipes = db.relationship("Recipe", backref="generation")
     # Read-only link to the cook. The created_by_user_id FK column already
@@ -287,6 +291,12 @@ class Recipe(db.Model):
     # created_by_user_id: the recipe's author. For AI recipes = the generation's
     # cook. Nullable FK (user/imported provenance comes later).
     created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    # Archive (Phase 24): a soft delete, household-wide (shared and attributed,
+    # like notes). NULL = live. An archived recipe drops out of History,
+    # Favourites and wizard suggestions — filter with Recipe.live() — but its
+    # own URL still renders, with a restore banner. Never hard-deleted.
+    archived_at = db.Column(db.DateTime, nullable=True)
+    archived_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 
     # Structured, catalogue-linked ingredient lines (Phase 3b). order_by position
     # so the collection mirrors the recipe's ingredient order; delete-orphan so a
@@ -308,8 +318,20 @@ class Recipe(db.Model):
         cascade="all, delete-orphan",
     )
     # Read-only link to the author. The created_by_user_id FK column carries the
-    # value; this is ORM-level only, so it reports no schema diff.
-    author = db.relationship("User")
+    # value; this is ORM-level only, so it reports no schema diff. foreign_keys
+    # is required since Phase 24 added a second FK to users (archived_by).
+    author = db.relationship("User", foreign_keys=[created_by_user_id])
+    archived_by = db.relationship("User", foreign_keys=[archived_by_user_id])
+
+    @property
+    def is_archived(self):
+        return self.archived_at is not None
+
+    @classmethod
+    def live(cls):
+        """Filter clause for non-archived recipes. Every list surface (History,
+        Favourites, suggestions) goes through this so none can forget it."""
+        return cls.archived_at.is_(None)
 
 
 class RecipeIngredient(db.Model):

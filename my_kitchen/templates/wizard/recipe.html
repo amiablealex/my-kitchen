@@ -1,16 +1,29 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
 {% from "_source.html" import source_dot %}
-{% from "_ingredients.html" import ingredient_line %}
+{% from "_ingredients.html" import scalable_line %}
 {% block title %}{{ recipe.title }} — My Kitchen{% endblock %}
 {% block page_title %}Recipe{% endblock %}
 {% block content %}
+  {% if recipe.is_archived %}
+    <div class="notice notice--archived">
+      {{ icon('archive') }}
+      <div class="notice-body">
+        <strong>Archived</strong> {{ recipe.archived_at | localdt }}{% if recipe.archived_by %} by {{ recipe.archived_by.name }}{% endif %}.
+        It won't appear in your recipes, favourites or suggestions.
+      </div>
+      <form method="post" action="{{ url_for('wizard.recipe_restore', recipe_id=recipe.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn--sm btn--primary">Restore</button>
+      </form>
+    </div>
+  {% endif %}
   <h1 class="display recipe-title">{{ recipe.title }}</h1>
   {% if recipe.blurb %}
     <p class="recipe-blurb recipe-source-dot">{{ source_dot(recipe.source) }}{{ recipe.blurb }}</p>
-    <p class="recipe-serves">Serves {{ recipe.servings }}.</p>
+    <p class="recipe-serves">Serves <span class="js-serves">{{ recipe.servings }}</span>.</p>
   {% else %}
-    <p class="recipe-serves recipe-source-dot">{{ source_dot(recipe.source) }}Serves {{ recipe.servings }}.</p>
+    <p class="recipe-serves recipe-source-dot">{{ source_dot(recipe.source) }}Serves <span class="js-serves">{{ recipe.servings }}</span>.</p>
   {% endif %}
 
   <div class="recipe-tags" id="recipe-tags"
@@ -74,6 +87,22 @@
         </button>
       {% endif %}
     </div>
+    {% if recipe.servings and recipe.servings > 0 %}
+      {# Servings scaler (Phase 24). Front-end only: nothing is saved, and the
+         print view always uses the recipe's own count. Hidden until
+         servings.js wires it up, so without JS the page is unchanged. #}
+      <div class="servings" id="servings" data-base="{{ recipe.servings }}"
+           data-key="mk:serves:{{ recipe.id }}" hidden>
+        <span class="servings-label">Serves</span>
+        <div class="servings-stepper" role="group" aria-label="Number of servings">
+          <button type="button" class="servings-btn" data-step="-1" aria-label="Fewer servings">{{ icon('remove') }}</button>
+          <output class="servings-value" aria-live="polite">{{ recipe.servings }}</output>
+          <button type="button" class="servings-btn" data-step="1" aria-label="More servings">{{ icon('add') }}</button>
+        </div>
+        <button type="button" class="servings-reset" hidden>Reset to {{ recipe.servings }}</button>
+        <p class="servings-note" hidden>Ingredient amounts are scaled. Quantities and times in the method are still for {{ recipe.servings }}.</p>
+      </div>
+    {% endif %}
     {% if recipe.ingredients %}
       {# Structured source (keystone): render the ordered RecipeIngredient rows.
          The freetext line ({amount} {unit} {raw_text}) is byte-identical to the
@@ -87,7 +116,7 @@
           <li class="ingredient-row" data-ri-id="{{ ri.id }}" data-raw-text="{{ ri.raw_text }}"
               data-link-url="{{ url_for('wizard.recipe_ingredient_link', recipe_id=recipe.id, ri_id=ri.id) }}"
               data-add-link-url="{{ url_for('wizard.recipe_ingredient_add_and_link', recipe_id=recipe.id, ri_id=ri.id) }}">
-            {{ ingredient_line(ri.amount, ri.unit, ri.raw_text) }}
+            {{ scalable_line(ri.amount, ri.unit, ri.raw_text) }}
             {% if ri.to_buy %} <span class="to-buy">(optional extra)</span>{% endif %}
             {% if ri.ingredient %}
               <span class="link-pill" data-linked-id="{{ ri.ingredient.id }}">{{ ri.ingredient.name }}</span>
@@ -140,7 +169,7 @@
       <ul class="ingredient-list">
         {% for ing in recipe.ingredients_json %}
           <li>
-            {{ ingredient_line(ing.amount, ing.unit, ing.item) }}
+            {{ scalable_line(ing.amount, ing.unit, ing.item) }}
             {% if ing.to_buy %} <span class="to-buy">(optional extra)</span>{% endif %}
           </li>
         {% endfor %}
@@ -198,6 +227,14 @@
     <a class="btn btn--secondary" href="{{ url_for('wizard.recipe_share', recipe_id=recipe.id) }}">{{ icon('print') }} Print / share this recipe</a>
   </p>
 
+  {% if not recipe.is_archived %}
+    <form method="post" style="margin-top:var(--space-3)"
+          action="{{ url_for('wizard.recipe_archive', recipe_id=recipe.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn--secondary">{{ icon('archive') }} Archive this recipe</button>
+    </form>
+  {% endif %}
+
   <section class="recipe-section notes-section" id="notes">
     <h2>Notes</h2>
     {% if recipe.comments %}
@@ -246,6 +283,7 @@
 
 {% block scripts %}
   <script src="{{ url_for('static', filename='recipe_tags.js') }}"></script>
+  <script src="{{ url_for('static', filename='servings.js') }}"></script>
   {% if recipe.ingredients %}
     <script src="{{ url_for('static', filename='recipe_links.js') }}"></script>
   {% endif %}

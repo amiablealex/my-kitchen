@@ -15,7 +15,7 @@ from ..models import (
     Ingredient, Category, Generation, Recipe, RecipeIngredient, RecipeComment,
     User, SECTION_CHOICES, DEFAULT_MEAL_TYPE, MEAL_TYPES, MEAL_TYPE_NAMES,
     meal_type_takes_cuisine, CUISINES, WIZARD_CUISINES, SURPRISE_ME,
-    COMMENT_MAX_CHARS, TAG_TYPE_CHOICES, TAG_TYPE_HINTS,
+    COMMENT_MAX_CHARS, TAG_TYPE_CHOICES, TAG_TYPE_HINTS, utcnow,
 )
 from ..llm.service import start_generation, combined_dietary
 from .suggestions import suggest_recipes
@@ -993,4 +993,35 @@ def toggle_favourite(recipe_id):
         msg = "Added to favourites."
     db.session.commit()
     flash(msg, "success")
+    return redirect(url_for("wizard.recipe", recipe_id=recipe.id))
+
+
+@wizard_bp.route("/recipe/<int:recipe_id>/archive", methods=["POST"])
+def recipe_archive(recipe_id):
+    """Archive one recipe from its own page (Phase 24). Household-wide and
+    reversible: the page stays put and shows a restore banner, which is the
+    undo."""
+    recipe = db.session.get(Recipe, recipe_id)
+    if recipe is None:
+        abort(404)
+    if not recipe.is_archived:
+        recipe.archived_at = utcnow()
+        recipe.archived_by_user_id = current_user.id
+        db.session.commit()
+    flash("Archived — it's out of your lists. Restore it any time.", "success")
+    return redirect(url_for("wizard.recipe", recipe_id=recipe.id))
+
+
+@wizard_bp.route("/recipe/<int:recipe_id>/restore", methods=["POST"])
+def recipe_restore(recipe_id):
+    recipe = db.session.get(Recipe, recipe_id)
+    if recipe is None:
+        abort(404)
+    recipe.archived_at = None
+    recipe.archived_by_user_id = None
+    db.session.commit()
+    flash("Restored to your recipes.", "success")
+    nxt = request.form.get("next")
+    if nxt == "archive":
+        return redirect(url_for("history.archived"))
     return redirect(url_for("wizard.recipe", recipe_id=recipe.id))

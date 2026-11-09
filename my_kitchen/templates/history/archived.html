@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% from "_source.html" import source_dot %}
+{% block title %}Archive — My Kitchen{% endblock %}
+{% block page_title %}Archive{% endblock %}
+{% block content %}
+
+  <h1>Archive</h1>
+  <p class="rf-head-actions">
+    <a class="back-link" href="{{ url_for('history.index') }}">{{ icon('arrow_back') }} Recipes</a>
+  </p>
+  <p class="muted">Archived recipes are hidden from your recipes, favourites and suggestions. Nothing here is deleted — restore anything to bring it back.</p>
+
+  {% if not recipes %}
+    <div class="empty">{{ icon('archive') }}<p>Nothing archived.</p></div>
+  {% else %}
+    <section class="recipe-group" data-no-filter>
+      <header class="recipe-group-head">
+        <h2 class="recipe-group-name">Archived</h2>
+        <span class="recipe-group-count">{{ recipes | length }}</span>
+      </header>
+      <ul class="recipe-list">
+        {% for r in recipes %}
+          <li class="recipe-row">
+            <div class="row-main">
+              <div class="row-title">{{ source_dot(r.source) }}<a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a></div>
+              <div class="row-meta">archived {{ r.archived_at | localdt }}{% if r.archived_by %} by {{ r.archived_by.name }}{% endif %}</div>
+            </div>
+            <form method="post" class="row-actions"
+                  action="{{ url_for('wizard.recipe_restore', recipe_id=r.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="next" value="archive">
+              <button type="submit" class="btn btn--sm btn--secondary">Restore</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+{% endblock %}
