@@ -390,6 +390,13 @@ th { color: var(--text-muted); font-weight: 600; }
 .recipe-row .row-title a { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-star { flex: none; color: var(--accent-2); display: inline-flex; align-items: center; }
 .row-star .icon { width: 1.15em; height: 1.15em; }
+/* Per-row archive (Phase 24). Quiet until hovered/focused; a full 40px target. */
+.row-archive { flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; margin: -4px -8px -4px 0; padding: 0; border: none; border-radius: var(--radius);
+  background: none; color: var(--text-muted); opacity: 0.6; cursor: pointer; }
+.row-archive:hover, .row-archive:focus-visible { opacity: 1; background: var(--surface-2); color: var(--text); }
+.row-archive[disabled] { opacity: 0.3; cursor: default; }
+.row-archive .icon { width: 1.2em; height: 1.2em; }
 
 /* --- History restyle: source-grouped tables (mirrors the stock editor) --- */
 .recipe-toolbar { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin-bottom: var(--space-3); }
@@ -658,6 +665,8 @@ th { color: var(--text-muted); font-weight: 600; }
 }
 .notice .icon { color: var(--warning); width: 1.4em; height: 1.4em; flex: none; margin-top: 2px; }
 .notice-body { flex: 1; }
+.notice--archived { border-left-color: var(--text-muted); align-items: center; }
+.notice--archived .icon { color: var(--text-muted); }
 
 /* --- empty states --- */
 .empty { text-align: center; padding: var(--space-6) var(--space-4); color: var(--text-muted); }
@@ -1161,3 +1170,23 @@ th { color: var(--text-muted); font-weight: 600; }
 }
 .facet-suggest-btn:hover { background: var(--surface); }
 .facet-suggest-facet { color: var(--text-muted); text-transform: uppercase; font-size: 0.7em; letter-spacing: 0.06em; flex: none; }
+
+/* --- servings scaler (Phase 24) --- */
+.servings { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-3); }
+.servings[hidden] { display: none; }
+.servings-label { color: var(--text-muted); }
+.servings-stepper { display: inline-flex; align-items: center; background: var(--surface);
+  border: 1px solid var(--divider); border-radius: 999px; }
+.servings-btn { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 44px;
+  padding: 0; border: none; background: none; color: var(--text); cursor: pointer; border-radius: 999px; }
+.servings-btn:hover:not([disabled]), .servings-btn:focus-visible { background: var(--surface-2); }
+.servings-btn[disabled] { opacity: 0.35; cursor: default; }
+.servings-btn .icon { width: 1.3em; height: 1.3em; }
+.servings-value { min-width: 2.2ch; text-align: center; font-weight: 700; font-size: 1.15em;
+  font-variant-numeric: tabular-nums; }
+.servings-reset { border: none; background: none; padding: var(--space-1) 0; color: var(--accent-1);
+  cursor: pointer; font: inherit; font-size: var(--fs-small); text-decoration: underline; }
+.servings-reset[hidden], .servings-note[hidden] { display: none; }
+.servings-note { flex-basis: 100%; margin: 0; color: var(--text-muted); font-size: var(--fs-small); }
+.ing-amt.is-scaled { color: var(--accent-1); font-weight: 600; }

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.24.0 — Archive and servings
+
+**Archive recipes you don't need to see.** Each row on the Recipes page now
+has an archive button. The recipe disappears from Recipes, Favourites and the
+cook wizard's suggestions, with an Undo straight afterwards. You can also
+archive from a recipe's own page. Nothing is deleted: everything archived is
+listed on the new Archive page (linked from Recipes), and Restore brings it
+back. Archiving applies to the whole household.
+
+**Scale a recipe to more or fewer people.** On a recipe page, use − and + next
+to the ingredients to change the number of servings, and the amounts adjust.
+Amounts like "a splash" are left as they are, and quantities in the method
+stay at the original serving size. It's only for the current view: nothing is
+saved, and the print / share view always uses the recipe's own serving count.
+
 ## 0.23.0 — Recipe data export
 - The print / share view has a new "Download recipe data (JSON)" link, which saves the recipe (title, intro, ingredients, method, tips and tags) as a file for publishing elsewhere. Household notes and names are not included.
 

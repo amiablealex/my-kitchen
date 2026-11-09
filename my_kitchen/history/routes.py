@@ -1,9 +1,9 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, abort, jsonify, render_template, request
 from flask_login import current_user
 from datetime import datetime
 
 from ..extensions import db
-from ..models import Generation, Recipe, RecipeComment, User
+from ..models import Generation, Recipe, RecipeComment, User, utcnow
 
 history_bp = Blueprint("history", __name__, url_prefix="/history")
 
@@ -124,6 +124,33 @@ def _recipe_facets(recipes):
     return fields, opts.as_list()
 
 
+def _generation_row(gen):
+    """The History row for one generation, or None when archived away.
+
+    Archive (Phase 24) is recipe-level, so a row's visibility follows the
+    recipes it shows: a chosen row disappears with its chosen recipe (the
+    unchosen sibling never resurfaces as an "unchosen" row); an unchosen row
+    shows whichever of its two recipes are still live and disappears when
+    neither is. A failed generation has no recipes, so it carries its own
+    archived_at."""
+    if not gen.recipes:
+        if gen.archived_at is not None:
+            return None
+        return {"kind": "generation", "sort_at": gen.created_at, "gen": gen,
+                "status": "error", "chosen": None, "recipes": []}
+    chosen = next((r for r in gen.recipes if r.was_chosen), None)
+    if chosen is not None:
+        if chosen.is_archived:
+            return None
+        return {"kind": "generation", "sort_at": gen.created_at, "gen": gen,
+                "status": "chosen", "chosen": chosen, "recipes": gen.recipes}
+    live = [r for r in gen.recipes if not r.is_archived]
+    if not live:
+        return None
+    return {"kind": "generation", "sort_at": gen.created_at, "gen": gen,
+            "status": "unchosen", "chosen": None, "recipes": live}
+
+
 @history_bp.route("/")
 def index():
     """A merged, newest-first list of the recipe bank: AI generations (chosen /
@@ -136,19 +163,13 @@ def index():
     # been superseded by the AI/hand grouping below.
 
     generations = Generation.query.all()
-    user_recipes = Recipe.query.filter(Recipe.source == "user").all()
+    user_recipes = Recipe.query.filter(Recipe.source == "user", Recipe.live()).all()
 
     rows = []
     for gen in generations:
-        if gen.recipes:
-            chosen = next((r for r in gen.recipes if r.was_chosen), None)
-            status = "chosen" if chosen else "unchosen"
-        else:
-            chosen = None
-            status = "error"
-        rows.append({"kind": "generation", "sort_at": gen.created_at,
-                     "gen": gen, "status": status, "chosen": chosen,
-                     "recipes": gen.recipes})
+        row = _generation_row(gen)
+        if row is not None:
+            rows.append(row)
     for r in user_recipes:
         rows.append({"kind": "user", "sort_at": r.created_at, "recipe": r})
 
@@ -167,10 +188,84 @@ def favourites():
     """The logged-in user's favourites, newest-first (spec section 6, corrected
     to be per-user)."""
     recipes = (Recipe.query
-               .filter(Recipe.favourited_by.any(id=current_user.id))
+               .filter(Recipe.favourited_by.any(id=current_user.id), Recipe.live())
                .order_by(Recipe.created_at.desc()).all())
     noted_ids = {rid for (rid,) in db.session.query(RecipeComment.recipe_id).distinct()}
     facets, facet_options = _recipe_facets(recipes)
     return render_template("history/favourites.html", recipes=recipes,
                            noted_ids=noted_ids, facets=facets,
                            facet_options=facet_options)
+
+
+# --- Archive (Phase 24) -----------------------------------------------------
+# Household-wide soft delete. A History row archives the recipes it shows (or,
+# for a failed generation, the generation itself); undo restores exactly that
+# set, so the JSON handshake returns what was touched. JSON rather than an HTML
+# fragment: the client re-inserts the row element it already holds, so no
+# url_for-built markup has to travel back.
+
+
+def _archive(recipes, gen=None):
+    now = utcnow()
+    for r in recipes:
+        r.archived_at = now
+        r.archived_by_user_id = current_user.id
+    if gen is not None:
+        gen.archived_at = now
+
+
+@history_bp.route("/row/archive", methods=["POST"])
+def row_archive():
+    data = request.get_json(silent=True) or {}
+    touched = {"recipe_ids": [], "generation_id": None}
+    if data.get("generation_id") is not None:
+        gen = db.session.get(Generation, int(data["generation_id"]))
+        if gen is None:
+            abort(404)
+        row = _generation_row(gen)
+        if row is None:
+            return jsonify(touched)  # already archived — nothing to do
+        if row["status"] == "error":
+            _archive([], gen)
+            touched["generation_id"] = gen.id
+        else:
+            recs = [row["chosen"]] if row["status"] == "chosen" else row["recipes"]
+            _archive(recs)
+            touched["recipe_ids"] = [r.id for r in recs]
+    elif data.get("recipe_id") is not None:
+        recipe = db.session.get(Recipe, int(data["recipe_id"]))
+        if recipe is None:
+            abort(404)
+        if not recipe.is_archived:
+            _archive([recipe])
+            touched["recipe_ids"] = [recipe.id]
+    else:
+        abort(400)
+    db.session.commit()
+    return jsonify(touched)
+
+
+@history_bp.route("/row/restore", methods=["POST"])
+def row_restore():
+    """Undo for row_archive: restores exactly the set it reported."""
+    data = request.get_json(silent=True) or {}
+    ids = [int(i) for i in (data.get("recipe_ids") or [])]
+    for r in Recipe.query.filter(Recipe.id.in_(ids)).all() if ids else []:
+        r.archived_at = None
+        r.archived_by_user_id = None
+    if data.get("generation_id") is not None:
+        gen = db.session.get(Generation, int(data["generation_id"]))
+        if gen is not None:
+            gen.archived_at = None
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@history_bp.route("/archived")
+def archived():
+    """The archive: every archived recipe, most recently archived first, each
+    with a restore button. Failed generations aren't listed — there's nothing
+    in one to restore."""
+    recipes = (Recipe.query.filter(Recipe.archived_at.isnot(None))
+               .order_by(Recipe.archived_at.desc(), Recipe.id.desc()).all())
+    return render_template("history/archived.html", recipes=recipes)

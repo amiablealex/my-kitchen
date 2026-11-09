@@ -21,6 +21,7 @@ A saved Recipe R is suggested iff ALL hold:
     (retired -> excluded). to_buy lines are ignored (optional extras).
   * MUST-USE — every wizard must-use ingredient id appears among R's linked
     ingredient ids.
+  * LIVE — not archived (Phase 24).
 
 NOT filtered by: time band (display-only badge), cooking-for / allergies /
 preferences (the allergy machinery stays on the generate path), or servings.
@@ -76,6 +77,7 @@ def suggest_recipes(meal_type, cuisine, must_use_ids, limit=None):
     None; `must_use_ids` is the wizard's selected_ingredient_ids (may be empty)."""
     q = Recipe.query.filter(
         db.or_(Recipe.source != "ai", Recipe.was_chosen.is_(True)),
+        Recipe.live(),
         Recipe.meal_type == meal_type,
     )
     if _cuisine_constrained(meal_type, cuisine):
