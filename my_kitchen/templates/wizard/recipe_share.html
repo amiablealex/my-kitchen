@@ -6,11 +6,11 @@
    *body* markup in recipe.html, mirror it here — and in the website's
    templates/recipe.html, which renders published recipes as the same sheet. #}
 {% extends "share_base.html" %}
-{% from "_icons.html" import icon %}
+{% from "_icons.html" import icon, brand_mark %}
 {% from "_ingredients.html" import ingredient_line %}
 {% block title %}{{ recipe.title }} — My Kitchen{% endblock %}
 {% block content %}
-  <p class="share-mark rainbow">My Kitchen</p>
+  <p class="share-mark">{{ brand_mark() }}<span class="rainbow">My Kitchen</span></p>
 
   <h1 class="display recipe-title">{{ recipe.title }}</h1>
   {% if recipe.blurb %}

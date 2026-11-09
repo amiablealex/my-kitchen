@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Log in — My Kitchen{% endblock %}
+{% from "_icons.html" import brand_mark %}
 {% block content %}
   <div class="home-hero" style="padding-bottom:var(--space-4)">
+    {{ brand_mark("brand-mark--hero") }}
     <h1 class="display" style="font-size:clamp(2.4rem,11vw,3.8rem);margin:0">My Kitchen</h1>
   </div>
   <div class="card" style="max-width:420px;margin:0 auto">

@@ -8,6 +8,8 @@
   <title>{% block title %}My Kitchen{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" href="{{ url_for('static', filename='icons/favicon.ico') }}" sizes="32x32">
+  <link rel="icon" href="{{ url_for('static', filename='icons/favicon.svg') }}" type="image/svg+xml">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-180.png') }}">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,7 +17,7 @@
   <meta name="mobile-web-app-capable" content="yes">
 </head>
 <body>
-{% from "_icons.html" import icon %}
+{% from "_icons.html" import icon, brand_mark %}
 
 {# Active nav section derived from the endpoint — no route changes needed.
    Favourites must be tested before the generic history.* branch. #}
@@ -52,7 +54,7 @@
   {# ----- left rail (desktop) / slide-in drawer (mobile) ----- #}
   <aside class="nav-rail" id="nav-rail">
     <div class="nav-brand">
-      <a href="{{ url_for('main.index') }}" class="brand-logo rainbow">My Kitchen</a>
+      <a href="{{ url_for('main.index') }}" class="brand-logo">{{ brand_mark() }}<span class="rainbow">My Kitchen</span></a>
       <button class="icon-btn" type="button" data-nav-close aria-label="Close menu">{{ icon('close') }}</button>
     </div>
     <nav class="nav-links" aria-label="Primary">

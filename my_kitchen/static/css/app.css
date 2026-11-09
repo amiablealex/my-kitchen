@@ -1293,3 +1293,11 @@ a.version-step:hover, a.version-step:focus-visible { border-color: var(--accent-
 .note-form.is-asking .note-submit .source-dot { display: inline-block; }
 .note-form.is-asking .note-submit .icon { display: none; }
 .ask-chip[hidden] { display: none; }
+
+/* --- brand mark (0.27.2): the pinwheel beside the wordmark --- */
+.brand-logo { display: inline-flex; align-items: center; gap: 0.45em; }
+.share-mark { display: flex; align-items: center; gap: 0.45em; }
+.brand-mark { width: 1.15em; height: 1.15em; flex: none; border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
+.brand-mark--hero { display: block; width: clamp(56px, 16vw, 76px); height: auto; margin: 0 auto var(--space-3); }
+@media print { .brand-mark { box-shadow: none; } }

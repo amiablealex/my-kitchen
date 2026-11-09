@@ -34,3 +34,11 @@
 {% macro icon(name, cls="") -%}
 <svg class="icon{% if cls %} {{ cls }}{% endif %}" viewBox="0 -960 960 960" aria-hidden="true" focusable="false"><path d="{{ _ICONS.get(name, _ICONS['info']) }}"/></svg>
 {%- endmacro %}
+
+{# The brand mark: the four-quadrant pinwheel, clockwise from 12 o'clock teal,
+   lime, orange, pink — the same order as .source-dot--ai and the app icons
+   (static/icons/favicon.svg is this same drawing). Flat, no gaps: it's shown
+   small. Decorative; the wordmark beside it carries the name. #}
+{% macro brand_mark(cls="") -%}
+<svg class="brand-mark{% if cls %} {{ cls }}{% endif %}" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path fill="#56D0BB" d="M32 32V0a32 32 0 0 1 32 32z"/><path fill="#B1E46D" d="M32 32h32a32 32 0 0 1-32 32z"/><path fill="#FE9B46" d="M32 32v32A32 32 0 0 1 0 32z"/><path fill="#FF5F91" d="M32 32H0A32 32 0 0 1 32 0z"/></svg>
+{%- endmacro %}

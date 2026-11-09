@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.27.2 — A new look: the pinwheel
+- The four-colour pinwheel is now My Kitchen's logo. It appears in the browser
+  tab, on the home-screen app icon (with a version cut for Android's adaptive
+  icons), next to the name in the menu, on the login screen, on printed
+  recipes, and as this add-on's icon and logo.
+- A phone that already has My Kitchen on its home screen may keep the old icon
+  until you remove and re-add it.
+
 ## 0.27.1
 - Tidier @kitchen composer. There's now only one button for posting: it reads
   *Add note*, and turns into *Ask @kitchen* (with the pinwheel) as soon as
