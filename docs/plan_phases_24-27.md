@@ -74,7 +74,9 @@ is present, the creative seed is suppressed and recipe 2 becomes "a distinct
 second take on the request". New golden briefs: two or three with requests,
 plus one adversarial ("ignore the allergy").
 
-## Phase 26 — Regenerate + refine + version trail
+## Phase 26 — Regenerate + refine + version trail ✓
+See `phase26_summary.md`.
+
 
 **Regenerate.** On the choose screen, *Neither — try again* opens a textarea
 pre-filled with the original request. A new generation row with

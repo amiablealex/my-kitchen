@@ -57,6 +57,22 @@
     </section>
   {% endif %}
 
+  {% if kinds | length > 1 %}
+    <section class="section">
+      <h2>By type <span class="muted usage-sub">last 30 days</span></h2>
+      <div class="usage-scroll">
+        <table class="usage-table">
+          <thead><tr><th></th><th>Calls</th><th>Failed</th><th>Est. cost</th></tr></thead>
+          <tbody>
+            {% for kind, s in kinds %}
+              <tr><th scope="row">{{ kind }}</th><td>{{ s.calls }}</td><td>{{ s.failed }}</td><td>{{ money(s.cost) }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
   {% if recent %}
     <section class="section">
       <h2>Recent calls</h2>

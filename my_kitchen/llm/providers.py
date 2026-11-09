@@ -40,7 +40,11 @@ class MockProvider:
 
     def generate(self, system_prompt, user_prompt, brief=None):
         self.last_finish_reason = "stop"
-        out = json.dumps(_mock_payload(brief or {}))
+        payload = _mock_payload(brief or {})
+        if "REFINEMENT MODE" in system_prompt:  # Phase 26: make refines visible in dev
+            payload["recipes"] = payload["recipes"][:1]
+            payload["recipes"][0]["title"] = "Refined " + payload["recipes"][0]["title"]
+        out = json.dumps(payload)
         # Rough chars/4 estimate so the usage page has numbers to show in dev.
         self.last_usage = {"input": (len(system_prompt) + len(user_prompt)) // 4,
                            "output": len(out) // 4}

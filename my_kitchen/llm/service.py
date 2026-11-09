@@ -6,7 +6,9 @@ from ..models import (
     DEFAULT_MEAL_TYPE, meal_type_takes_cuisine, recipe_cuisine_from,
     SPECIAL_REQUEST_MAX_CHARS,
 )
-from .prompt import SYSTEM_PROMPT, build_user_prompt
+from .prompt import (
+    SYSTEM_PROMPT, REFINE_SYSTEM_PROMPT, build_user_prompt, build_refine_prompt,
+)
 from .schema import extract_json, validate_and_normalize
 from .providers import get_provider, ProviderError
 from .seeds import pick_seed_for
@@ -207,7 +209,126 @@ def build_brief(wizard_state, time_label, app_config):
     }
 
 
-def start_generation(app, wizard_state, time_label, user_id=None):
+def state_from_generation(gen):
+    """Rebuild the wizard state a generation was made from (Phase 26), so a
+    regenerate or refine doesn't depend on the wizard session still existing.
+    Stock is read fresh by build_brief — deliberately current, not snapshotted."""
+    return {
+        "selected_ingredient_ids": gen.selected_ingredient_ids or [],
+        "meal_type": gen.meal_type or DEFAULT_MEAL_TYPE,
+        "cuisine": gen.cuisine,
+        "time_band": gen.time_band or "quick",
+        "cooking_for_user_ids": gen.cooking_for_user_ids or [],
+        "guest_count": gen.guest_count or 0,
+        "special_request": gen.special_request,
+    }
+
+
+def regenerate_round(gen):
+    """How many regenerates deep this generation is (0 for a wizard original)."""
+    n, seen = 0, set()
+    while gen is not None and gen.kind == "regenerate" and gen.id not in seen:
+        seen.add(gen.id)
+        n += 1
+        gen = db.session.get(Generation, gen.parent_generation_id) if gen.parent_generation_id else None
+    return n
+
+
+def _chain_titles(gen):
+    """Every recipe title the cook has passed on in this regenerate chain."""
+    titles, seen = [], set()
+    while gen is not None and gen.id not in seen:
+        seen.add(gen.id)
+        titles.extend(r.title for r in gen.recipes)
+        gen = db.session.get(Generation, gen.parent_generation_id) if gen.parent_generation_id else None
+    return titles
+
+
+def start_regeneration(app, parent, special_request, time_label, user_id):
+    """"Neither — try again" (Phase 26): a new generation from the parent's
+    brief, with the (possibly edited) request and every title passed on so far."""
+    state = state_from_generation(parent)
+    state["special_request"] = special_request
+    return start_generation(app, state, time_label, user_id=user_id,
+                            kind="regenerate", parent_generation_id=parent.id,
+                            rejected_titles=_chain_titles(parent))
+
+
+def recipe_to_contract(recipe):
+    """A saved recipe back in the §5.2 output shape — what the refine prompt
+    shows the model as the current recipe."""
+    if recipe.ingredients:
+        ingredients = [{"item": ri.raw_text, "amount": ri.amount or "", "unit": ri.unit or "",
+                        "to_buy": bool(ri.to_buy)} for ri in recipe.ingredients]
+    else:
+        ingredients = list(recipe.ingredients_json or [])
+    return {
+        "title": recipe.title, "blurb": recipe.blurb, "intro": recipe.intro,
+        "servings": recipe.servings, "ingredients": ingredients,
+        "prep": recipe.prep_steps_json or [], "cook": recipe.cook_steps_json or [],
+        "tips": recipe.tips_json or [],
+    }
+
+
+def start_refine(app, source, instruction, time_label, user_id):
+    """Refine (Phase 26): one revised version of `source`. Same job machinery as
+    generation (status row, thread, poll, resolver); the job supersedes the
+    source on success. Dietary context comes from the source generation's
+    cooking-for list, with current tags; must-use is empty by design."""
+    gen0 = source.generation
+    state = state_from_generation(gen0)
+    state["selected_ingredient_ids"] = []
+    state["special_request"] = None
+    state["meal_type"] = source.meal_type or state["meal_type"]
+    brief = build_brief(state, time_label, app.config)
+    brief["servings"] = source.servings or brief["servings"]
+    user_prompt = build_refine_prompt(brief, recipe_to_contract(source), instruction)
+
+    gen = Generation(
+        created_by_user_id=user_id, kind="refine",
+        source_recipe_id=source.id, instruction=instruction,
+        cuisine=gen0.cuisine, meal_type=source.meal_type or gen0.meal_type,
+        time_band=source.time_band or gen0.time_band, servings=brief["servings"],
+        cooking_for_user_ids=gen0.cooking_for_user_ids or [],
+        guest_count=gen0.guest_count or 0, selected_ingredient_ids=[],
+        raw_prompt=user_prompt, status="running",
+    )
+    db.session.add(gen)
+    db.session.commit()
+    threading.Thread(target=_run_generation_job,
+                     args=(app, gen.id, user_prompt, brief, "refine"),
+                     daemon=True).start()
+    return gen.id
+
+
+def recipe_versions(recipe):
+    """The recipe's refine lineage, oldest first, as [(recipe, label)]. Walks
+    back through refine generations, then forward to the newest finished
+    refine. Linear by design: only the latest version can be refined."""
+    back, seen = [], set()
+    r = recipe
+    while r is not None and r.id not in seen:
+        seen.add(r.id)
+        back.append(r)
+        r = r.refined_from
+    chain = list(reversed(back))
+    r = recipe
+    while True:
+        nxt = (Generation.query
+               .filter(Generation.kind == "refine", Generation.source_recipe_id == r.id,
+                       Generation.status == "done")
+               .order_by(Generation.created_at.desc()).first())
+        if nxt is None or not nxt.recipes or nxt.recipes[0].id in seen:
+            break
+        r = nxt.recipes[0]
+        seen.add(r.id)
+        chain.append(r)
+    return [(v, "Original" if i == 0 else (v.generation.instruction or "Refined"))
+            for i, v in enumerate(chain)]
+
+
+def start_generation(app, wizard_state, time_label, user_id=None, kind=None,
+                     parent_generation_id=None, rejected_titles=None):
     """Synchronous starter — runs INSIDE the request. Does only fast, reliable
     work: build the brief (DB reads) + user_prompt (string assembly), create the
     Generation row as status="running", commit, then hand the slow/fallible part
@@ -222,10 +343,14 @@ def start_generation(app, wizard_state, time_label, user_id=None):
     on current_app / the request session across the thread boundary.
     """
     brief = build_brief(wizard_state, time_label, app.config)
+    if rejected_titles:
+        brief["rejected_titles"] = rejected_titles
     user_prompt = build_user_prompt(brief)
 
     gen = Generation(
         created_by_user_id=user_id,
+        kind=kind,
+        parent_generation_id=parent_generation_id,
         cuisine=brief["cuisine"],
         meal_type=brief["meal_type"],
         time_band=brief["time_band"],
@@ -247,14 +372,14 @@ def start_generation(app, wizard_state, time_label, user_id=None):
     # session. The thread re-queries the row by id inside its own context.
     thread = threading.Thread(
         target=_run_generation_job,
-        args=(app, generation_id, user_prompt, brief),
+        args=(app, generation_id, user_prompt, brief, "generate"),
         daemon=True,
     )
     thread.start()
     return generation_id
 
 
-def _run_generation_job(app, generation_id, user_prompt, brief):
+def _run_generation_job(app, generation_id, user_prompt, brief, mode="generate"):
     """Background thread body — runs OUTSIDE any request. Pushes its own app
     context, uses a FRESH db session, re-queries the Generation by id, and runs
     only the genuinely slow/fallible part: provider call -> retry-once loop ->
@@ -279,12 +404,15 @@ def _run_generation_job(app, generation_id, user_prompt, brief):
                 return
 
             gen.model = f"{provider.name}:{provider.model}"
+            refine = mode == "refine"
 
             last_error, last_raw, normalized = None, None, None
             for attempt in range(1, MAX_ATTEMPTS + 1):
                 try:
                     try:
-                        last_raw = provider.generate(SYSTEM_PROMPT, user_prompt, brief=brief)
+                        last_raw = provider.generate(
+                            REFINE_SYSTEM_PROMPT if refine else SYSTEM_PROMPT,
+                            user_prompt, brief=brief)
                     finally:
                         # Count every attempt's tokens (a retry is a second paid
                         # call). Set on the row now so whichever commit follows —
@@ -301,7 +429,8 @@ def _run_generation_job(app, generation_id, user_prompt, brief):
                             "and got cut off. Try again, or raise LLM_MAX_TOKENS."
                         )
                         break
-                    normalized = validate_and_normalize(extract_json(last_raw))
+                    normalized = validate_and_normalize(extract_json(last_raw),
+                                                        count=1 if refine else 2)
                     break
                 except ProviderError as e:
                     last_error = f"Provider error: {e}"
@@ -328,6 +457,7 @@ def _run_generation_job(app, generation_id, user_prompt, brief):
             # strictly post-hoc pass over the model's free-text output.
             index = build_index(load_catalogue(), ALIASES)
 
+            source = gen.source_recipe if refine else None
             for r in normalized:
                 recipe = Recipe(
                     generation_id=gen.id,
@@ -348,6 +478,16 @@ def _run_generation_job(app, generation_id, user_prompt, brief):
                     time_band=gen.time_band,
                     created_by_user_id=gen.created_by_user_id,
                 )
+                if source is not None:
+                    # Refine (Phase 26): the new version inherits the source's
+                    # (possibly hand-edited) tags and takes over as the chosen
+                    # recipe — the source drops out of History and suggestions
+                    # but stays reachable through the version trail.
+                    recipe.meal_type = source.meal_type
+                    recipe.cuisine = source.cuisine
+                    recipe.time_band = source.time_band
+                    recipe.was_chosen = True
+                    source.was_chosen = False
                 # Resolve each free-text ingredient to a catalogue id and write a
                 # structured recipe_ingredients row. Resolve the `item` STRING only;
                 # amount/unit/to_buy/position are preserved verbatim. to_buy items

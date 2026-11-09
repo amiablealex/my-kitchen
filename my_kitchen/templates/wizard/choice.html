@@ -1,6 +1,17 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
 {% block title %}Cook — Choose{% endblock %}
+
+{% block scripts %}
+  <script>
+    (function () {
+      var f = document.getElementById("retry-form");
+      if (f) f.addEventListener("submit", function () {
+        var b = document.getElementById("retry-btn"); b.disabled = true; b.textContent = "Starting…";
+      });
+    })();
+  </script>
+{% endblock %}
 {% block page_title %}Take your pick{% endblock %}
 {% block content %}
   <h1>Two recipes — take your pick</h1>
@@ -16,5 +27,31 @@
       </div>
     {% endfor %}
   </div>
-  <p><a class="back-link" href="{{ url_for('wizard.start') }}">{{ icon('arrow_back') }} Start over</a></p>
+
+  {# Regenerate (Phase 26): a fresh pair from the same brief, told what was
+     passed on. The request is pre-filled and editable. #}
+  <details class="retry-panel"{% if not rounds_left or not limits.generations_left %} hidden{% endif %}>
+    <summary class="btn btn--secondary">{{ icon('cooking') }} Neither — try again</summary>
+    <form method="post" action="{{ url_for('wizard.regenerate', generation_id=gen.id) }}" class="retry-form" id="retry-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="special-request-label" for="retry-request">Steer the next two? <span class="muted">(optional)</span></label>
+      <p class="special-request-hint">They'll steer clear of these and go in a different direction.</p>
+      <textarea id="retry-request" name="special_request" rows="2" maxlength="{{ special_request_max }}"
+                placeholder="e.g. something lighter, or more of a one-pot">{{ gen.special_request or "" }}</textarea>
+      <div class="btn-row">
+        <button type="submit" class="btn btn--primary" id="retry-btn">{{ icon('cooking') }} Show me two more</button>
+      </div>
+      <p class="generate-limit">{{ rounds_left }} {{ "try" if rounds_left == 1 else "tries" }} left from this brief.</p>
+    </form>
+  </details>
+  {% if not rounds_left %}
+    <p class="generate-limit">That's all the fresh tries for this brief — <a href="{{ url_for('wizard.review') }}">change the brief</a> to open up new ideas.</p>
+  {% endif %}
+
+  <p class="choice-nav">
+    {% if gen.parent_generation_id %}
+      <a class="back-link" href="{{ url_for('wizard.choice', generation_id=gen.parent_generation_id) }}">{{ icon('arrow_back') }} The previous two</a>
+    {% endif %}
+    <a class="back-link" href="{{ url_for('wizard.start') }}">{{ icon('arrow_back') }} Start over</a>
+  </p>
 {% endblock %}

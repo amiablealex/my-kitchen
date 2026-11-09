@@ -12,8 +12,8 @@ Expected: the GOLDEN BRIEFS sections show NO diff (byte-identical regression
 pass); the only differences fall inside SPOT CHECKS, where Dessert gains a
 "Meal type:" line and loses its cuisine line.
 """
-from ..llm.prompt import build_user_prompt
-from .golden_briefs import GOLDEN_BRIEFS
+from ..llm.prompt import build_user_prompt, build_refine_prompt
+from .golden_briefs import GOLDEN_BRIEFS, GOLDEN_REFINES
 
 # Minimal well-formed briefs exercising the Phase 11 paths. Kept here (not in
 # golden_briefs.py) until CP3 adds the real Dessert golden.
@@ -49,6 +49,10 @@ def main():
     for name, brief in _SPOT_CHECKS:
         print(f"\n### {name}")
         print(build_user_prompt(brief))
+    print("\n\n===== REFINES (Phase 26) =====")
+    for r in GOLDEN_REFINES:
+        print(f"\n### {r['name']}")
+        print(build_refine_prompt(r["brief"], r["recipe"], r["instruction"]))
 
 
 if __name__ == "__main__":

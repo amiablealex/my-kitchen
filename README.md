@@ -76,6 +76,7 @@ provider. Both are on the list; see [the roadmap](https://my-kitchen.io/approach
 | `LLM_MAX_TOKENS` | Output ceiling per generation | 8000 |
 | `LIMIT_GENERATIONS_PER_USER_DAY` | Recipe generations each person can start per day | 10 |
 | `LIMIT_HOUSEHOLD_CALLS_DAY` | All AI calls across the household per day | 40 |
+| `LIMIT_REGENERATES_PER_BRIEF` | "Neither — try again" rounds from one brief | 3 |
 | `APP_TIMEZONE` | Timestamps in history | Europe/London |
 | `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | API key for the chosen provider | — |
 

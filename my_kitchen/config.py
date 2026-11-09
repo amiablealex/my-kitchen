@@ -54,3 +54,5 @@ class Config:
     # or repeated taps) at a known ceiling. See usage/service.py.
     LIMIT_GENERATIONS_PER_USER_DAY = int(os.environ.get("LIMIT_GENERATIONS_PER_USER_DAY", "10"))
     LIMIT_HOUSEHOLD_CALLS_DAY = int(os.environ.get("LIMIT_HOUSEHOLD_CALLS_DAY", "40"))
+    # "Neither — try again" rounds allowed from one brief (Phase 26).
+    LIMIT_REGENERATES_PER_BRIEF = int(os.environ.get("LIMIT_REGENERATES_PER_BRIEF", "3"))

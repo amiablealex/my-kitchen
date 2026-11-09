@@ -248,8 +248,21 @@ class Generation(db.Model):
     # page prices tokens at render time from MODEL_PRICES.
     input_tokens = db.Column(db.Integer, nullable=True)
     output_tokens = db.Column(db.Integer, nullable=True)
+    # --- Regenerate + refine (Phase 26) ---
+    # kind: NULL/"generate" (the wizard), "regenerate" (Neither — try again,
+    # from parent_generation_id's brief) or "refine" (one revised version of
+    # source_recipe_id, per `instruction`). A refine's single recipe supersedes
+    # its source: the source's was_chosen flips False in the same commit.
+    kind = db.Column(db.String, nullable=True)
+    parent_generation_id = db.Column(db.Integer, db.ForeignKey("generations.id"), nullable=True)
+    source_recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id"), nullable=True)
+    instruction = db.Column(db.Text, nullable=True)
 
-    recipes = db.relationship("Recipe", backref="generation")
+    # foreign_keys is required on both since Phase 26 added a second FK path
+    # between generations and recipes (source_recipe_id).
+    recipes = db.relationship("Recipe", backref="generation",
+                              foreign_keys="Recipe.generation_id")
+    source_recipe = db.relationship("Recipe", foreign_keys=[source_recipe_id])
     # Read-only link to the cook. The created_by_user_id FK column already
     # exists, so this is ORM-level only — no migration, and autogenerate won't
     # report a schema diff from it.
@@ -336,6 +349,14 @@ class Recipe(db.Model):
     # is required since Phase 24 added a second FK to users (archived_by).
     author = db.relationship("User", foreign_keys=[created_by_user_id])
     archived_by = db.relationship("User", foreign_keys=[archived_by_user_id])
+
+    @property
+    def refined_from(self):
+        """The version this recipe was refined from, or None (Phase 26)."""
+        g = self.generation
+        if g is not None and g.kind == "refine":
+            return g.source_recipe
+        return None
 
     @property
     def is_archived(self):

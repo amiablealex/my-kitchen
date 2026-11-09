@@ -92,12 +92,25 @@
     out.textContent = n;
     servesEls.forEach(function (s) { s.textContent = n; });
     reset.hidden = note.hidden = n === base;
+    if (refineBtn) {
+      refineBtn.hidden = n === base || !window.mkRefine;
+      refineBtn.dataset.n = n;
+    }
     box.querySelector('[data-step="-1"]').disabled = n <= MIN;
     box.querySelector('[data-step="1"]').disabled = n >= MAX;
     try {
       if (n === base) sessionStorage.removeItem(key);
       else sessionStorage.setItem(key, String(n));
     } catch (e) { /* storage unavailable — scaling still works for this view */ }
+  }
+
+  // Phase 26: when the recipe can be refined, offer to rewrite the method for
+  // the new count — the one thing front-end scaling can't do.
+  var refineBtn = box.querySelector(".servings-refine");
+  if (refineBtn) {
+    refineBtn.addEventListener("click", function () {
+      if (window.mkRefine) window.mkRefine("Make this for " + refineBtn.dataset.n + " people");
+    });
   }
 
   var current = base;

@@ -30,6 +30,10 @@ MODEL_PRICES = {
 }
 
 
+KIND_LABELS = {None: "Generate", "generate": "Generate",
+               "regenerate": "Try again", "refine": "Refine"}
+
+
 def model_id(stored):
     """'gemini:gemini-3.5-flash' -> 'gemini-3.5-flash'."""
     return (stored or "").split(":", 1)[-1] or None
@@ -134,11 +138,16 @@ def dashboard(user_id):
     people = sorted(((n, _summarise(gs)) for n, gs in by_person.items()),
                     key=lambda kv: -kv[1]["calls"])
 
+    by_kind = {}
+    for g in since(now - timedelta(days=30)):
+        by_kind.setdefault(KIND_LABELS.get(g.kind, "Generate"), []).append(g)
+    kinds = [(k, _summarise(gs)) for k, gs in sorted(by_kind.items(), key=lambda kv: -len(kv[1]))]
+
     recent = [{
         "gen": g,
-        "kind": "Generate",
+        "kind": KIND_LABELS.get(g.kind, "Generate"),
         "cost": cost_of(g.model, g.input_tokens, g.output_tokens),
     } for g in rows[:20]]
 
-    return {"periods": periods, "people": people, "recent": recent,
+    return {"periods": periods, "people": people, "kinds": kinds, "recent": recent,
             "limits": limits_today(user_id)}

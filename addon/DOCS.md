@@ -23,7 +23,8 @@ Self-hosted, LLM-powered household recipe generator.
 
 ## Usage limits & cost
 `limit_generations_per_user_day` (default 10) and `limit_household_calls_day`
-(default 40) cap AI calls per local calendar day — generous for normal use,
+(default 40) cap AI calls per local calendar day, and
+`limit_regenerates_per_brief` (default 3) caps "Neither — try again" rounds — generous for normal use,
 there to stop a runaway. The app's **Usage** page shows calls, tokens and an
 estimated cost. For a hard stop on the provider side as well, set a budget
 alert and a daily request quota on your API key.

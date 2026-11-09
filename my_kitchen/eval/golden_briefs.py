@@ -284,3 +284,67 @@ GOLDEN_BRIEFS += [
         "assert": {"required": ["mushroom"], "forbidden": [], "max_to_buy": 2},
     },
 ]
+
+
+# --- Phase 26: refine ---------------------------------------------------------
+# A refine revises ONE saved recipe. Each entry carries the brief (pantry +
+# dietary context, must_use empty by design), the current recipe in contract
+# shape, and the change request. Run by `flask eval-recipes` alongside the
+# briefs above; rendered by render_prompts.py in their own section.
+_TRAYBAKE = {
+    "title": "Lemon & Herb Chicken Traybake",
+    "blurb": "Golden chicken thighs and potatoes roasted on one tray.",
+    "intro": "A one-tray dinner where everything roasts together.",
+    "servings": 2,
+    "ingredients": [
+        {"item": "chicken thighs", "amount": 4, "unit": "", "to_buy": False},
+        {"item": "baby potatoes", "amount": 400, "unit": "g", "to_buy": False},
+        {"item": "red onion", "amount": 1, "unit": "", "to_buy": False},
+        {"item": "olive oil", "amount": 2, "unit": "tbsp", "to_buy": False},
+        {"item": "lemon", "amount": 1, "unit": "", "to_buy": False},
+    ],
+    "prep": [{"title": "Heat oven", "text": "Preheat to 200C (180C fan).", "timer_minutes": None}],
+    "cook": [{"title": "Roast", "text": "Roast everything until golden and the chicken is cooked through.", "timer_minutes": 40}],
+    "tips": [],
+}
+_REFINE_BRIEF = {
+    "must_use": [],
+    "available": [_ing("baby potatoes"), _ing("red onion"), _ing("chicken thighs"),
+                  _ing("natural yoghurt"), _ing("green beans")],
+    "staples": STAPLES, "equipment": ["oven"],
+    "allergies": [], "avoid": [], "preferences": [],
+    "meal_type": "Dinner", "cuisine": None,
+    "time_band": RELAXED[0], "time_label": RELAXED[1],
+    "servings": 2, "recent_titles": [], "creative_seed": None,
+}
+
+GOLDEN_REFINES = [
+    {
+        "name": "refine_spicier",
+        "note": "Same traybake, clearly spicier (chilli, paprika, a marinade), with the "
+                "intro and steps updated to match. Still chicken and potatoes.",
+        "brief": _REFINE_BRIEF,
+        "recipe": _TRAYBAKE,
+        "instruction": "Make it spicier",
+        "assert": {"required": ["chicken", "potato"], "forbidden": [], "max_to_buy": 2},
+    },
+    {
+        "name": "refine_for_six",
+        "note": "Scaled to 6 servings, with method quantities and timings rewritten "
+                "for the bigger batch (two trays, longer roast) — the thing the "
+                "front-end scaler can't do.",
+        "brief": {**_REFINE_BRIEF, "servings": 2},
+        "recipe": _TRAYBAKE,
+        "instruction": "Make this for 6 people",
+        "assert": {"required": ["chicken"], "forbidden": [], "max_to_buy": 2, "servings": 6},
+    },
+    {
+        "name": "refine_allergy_holds",
+        "note": "The change request asks for a peanut topping but someone has a peanut "
+                "allergy. Allergy wins: some other crunch (seeds, breadcrumbs), no peanut.",
+        "brief": {**_REFINE_BRIEF, "allergies": ["Peanut allergy"]},
+        "recipe": _TRAYBAKE,
+        "instruction": "Add a crunchy peanut topping",
+        "assert": {"required": ["chicken"], "forbidden": ["peanut"], "max_to_buy": 2},
+    },
+]

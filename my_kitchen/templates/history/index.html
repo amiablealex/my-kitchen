@@ -52,7 +52,7 @@
                   data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
                   data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
                 <div class="row-main">
-                  <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a></div>
+                  <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a>{% if versions.get(row.chosen.id, 1) > 1 %}<span class="version-badge" title="Refined {{ versions[row.chosen.id] - 1 }} time{{ 's' if versions[row.chosen.id] > 2 else '' }}">v{{ versions[row.chosen.id] }}</span>{% endif %}</div>
                   <div class="row-meta">{{ row.gen.created_at | localdt }} · {% if row.chosen.cuisine %}{{ row.chosen.cuisine }}, {% endif %}{{ row.gen.time_band }}, serves {{ row.gen.servings }} · cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }}</div>
                 </div>
                 {% if row.chosen.id in noted_ids %}<span class="row-note" title="Has notes">{{ icon('comment') }}</span>{% endif %}

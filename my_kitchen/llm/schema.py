@@ -100,14 +100,15 @@ def _normalize_recipe(recipe):
     }
 
 
-def validate_and_normalize(data):
-    """Validate the §5.2 contract. Returns a normalised list of exactly two
-    recipe dicts, or raises ValueError describing the first problem found."""
+def validate_and_normalize(data, count=2):
+    """Validate the §5.2 contract. Returns a normalised list of exactly `count`
+    recipe dicts (2 for generation, 1 for a refine — Phase 26), or raises
+    ValueError describing the first problem found."""
     if not isinstance(data, dict):
         raise ValueError("top-level response is not an object")
     recipes = data.get("recipes")
     if not isinstance(recipes, list):
         raise ValueError("'recipes' is missing or not a list")
-    if len(recipes) < 2:
-        raise ValueError(f"expected 2 recipes, got {len(recipes)}")
-    return [_normalize_recipe(r) for r in recipes[:2]]
+    if len(recipes) < count:
+        raise ValueError(f"expected {count} recipe(s), got {len(recipes)}")
+    return [_normalize_recipe(r) for r in recipes[:count]]

@@ -124,7 +124,41 @@ def _recipe_facets(recipes):
     return fields, opts.as_list()
 
 
-def _generation_row(gen):
+def _lineage_context(generations):
+    """What hides a generation row because something newer stands in for it
+    (Phase 26), plus each recipe's version number for the "v3" badge.
+
+    - A regenerate round replaces its parent while the parent has no chosen
+      recipe: a chain of "Neither — try again" shows as ONE row, the latest.
+    - A finished refine replaces the generation its source recipe came from;
+      the lineage is represented by its newest version's row.
+    Error rounds and refines replace nothing."""
+    done = [g for g in generations if (g.status or "done") == "done"]
+    regen_parents = {g.parent_generation_id for g in generations
+                     if g.kind == "regenerate" and g.status != "error"}
+    refined_sources = {g.source_recipe_id for g in done if g.kind == "refine"}
+    by_recipe_gen = {g.id: g for g in generations}
+
+    versions = {}
+
+    def version(recipe, depth=0):
+        if recipe.id in versions:
+            return versions[recipe.id]
+        gen = by_recipe_gen.get(recipe.generation_id)
+        n = 1
+        if gen is not None and gen.kind == "refine" and gen.source_recipe is not None and depth < 50:
+            n = version(gen.source_recipe, depth + 1) + 1
+        versions[recipe.id] = n
+        return n
+
+    for g in done:
+        for r in g.recipes:
+            version(r)
+    return {"regen_parents": regen_parents, "refined_sources": refined_sources,
+            "versions": versions}
+
+
+def _generation_row(gen, ctx=None):
     """The History row for one generation, or None when archived away.
 
     Archive (Phase 24) is recipe-level, so a row's visibility follows the
@@ -133,8 +167,14 @@ def _generation_row(gen):
     shows whichever of its two recipes are still live and disappears when
     neither is. A failed generation has no recipes, so it carries its own
     archived_at."""
+    if ctx is not None:
+        if any(r.id in ctx["refined_sources"] for r in gen.recipes):
+            return None
+        if gen.id in ctx["regen_parents"] and not any(r.was_chosen for r in gen.recipes):
+            return None
     if not gen.recipes:
-        if gen.archived_at is not None:
+        # A job still in flight isn't a row yet; it isn't a failure either.
+        if gen.archived_at is not None or gen.status == "running":
             return None
         return {"kind": "generation", "sort_at": gen.created_at, "gen": gen,
                 "status": "error", "chosen": None, "recipes": []}
@@ -164,10 +204,11 @@ def index():
 
     generations = Generation.query.all()
     user_recipes = Recipe.query.filter(Recipe.source == "user", Recipe.live()).all()
+    ctx = _lineage_context(generations)
 
     rows = []
     for gen in generations:
-        row = _generation_row(gen)
+        row = _generation_row(gen, ctx)
         if row is not None:
             rows.append(row)
     for r in user_recipes:
@@ -179,6 +220,7 @@ def index():
     fav_ids = {r.id for r in current_user.favourite_recipes}
     noted_ids = {rid for (rid,) in db.session.query(RecipeComment.recipe_id).distinct()}
     return render_template("history/index.html", rows=rows,
+                           versions=ctx["versions"],
                            facet_options=facet_options,
                            fav_ids=fav_ids, noted_ids=noted_ids)
 
@@ -222,7 +264,7 @@ def row_archive():
         gen = db.session.get(Generation, int(data["generation_id"]))
         if gen is None:
             abort(404)
-        row = _generation_row(gen)
+        row = _generation_row(gen, _lineage_context(Generation.query.all()))
         if row is None:
             return jsonify(touched)  # already archived — nothing to do
         if row["status"] == "error":

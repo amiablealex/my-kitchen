@@ -18,6 +18,32 @@
       </form>
     </div>
   {% endif %}
+  {# Version trail (Phase 26): the refine lineage, oldest first, each step
+     labelled with the change that produced it. Only shown past one version. #}
+  {% if versions | length > 1 %}
+    <nav class="version-trail" aria-label="Recipe versions">
+      <ol>
+        {% for v, label in versions %}
+          <li class="{% if v.id == recipe.id %}is-current{% endif %}">
+            {% if v.id == recipe.id %}
+              <span class="version-step" aria-current="page"><span class="version-n">v{{ loop.index }}</span><span class="version-label">{{ label }}</span></span>
+            {% else %}
+              <a class="version-step" href="{{ url_for('wizard.recipe', recipe_id=v.id) }}"><span class="version-n">v{{ loop.index }}</span><span class="version-label">{{ label }}</span></a>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ol>
+    </nav>
+    {% if not is_latest %}
+      <div class="notice notice--archived">
+        {{ icon('info') }}
+        <div class="notice-body">You're looking at an earlier version of this recipe.</div>
+        <a class="btn btn--sm btn--primary" href="{{ url_for('wizard.recipe', recipe_id=versions[-1][0].id) }}">Latest version</a>
+      </div>
+    {% elif just_refined %}
+      <p class="refine-done">{{ icon('check') }} Refined: “{{ versions[-1][1] }}”. The earlier version is one tap back in the trail above.</p>
+    {% endif %}
+  {% endif %}
   <h1 class="display recipe-title">{{ recipe.title }}</h1>
   {% if recipe.blurb %}
     <p class="recipe-blurb recipe-source-dot">{{ source_dot(recipe.source) }}{{ recipe.blurb }}</p>
@@ -104,7 +130,8 @@
           <button type="button" class="servings-btn" data-step="1" aria-label="More servings">{{ icon('add') }}</button>
         </div>
         <button type="button" class="servings-reset" hidden>Reset to {{ recipe.servings }}</button>
-        <p class="servings-note" hidden>Ingredient amounts are scaled. Quantities and times in the method are still for {{ recipe.servings }}.</p>
+        <p class="servings-note" hidden>Ingredient amounts are scaled. Quantities and times in the method are still for {{ recipe.servings }}.
+          {% if can_refine %}<button type="button" class="servings-refine" hidden>Rewrite the method for this many</button>{% endif %}</p>
       </div>
     {% endif %}
     {% if recipe.ingredients %}
@@ -212,6 +239,29 @@
   </section>
   {% endif %}
 
+  {# Refine (Phase 26): one revised version from a short change request.
+     Opens itself when arriving from the choice screen (?fresh=1). #}
+  {% if can_refine %}
+    <details class="refine-panel" id="refine"{% if refine_open %} open{% endif %}>
+      <summary>{{ icon('edit') }}<span><strong>Not quite right? Refine it</strong>
+        <span class="refine-sub">Ask for a change and get a new version. This one stays in the trail.</span></span></summary>
+      <form method="post" action="{{ url_for('wizard.recipe_refine', recipe_id=recipe.id) }}" id="refine-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="special-request-label" for="refine-instruction">What would you change?</label>
+        <textarea id="refine-instruction" name="instruction" rows="2" maxlength="{{ refine_max }}" required
+                  placeholder="e.g. swap the cream for something lighter"></textarea>
+        <div class="request-chips">
+          {% for chip in refine_chips %}
+            <button type="button" class="request-chip" data-chip="{{ chip }}">{{ icon('add') }}{{ chip }}</button>
+          {% endfor %}
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn--primary" id="refine-btn">{{ icon('cooking') }} Refine this recipe</button>
+        </div>
+      </form>
+    </details>
+  {% endif %}
+
   <form method="post" action="{{ url_for('wizard.toggle_favourite', recipe_id=recipe.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if favourited %}
@@ -287,6 +337,8 @@
 
 {% block scripts %}
   <script src="{{ url_for('static', filename='recipe_tags.js') }}"></script>
+  {# refine.js before servings.js: the scaler checks for window.mkRefine. #}
+  {% if can_refine %}<script src="{{ url_for('static', filename='refine.js') }}"></script>{% endif %}
   <script src="{{ url_for('static', filename='servings.js') }}"></script>
   {% if recipe.ingredients %}
     <script src="{{ url_for('static', filename='recipe_links.js') }}"></script>

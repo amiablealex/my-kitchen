@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.26.0 — Try again, refine, and recipe versions
+
+**Neither of the two? Try again.** The choice screen has a new *Neither — try
+again* option. It fetches two more recipes from the same brief and steers them
+clearly away from everything you've already passed on. Your special request is
+pre-filled, so you can tweak it first. There are three fresh tries per brief
+(a new add-on option), and *The previous two* takes you back a round. Rejected
+rounds no longer pile up on the Recipes page: a run of tries shows as one entry.
+
+**Refine a recipe.** AI recipes have a new *Not quite right? Refine it* panel:
+say what you'd change ("make it spicier", "swap the cream for something
+lighter") and you get a revised version. It opens by itself straight after you
+pick a recipe. Allergies still always apply. If you've scaled the servings, the
+panel can rewrite the whole method for the new number of people.
+
+**Recipe versions.** A refined recipe shows a trail along the top: Original →
+"make it spicier" → … Tap any step to see that version. The newest version
+replaces the older ones on the Recipes page (marked v2, v3…) and in
+suggestions. Earlier versions are kept, along with any favourites and notes
+on them.
+
 ## 0.25.0 — Special requests and a usage page
 
 **Tell the kitchen what you fancy.** The last step of Lets Cook has a new

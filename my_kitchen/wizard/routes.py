@@ -19,7 +19,10 @@ from ..models import (
     COMMENT_MAX_CHARS, TAG_TYPE_CHOICES, TAG_TYPE_HINTS, utcnow,
     SPECIAL_REQUEST_MAX_CHARS,
 )
-from ..llm.service import start_generation, combined_dietary, clean_special_request
+from ..llm.service import (
+    start_generation, combined_dietary, clean_special_request,
+    start_regeneration, start_refine, regenerate_round, recipe_versions,
+)
 from ..usage.service import generation_blocked_reason, limits_today
 from .suggestions import suggest_recipes
 # Reuse the manage blueprint's ingredient-creation validation rather than
@@ -276,6 +279,35 @@ def review():
     )
 
 
+def _start_guard(bounce_url):
+    """Shared pre-flight for anything that starts a paid model job (generate,
+    regenerate, refine). Returns a redirect, or None to go ahead.
+
+    One running job per USER (Phase 25), not just per session: a second tab or
+    device resumes the same wait instead of starting another paid call. Checked
+    in the DB, so it holds across both gunicorn workers. Then the daily limits
+    — a calm explanation and a bounce back, never an error page."""
+    running = (Generation.query
+               .filter(Generation.created_by_user_id == current_user.id,
+                       Generation.status == "running")
+               .order_by(Generation.created_at.desc()).first())
+    if running is not None and not _is_stale(running):
+        return redirect(url_for("wizard.generating", generation_id=running.id))
+    blocked = generation_blocked_reason(current_user.id)
+    if blocked:
+        flash(blocked, "info")
+        return redirect(bounce_url)
+    return None
+
+
+def _done_url(gen):
+    """Where a finished job lands: a refine goes straight to its one recipe;
+    everything else to the two-up choice screen."""
+    if gen.kind == "refine" and gen.recipes:
+        return url_for("wizard.recipe", recipe_id=gen.recipes[0].id, refined=1)
+    return url_for("wizard.choice", generation_id=gen.id)
+
+
 @wizard_bp.route("/generate", methods=["POST"])
 def generate():
     w = get_wizard()
@@ -300,21 +332,9 @@ def generate():
                 and not _is_stale(existing)):
             return redirect(url_for("wizard.generating", generation_id=existing.id))
 
-    # One running generation per USER (Phase 25), not just per session: a
-    # second tab or device resumes the same wait instead of starting another
-    # paid call. Checked in the DB, so it holds across both gunicorn workers.
-    running = (Generation.query
-               .filter(Generation.created_by_user_id == current_user.id,
-                       Generation.status == "running")
-               .order_by(Generation.created_at.desc()).first())
-    if running is not None and not _is_stale(running):
-        return redirect(url_for("wizard.generating", generation_id=running.id))
-
-    # Daily limits (Phase 25). A calm explanation, never an error page.
-    blocked = generation_blocked_reason(current_user.id)
-    if blocked:
-        flash(blocked, "info")
-        return redirect(url_for("wizard.review"))
+    guard = _start_guard(url_for("wizard.review"))
+    if guard is not None:
+        return guard
 
     time_label = dict(TIME_BANDS).get(w["time_band"], w["time_band"])
     # Capture the real app object for the thread's app-context push — never let
@@ -333,13 +353,17 @@ def generating(generation_id):
         abort(404)
     # NULL status = legacy/complete; if already finished, skip the wait entirely.
     if (gen.status or "done") == "done":
-        return redirect(url_for("wizard.choice", generation_id=gen.id))
+        return redirect(_done_url(gen))
     # status_url + choice_url are built server-side so the polling JS works under
     # the HA ingress sub-path (the JS must never hardcode "/cook/status/...").
     return render_template(
         "wizard/generating.html",
         generation_id=gen.id,
         status_url=url_for("wizard.status", generation_id=gen.id),
+        mode=gen.kind or "generate",
+        retry_url=(url_for("wizard.recipe", recipe_id=gen.source_recipe_id) if gen.kind == "refine"
+                   else url_for("wizard.choice", generation_id=gen.parent_generation_id)
+                   if gen.kind == "regenerate" else url_for("wizard.review")),
     )
 
 
@@ -376,7 +400,7 @@ def status(generation_id):
         return jsonify(
             status="done",
             error=None,
-            redirect_url=url_for("wizard.choice", generation_id=gen.id),
+            redirect_url=_done_url(gen),
         )
 
     # error
@@ -392,9 +416,74 @@ def choice(generation_id):
     # than 404-ing. Legacy NULL-status rows fall through (treated as done).
     if (gen.status or "done") == "running" and not _is_stale(gen):
         return redirect(url_for("wizard.generating", generation_id=gen.id))
+    if gen.kind == "refine" and gen.recipes:
+        return redirect(_done_url(gen))
     if len(gen.recipes) < 2:
         abort(404)
-    return render_template("wizard/choice.html", recipes=gen.recipes)
+    rounds_used = regenerate_round(gen)
+    rounds_limit = int(current_app.config.get("LIMIT_REGENERATES_PER_BRIEF", 3))
+    return render_template(
+        "wizard/choice.html", gen=gen, recipes=gen.recipes,
+        rounds_left=max(0, rounds_limit - rounds_used),
+        special_request_max=SPECIAL_REQUEST_MAX_CHARS,
+        limits=limits_today(current_user.id),
+    )
+
+
+@wizard_bp.route("/choice/<int:generation_id>/regenerate", methods=["POST"])
+def regenerate(generation_id):
+    """"Neither — try again" (Phase 26): a fresh pair from the same brief,
+    told what was passed on. The request box is pre-filled with the original
+    request and may be edited."""
+    parent = db.session.get(Generation, generation_id)
+    if parent is None or parent.kind == "refine" or not parent.recipes:
+        abort(404)
+    back = url_for("wizard.choice", generation_id=parent.id)
+    limit = int(current_app.config.get("LIMIT_REGENERATES_PER_BRIEF", 3))
+    if regenerate_round(parent) >= limit:
+        flash(f"That's {limit} fresh tries from this brief. Try changing the brief "
+              "instead — a different ingredient or cuisine opens up new ideas.", "info")
+        return redirect(back)
+    guard = _start_guard(back)
+    if guard is not None:
+        return guard
+    time_label = dict(TIME_BANDS).get(parent.time_band, parent.time_band or "")
+    app = current_app._get_current_object()
+    gen_id = start_regeneration(
+        app, parent, clean_special_request(request.form.get("special_request")),
+        time_label, current_user.id)
+    session["active_generation_id"] = gen_id
+    session.modified = True
+    return redirect(url_for("wizard.generating", generation_id=gen_id))
+
+
+@wizard_bp.route("/recipe/<int:recipe_id>/refine", methods=["POST"])
+def recipe_refine(recipe_id):
+    """Refine (Phase 26): one revised version of an AI recipe, from a short
+    change request. Only the latest version of a recipe can be refined, which
+    keeps its history a straight line."""
+    recipe = db.session.get(Recipe, recipe_id)
+    if recipe is None:
+        abort(404)
+    back = url_for("wizard.recipe", recipe_id=recipe.id)
+    if recipe.generation is None or recipe.is_archived:
+        abort(400)
+    if recipe_versions(recipe)[-1][0].id != recipe.id:
+        flash("There's a newer version of this recipe — refine that one instead.", "info")
+        return redirect(back)
+    instruction = clean_special_request(request.form.get("instruction"))
+    if not instruction:
+        flash("Tell the kitchen what you'd like to change first.", "info")
+        return redirect(back + "#refine")
+    guard = _start_guard(back)
+    if guard is not None:
+        return guard
+    time_label = dict(TIME_BANDS).get(recipe.time_band or recipe.generation.time_band, "")
+    app = current_app._get_current_object()
+    gen_id = start_refine(app, recipe, instruction, time_label, current_user.id)
+    session["active_generation_id"] = gen_id
+    session.modified = True
+    return redirect(url_for("wizard.generating", generation_id=gen_id))
 
 
 @wizard_bp.route("/choose/<int:recipe_id>", methods=["POST"])
@@ -409,7 +498,10 @@ def choose(recipe_id):
     for sib in recipe.generation.recipes:
         sib.was_chosen = (sib.id == recipe.id)
     db.session.commit()
-    return redirect(url_for("wizard.recipe", recipe_id=recipe.id))
+    return redirect(url_for("wizard.recipe", recipe_id=recipe.id, fresh=1))
+
+
+REFINE_CHIPS = ["Make it spicier", "Simpler method", "No extras — use what I've got", "Make it lighter"]
 
 
 @wizard_bp.route("/recipe/<int:recipe_id>")
@@ -418,6 +510,9 @@ def recipe(recipe_id):
     if recipe is None:
         abort(404)
     favourited = recipe in current_user.favourite_recipes
+    # Refine lineage (Phase 26): oldest first; the strip only renders past one.
+    versions = recipe_versions(recipe)
+    is_latest = versions[-1][0].id == recipe.id
     # If an allergy was among the brief's combined dietary tags, show a caveat.
     # Re-derived from current tags (no snapshot stored) — consistent with the
     # spec's "an LLM is not a safety guarantee" honesty.
@@ -451,6 +546,11 @@ def recipe(recipe_id):
         cuisine_meal_types=CUISINE_MEAL_TYPES,
         cuisine_allowed=bool(recipe.meal_type and meal_type_takes_cuisine(recipe.meal_type)),
         comment_max_chars=COMMENT_MAX_CHARS,
+        versions=versions, is_latest=is_latest,
+        can_refine=(recipe.generation is not None and is_latest and not recipe.is_archived),
+        refine_open=bool(request.args.get("fresh")),
+        just_refined=bool(request.args.get("refined")),
+        refine_chips=REFINE_CHIPS, refine_max=SPECIAL_REQUEST_MAX_CHARS,
     )
 
 

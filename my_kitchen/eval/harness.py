@@ -13,10 +13,12 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from ..llm.prompt import SYSTEM_PROMPT, build_user_prompt
+from ..llm.prompt import (
+    SYSTEM_PROMPT, REFINE_SYSTEM_PROMPT, build_user_prompt, build_refine_prompt,
+)
 from ..llm.providers import get_provider, ProviderError
 from ..llm.schema import extract_json, validate_and_normalize
-from .golden_briefs import GOLDEN_BRIEFS
+from .golden_briefs import GOLDEN_BRIEFS, GOLDEN_REFINES
 
 DEFAULT_EVAL_TEMPERATURE = 0.2  # low on purpose: tight, comparable diffs
 OUTPUT_DIR = "eval_runs"
@@ -51,7 +53,7 @@ def _count_to_buy(recipe):
     return sum(1 for ing in recipe.get("ingredients", []) if ing.get("to_buy"))
 
 
-def _run_checks(parsed, normalized, finish_reason, assertions):
+def _run_checks(parsed, normalized, finish_reason, assertions, expected=2):
     """Return [(label, passed, detail), ...]. Labels ending '(info)' don't count
     toward the brief's overall pass."""
     checks = []
@@ -60,7 +62,8 @@ def _run_checks(parsed, normalized, finish_reason, assertions):
     forbidden = [k.lower() for k in assertions.get("forbidden", [])]
 
     raw_count = len(parsed.get("recipes", [])) if isinstance(parsed, dict) else 0
-    checks.append(("exactly two recipes", raw_count == 2, f"got {raw_count}"))
+    checks.append((f"exactly {'two recipes' if expected == 2 else 'one recipe'}",
+                   raw_count == expected, f"got {raw_count}"))
 
     checks.append(("not truncated", not _is_truncated(finish_reason),
                    f"finish_reason={finish_reason}"))
@@ -81,10 +84,16 @@ def _run_checks(parsed, normalized, finish_reason, assertions):
             for i, r in enumerate(normalized) if _count_to_buy(r) > max_to_buy]
     checks.append((f"<= {max_to_buy} to_buy per recipe", not over, "; ".join(over) or "ok"))
 
-    titles = [r.get("title", "").strip().lower() for r in normalized]
-    distinct = len(titles) == 2 and titles[0] != titles[1] and all(titles)
-    checks.append(("two distinct titles", distinct,
-                   " vs ".join(t or "(blank)" for t in titles)))
+    if expected == 2:
+        titles = [r.get("title", "").strip().lower() for r in normalized]
+        distinct = len(titles) == 2 and titles[0] != titles[1] and all(titles)
+        checks.append(("two distinct titles", distinct,
+                       " vs ".join(t or "(blank)" for t in titles)))
+
+    if "servings" in assertions:
+        got = [r.get("servings") for r in normalized]
+        checks.append((f"servings == {assertions['servings']}",
+                       all(g == assertions["servings"] for g in got), f"got {got}"))
 
     intros_ok = all(r.get("intro", "").strip() for r in normalized)
     checks.append(("intro present (info)", intros_ok,
@@ -106,12 +115,12 @@ def run_eval(config, provider_name=None, temperature=None, only=None, echo=print
         echo(f"Could not build provider: {e}")
         return None
 
-    briefs = GOLDEN_BRIEFS
+    briefs = GOLDEN_BRIEFS + GOLDEN_REFINES
     if only:
-        briefs = [b for b in GOLDEN_BRIEFS if b["name"] == only]
+        briefs = [b for b in GOLDEN_BRIEFS + GOLDEN_REFINES if b["name"] == only]
         if not briefs:
             echo(f"No golden brief named '{only}'. "
-                 f"Known: {', '.join(b['name'] for b in GOLDEN_BRIEFS)}")
+                 f"Known: {', '.join(b['name'] for b in GOLDEN_BRIEFS + GOLDEN_REFINES)}")
             return None
 
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -132,9 +141,15 @@ def run_eval(config, provider_name=None, temperature=None, only=None, echo=print
         if b.get("note"):
             emit(f"# what good looks like: {b['note']}")
 
-        user_prompt = build_user_prompt(b["brief"])
+        refine = "instruction" in b  # Phase 26: refine goldens
+        expected = 1 if refine else 2
+        if refine:
+            system, user_prompt = REFINE_SYSTEM_PROMPT, build_refine_prompt(
+                b["brief"], b["recipe"], b["instruction"])
+        else:
+            system, user_prompt = SYSTEM_PROMPT, build_user_prompt(b["brief"])
         try:
-            raw = provider.generate(SYSTEM_PROMPT, user_prompt, brief=b["brief"])
+            raw = provider.generate(system, user_prompt, brief=b["brief"])
         except ProviderError as e:
             emit(f"PROVIDER ERROR: {e}")
             continue
@@ -142,7 +157,7 @@ def run_eval(config, provider_name=None, temperature=None, only=None, echo=print
 
         try:
             parsed = extract_json(raw)
-            normalized = validate_and_normalize(parsed)
+            normalized = validate_and_normalize(parsed, count=expected)
         except ValueError as e:
             emit(f"[FAIL] valid JSON to schema: {e}")
             emit("--- raw response ---")
@@ -151,7 +166,7 @@ def run_eval(config, provider_name=None, temperature=None, only=None, echo=print
 
         emit("[PASS] valid JSON to schema")
         brief_pass = True
-        for label, passed, detail in _run_checks(parsed, normalized, finish_reason, b.get("assert", {})):
+        for label, passed, detail in _run_checks(parsed, normalized, finish_reason, b.get("assert", {}), expected):
             if label.endswith("(info)"):
                 emit(f"[info] {label}: {detail}")
                 continue

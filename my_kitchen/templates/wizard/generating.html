@@ -10,7 +10,7 @@
   <div class="gen-page">
     <div class="gen-card" id="gen-cooking" role="status" aria-live="polite">
       <div class="gen-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
-      <p class="gen-title">Cooking up your recipes…</p>
+      <p class="gen-title">{% if mode == "refine" %}Reworking your recipe…{% elif mode == "regenerate" %}Cooking up two more…{% else %}Cooking up your recipes…{% endif %}</p>
       <p class="gen-sub" id="gen-sub">This usually takes under a minute.</p>
     </div>
 
@@ -18,8 +18,8 @@
       <p class="gen-title">The kitchen had a wobble</p>
       <p class="gen-sub" id="gen-error-msg">Something went wrong — please try again.</p>
       <p style="margin-top: var(--space-4);">
-        <a class="btn btn--primary" href="{{ url_for('wizard.review') }}">
-          {{ icon('arrow_back') }} Back to review and try again
+        <a class="btn btn--primary" href="{{ retry_url }}">
+          {{ icon('arrow_back') }} {% if mode == "refine" %}Back to the recipe{% elif mode == "regenerate" %}Back to the previous two{% else %}Back to review and try again{% endif %}
         </a>
       </p>
     </div>
