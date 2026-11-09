@@ -56,3 +56,9 @@ class Config:
     LIMIT_HOUSEHOLD_CALLS_DAY = int(os.environ.get("LIMIT_HOUSEHOLD_CALLS_DAY", "40"))
     # "Neither — try again" rounds allowed from one brief (Phase 26).
     LIMIT_REGENERATES_PER_BRIEF = int(os.environ.get("LIMIT_REGENERATES_PER_BRIEF", "3"))
+    # @kitchen questions per person per day (Phase 27); they also count
+    # towards LIMIT_HOUSEHOLD_CALLS_DAY.
+    LIMIT_QUESTIONS_PER_USER_DAY = int(os.environ.get("LIMIT_QUESTIONS_PER_USER_DAY", "20"))
+    # Model for @kitchen answers. Blank -> the provider's Lite default
+    # (gemini-3.5-flash-lite), falling back to LLM_MODEL if that's refused.
+    LLM_QA_MODEL = os.environ.get("LLM_QA_MODEL", "")

@@ -1,5 +1,5 @@
 name: My Kitchen
-version: "0.26.0"
+version: "0.27.1"
 slug: my_kitchen
 description: Self-hosted household recipe generator (LLM-powered).
 url: https://github.com/amiablealex/my-kitchen
@@ -24,6 +24,7 @@ ports_description:
 options:
   llm_provider: gemini
   llm_model: ""
+  llm_qa_model: ""
   gemini_api_key: ""
   anthropic_api_key: ""
   llm_temperature: 0.8
@@ -32,6 +33,7 @@ options:
   limit_generations_per_user_day: 10
   limit_household_calls_day: 40
   limit_regenerates_per_brief: 3
+  limit_questions_per_user_day: 20
   app_timezone: Europe/London
   gunicorn_workers: 2
   gunicorn_threads: 4
@@ -39,6 +41,7 @@ options:
 schema:
   llm_provider: "list(mock|gemini|anthropic)"
   llm_model: "str?"
+  llm_qa_model: "str?"
   gemini_api_key: "password?"
   anthropic_api_key: "password?"
   llm_temperature: "float(0,2)"
@@ -47,6 +50,7 @@ schema:
   limit_generations_per_user_day: "int(1,200)"
   limit_household_calls_day: "int(1,1000)"
   limit_regenerates_per_brief: "int(0,20)"
+  limit_questions_per_user_day: "int(0,500)"
   app_timezone: "str"
   gunicorn_workers: "int(1,8)"
   gunicorn_threads: "int(1,16)"

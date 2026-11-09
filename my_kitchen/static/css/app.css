@@ -1266,3 +1266,30 @@ a.version-step:hover, a.version-step:focus-visible { border-color: var(--accent-
 .servings-refine { border: none; background: none; padding: 0; margin-left: 4px; color: var(--accent-1);
   font: inherit; text-decoration: underline; cursor: pointer; }
 .servings-refine[hidden] { display: none; }
+
+/* --- @kitchen questions (Phase 27) --- */
+.mention { display: inline-block; padding: 0 6px; border-radius: 6px; background: var(--surface-2);
+  color: var(--accent-1); font-weight: 700; white-space: nowrap; }
+.note-reply { position: relative; margin: var(--space-3) 0 0 var(--space-3); padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--accent-1); border-radius: 0 var(--radius) var(--radius) 0;
+  background: color-mix(in srgb, var(--accent-1) 7%, var(--surface)); }
+.note-reply .note-head .source-dot { margin: 0; }
+.note-thinking { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--text-muted); font-style: italic; }
+.thinking-dots { display: inline-flex; gap: 3px; }
+.thinking-dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--accent-1);
+  animation: mk-think 1.2s infinite ease-in-out; }
+.thinking-dots span:nth-child(2) { animation-delay: 0.15s; background: var(--accent-2); }
+.thinking-dots span:nth-child(3) { animation-delay: 0.3s; background: var(--accent-3); }
+@keyframes mk-think { 0%, 80%, 100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .thinking-dots span { animation: none; opacity: 0.7; } }
+.note-failed { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); color: var(--text-muted); }
+.note-form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.ask-chip .source-dot { margin: 0 2px 0 0; }
+.ask-chip[disabled] { opacity: 0.45; cursor: default; }
+
+/* @kitchen composer (0.27.1): the submit carries the mode — a plus for a
+   note, the pinwheel once it's a question; the switch chip hides itself. */
+.note-submit .source-dot { display: none; margin: 0; }
+.note-form.is-asking .note-submit .source-dot { display: inline-block; }
+.note-form.is-asking .note-submit .icon { display: none; }
+.ask-chip[hidden] { display: none; }

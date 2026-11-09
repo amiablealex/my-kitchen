@@ -21,10 +21,16 @@ Self-hosted, LLM-powered household recipe generator.
    log in. Change the password in the app. (A direct-LAN port is also exposed,
    but the installable PWA only comes fully alive over the HTTPS ingress URL.)
 
+## Model for @kitchen answers
+`llm_qa_model` picks the model that answers @kitchen questions on a recipe.
+Leave it blank to use `gemini-3.5-flash-lite` (quick and cheap for short
+answers). If that model is refused, the app falls back to `llm_model`.
+
 ## Usage limits & cost
 `limit_generations_per_user_day` (default 10) and `limit_household_calls_day`
 (default 40) cap AI calls per local calendar day, and
-`limit_regenerates_per_brief` (default 3) caps "Neither — try again" rounds — generous for normal use,
+`limit_regenerates_per_brief` (default 3) caps "Neither — try again" rounds,
+and `limit_questions_per_user_day` (default 20) caps @kitchen questions — generous for normal use,
 there to stop a runaway. The app's **Usage** page shows calls, tokens and an
 estimated cost. For a hard stop on the provider side as well, set a budget
 alert and a daily request quota on your API key.

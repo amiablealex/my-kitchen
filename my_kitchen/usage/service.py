@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 
 from flask import current_app
 
-from ..models import Generation
+from ..models import Generation, RecipeComment
 
 # USD per 1M tokens: (input, output). Keyed by model id without the provider
 # prefix stored on generations.model ("gemini:gemini-3.5-flash"). A model not
@@ -31,7 +31,7 @@ MODEL_PRICES = {
 
 
 KIND_LABELS = {None: "Generate", "generate": "Generate",
-               "regenerate": "Try again", "refine": "Refine"}
+               "regenerate": "Try again", "refine": "Refine", "question": "Question"}
 
 
 def model_id(stored):
@@ -69,20 +69,45 @@ def _generations_since(since, user_id=None):
     return q.count()
 
 
+def _questions_since(since, user_id=None):
+    q = RecipeComment.query.filter(RecipeComment.kind == "question",
+                                   RecipeComment.created_at >= since)
+    if user_id is not None:
+        q = q.filter(RecipeComment.user_id == user_id)
+    return q.count()
+
+
 def limits_today(user_id):
     """Today's counts against the configured limits, for the wizard and the
     usage page. Failed generations count: they can still have cost tokens."""
     cfg = current_app.config
     start = day_start_utc()
     mine = _generations_since(start, user_id)
-    household = _generations_since(start)  # + questions, Phase 27
+    my_questions = _questions_since(start, user_id)
+    household = _generations_since(start) + _questions_since(start)
     gen_limit = int(cfg.get("LIMIT_GENERATIONS_PER_USER_DAY", 10))
+    q_limit = int(cfg.get("LIMIT_QUESTIONS_PER_USER_DAY", 20))
     house_limit = int(cfg.get("LIMIT_HOUSEHOLD_CALLS_DAY", 40))
     return {
         "generations": mine, "generations_limit": gen_limit,
+        "questions": my_questions, "questions_limit": q_limit,
         "household": household, "household_limit": house_limit,
         "generations_left": max(0, min(gen_limit - mine, house_limit - household)),
+        "questions_left": max(0, min(q_limit - my_questions, house_limit - household)),
     }
+
+
+def question_blocked_reason(user_id):
+    """None if this user may ask @kitchen now, else a calm explanation."""
+    lim = limits_today(user_id)
+    if lim["questions"] >= lim["questions_limit"]:
+        return (f"You've asked all {lim['questions_limit']} of today's @kitchen "
+                "questions. It resets at midnight — your note wasn't posted.")
+    if lim["household"] >= lim["household_limit"]:
+        return (f"The household has reached today's limit of "
+                f"{lim['household_limit']} AI calls, so @kitchen can't answer until "
+                "midnight — your note wasn't posted.")
+    return None
 
 
 def generation_blocked_reason(user_id):
@@ -96,6 +121,21 @@ def generation_blocked_reason(user_id):
         return (f"The household has reached today's limit of "
                 f"{lim['household_limit']} AI calls. It resets at midnight.")
     return None
+
+
+class _QuestionCall:
+    """A question row seen through the attributes the summaries read off a
+    Generation, so both kinds of call share one code path."""
+    kind = "question"
+
+    def __init__(self, c):
+        self.c = c
+        self.created_at = c.created_at
+        self.created_by = c.author
+        self.model = c.model
+        self.input_tokens = c.input_tokens
+        self.output_tokens = c.output_tokens
+        self.status = {"pending": "running", "error": "error"}.get(c.answer_status, "done")
 
 
 def _summarise(rows):
@@ -117,7 +157,9 @@ def _summarise(rows):
 def dashboard(user_id):
     """Everything the /usage page shows. Household scale: one pass in Python
     over all generations is cheaper to read than a pile of GROUP BYs."""
-    rows = Generation.query.order_by(Generation.created_at.desc()).all()
+    rows = Generation.query.all() + [
+        _QuestionCall(c) for c in RecipeComment.query.filter(RecipeComment.kind == "question")]
+    rows.sort(key=lambda g: g.created_at or datetime.min, reverse=True)
     now = naive_utc_now()
     today = day_start_utc()
 

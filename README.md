@@ -77,6 +77,8 @@ provider. Both are on the list; see [the roadmap](https://my-kitchen.io/approach
 | `LIMIT_GENERATIONS_PER_USER_DAY` | Recipe generations each person can start per day | 10 |
 | `LIMIT_HOUSEHOLD_CALLS_DAY` | All AI calls across the household per day | 40 |
 | `LIMIT_REGENERATES_PER_BRIEF` | "Neither — try again" rounds from one brief | 3 |
+| `LIMIT_QUESTIONS_PER_USER_DAY` | @kitchen questions each person can ask per day | 20 |
+| `LLM_QA_MODEL` | Model for @kitchen answers | `gemini-3.5-flash-lite` (falls back to `LLM_MODEL`) |
 | `APP_TIMEZONE` | Timestamps in history | Europe/London |
 | `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | API key for the chosen provider | — |
 

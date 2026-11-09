@@ -100,6 +100,11 @@ COMMENT_MAX_CHARS = 2000
 # capped server-side; the textarea's maxlength is a courtesy.
 SPECIAL_REQUEST_MAX_CHARS = 280
 
+# @kitchen questions (Phase 27): the prefix that turns a note into a question,
+# and a cap on question length (shorter than a note — it's a question).
+KITCHEN_MENTION = "@kitchen"
+QUESTION_MAX_CHARS = 500
+
 def recipe_cuisine_from(value):
     """Map a generation's requested cuisine to a recipe cuisine TAG. 'Surprise me'
     and None/'' aren't real cuisines -> None; a concrete one is kept (validated
@@ -427,5 +432,24 @@ class RecipeComment(db.Model):
     body = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
 
+    # --- @kitchen questions (Phase 27) ---
+    # kind: NULL/"note" (a household note) or "question" (posted with an
+    # @kitchen prefix; `body` holds the question without it). The AI's answer
+    # lives on the SAME row, so the reply needs no threading column and goes
+    # when the question is deleted. answer_status: "pending" | "done" |
+    # "error". model + tokens make each question a countable, priceable call
+    # on the usage page, exactly like a Generation row.
+    kind = db.Column(db.String, nullable=True)
+    answer = db.Column(db.Text, nullable=True)
+    answer_status = db.Column(db.String, nullable=True)
+    answered_at = db.Column(db.DateTime, nullable=True)
+    model = db.Column(db.String, nullable=True)
+    input_tokens = db.Column(db.Integer, nullable=True)
+    output_tokens = db.Column(db.Integer, nullable=True)
+
     # Read-only link to the note's author (None if the user was removed).
     author = db.relationship("User")
+
+    @property
+    def is_question(self):
+        return self.kind == "question"

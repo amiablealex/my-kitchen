@@ -106,7 +106,9 @@ a strip reads Original → "make it spicier" → "simpler method", each step
 labelled with its instruction and tappable to open that version. History shows
 a "v3" badge.
 
-## Phase 27 — Ask @kitchen
+## Phase 27 — Ask @kitchen ✓
+See `phase27_summary.md`.
+
 
 There's one comment box. Placeholder: "Add a note, or start with @kitchen to
 ask a question". An *Ask @kitchen* chip inserts the prefix. The server decides

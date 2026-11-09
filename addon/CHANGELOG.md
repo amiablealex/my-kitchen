@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.27.1
+- Tidier @kitchen composer. There's now only one button for posting: it reads
+  *Add note*, and turns into *Ask @kitchen* (with the pinwheel) as soon as
+  your text starts with @kitchen. The *Ask @kitchen instead* shortcut hides
+  once you're asking, and comes back if you remove the @kitchen.
+
+## 0.27.0 — Ask @kitchen
+
+**Ask questions about a recipe.** In a recipe's Notes, start what you type with
+**@kitchen** (or tap *Ask @kitchen*) and post it. The kitchen replies just
+underneath, in the thread: how long to rest it, what to use instead of crème
+fraîche, whether it freezes. It knows the recipe, the number of servings
+you're viewing it at, what's in stock, and everyone's allergies and dislikes,
+so it won't suggest a swap someone can't eat. It only answers questions. To
+change the recipe itself, use *Refine*.
+
+Answers usually arrive in a few seconds. A slower one shows "Thinking…" and
+appears when it's ready, and if one fails there's a *Try again* button.
+Deleting a question removes its answer too. Questions don't appear in the
+print / share view.
+
+New add-on options: `limit_questions_per_user_day` (default 20; questions
+also count towards the household limit) and `llm_qa_model` (blank uses the
+quick, cheap `gemini-3.5-flash-lite`, and falls back to your main model if that
+one isn't available). Questions appear on the Usage page as their own type.
+
 ## 0.26.0 — Try again, refine, and recipe versions
 
 **Neither of the two? Try again.** The choice screen has a new *Neither — try

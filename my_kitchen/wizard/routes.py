@@ -1,6 +1,7 @@
 import json
 import random
 import re
+import threading
 import unicodedata
 from datetime import datetime, timezone
 
@@ -17,13 +18,16 @@ from ..models import (
     User, SECTION_CHOICES, DEFAULT_MEAL_TYPE, MEAL_TYPES, MEAL_TYPE_NAMES,
     meal_type_takes_cuisine, CUISINES, WIZARD_CUISINES, SURPRISE_ME,
     COMMENT_MAX_CHARS, TAG_TYPE_CHOICES, TAG_TYPE_HINTS, utcnow,
-    SPECIAL_REQUEST_MAX_CHARS,
+    SPECIAL_REQUEST_MAX_CHARS, KITCHEN_MENTION, QUESTION_MAX_CHARS,
 )
+from ..llm.qa import answer_question
 from ..llm.service import (
     start_generation, combined_dietary, clean_special_request,
     start_regeneration, start_refine, regenerate_round, recipe_versions,
 )
-from ..usage.service import generation_blocked_reason, limits_today
+from ..usage.service import (
+    generation_blocked_reason, question_blocked_reason, limits_today,
+)
 from .suggestions import suggest_recipes
 # Reuse the manage blueprint's ingredient-creation validation rather than
 # duplicating the name/category/staple handling (Phase 4a add-and-link). One-way
@@ -551,6 +555,10 @@ def recipe(recipe_id):
         refine_open=bool(request.args.get("fresh")),
         just_refined=bool(request.args.get("refined")),
         refine_chips=REFINE_CHIPS, refine_max=SPECIAL_REQUEST_MAX_CHARS,
+        kitchen_mention=KITCHEN_MENTION,
+        stale_answer_ids={c.id for c in recipe.comments
+                          if c.is_question and c.answer_status == "pending" and _answer_is_stale(c)},
+        questions_left=limits_today(current_user.id)["questions_left"],
     )
 
 
@@ -567,6 +575,9 @@ def recipe_comment_add(recipe_id):
     if recipe is None:
         abort(404)
     body = (request.form.get("body") or "").strip()
+    question = _strip_mention(body)
+    if question is not None:
+        return _ask_kitchen(recipe, question)
     if not body:
         flash("Write something first — an empty note isn't saved.", "error")
     elif len(body) > COMMENT_MAX_CHARS:
@@ -577,6 +588,93 @@ def recipe_comment_add(recipe_id):
         ))
         db.session.commit()
     return redirect(url_for("wizard.recipe", recipe_id=recipe.id, _anchor="notes"))
+
+
+# --- @kitchen questions (Phase 27) ------------------------------------------
+# A note that STARTS with "@kitchen" is a question for the AI. Only the start
+# counts, so a note that merely mentions the word can't cost a call by
+# accident. The answer is written onto the question's own row by a background
+# job; the POST waits a short while for it so the usual case lands answered,
+# and anything slower shows "thinking" and the page checks back.
+ANSWER_WAIT_SECONDS = 20
+ANSWER_STALE_SECONDS = 120
+_MENTION_RE = re.compile(r"^\s*" + re.escape(KITCHEN_MENTION) + r"\b[\s,:;.!-]*", re.I)
+
+
+def _strip_mention(body):
+    """The question text if `body` is addressed to @kitchen, else None."""
+    m = _MENTION_RE.match(body or "")
+    return body[m.end():].strip() if m else None
+
+
+def _viewing_servings():
+    try:
+        n = int(request.form.get("viewing_servings") or 0)
+    except ValueError:
+        return None
+    return n if 0 < n <= 200 else None
+
+
+def _run_answer(comment_id):
+    """Start the answer job and wait up to ANSWER_WAIT_SECONDS for it."""
+    app = current_app._get_current_object()
+    t = threading.Thread(target=answer_question,
+                         args=(app, comment_id, _viewing_servings()), daemon=True)
+    t.start()
+    t.join(timeout=ANSWER_WAIT_SECONDS)
+
+
+def _ask_kitchen(recipe, question):
+    back = url_for("wizard.recipe", recipe_id=recipe.id, _anchor="notes")
+    if not question:
+        flash(f"Add your question after {KITCHEN_MENTION}.", "info")
+        return redirect(back)
+    if len(question) > QUESTION_MAX_CHARS:
+        flash(f"That question is too long for {KITCHEN_MENTION} "
+              f"(max {QUESTION_MAX_CHARS} characters).", "error")
+        return redirect(back)
+    blocked = question_blocked_reason(current_user.id)
+    if blocked:
+        flash(blocked, "info")
+        return redirect(back)
+    c = RecipeComment(recipe_id=recipe.id, user_id=current_user.id, body=question,
+                      kind="question", answer_status="pending")
+    db.session.add(c)
+    db.session.commit()
+    _run_answer(c.id)
+    return redirect(url_for("wizard.recipe", recipe_id=recipe.id, _anchor=f"note-{c.id}"))
+
+
+@wizard_bp.route("/recipe/<int:recipe_id>/comment/<int:comment_id>/retry", methods=["POST"])
+def recipe_question_retry(recipe_id, comment_id):
+    """Ask again after a failed (or stuck) answer. Counts like a new question
+    against the per-user limit only in the sense that it's a fresh call, so the
+    household limit is checked; the question row itself is reused."""
+    c = _recipe_comment_or_404(recipe_id, comment_id)
+    if not c.is_question or (c.answer_status == "pending" and not _answer_is_stale(c)):
+        return redirect(url_for("wizard.recipe", recipe_id=recipe_id, _anchor=f"note-{c.id}"))
+    lim = limits_today(current_user.id)
+    if lim["household"] >= lim["household_limit"]:
+        flash("The household has reached today's AI limit — try again after midnight.", "info")
+        return redirect(url_for("wizard.recipe", recipe_id=recipe_id, _anchor=f"note-{c.id}"))
+    c.answer_status = "pending"
+    c.answer = None
+    c.answered_at = utcnow()  # while pending: when this attempt started (stale guard)
+    db.session.commit()
+    _run_answer(c.id)
+    return redirect(url_for("wizard.recipe", recipe_id=recipe_id, _anchor=f"note-{c.id}"))
+
+
+def _answer_is_stale(c):
+    """A pending answer older than ANSWER_STALE_SECONDS is treated as failed
+    (worker restarted mid-answer, say): shown with a retry, never spinning."""
+    created = c.answered_at or c.created_at  # a retry restarts the clock
+    if created is None:
+        return True
+    now = datetime.now(timezone.utc)
+    if created.tzinfo is None:
+        now = now.replace(tzinfo=None)
+    return (now - created).total_seconds() > ANSWER_STALE_SECONDS
 
 
 def _recipe_comment_or_404(recipe_id, comment_id):

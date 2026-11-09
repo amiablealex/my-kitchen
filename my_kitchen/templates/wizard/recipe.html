@@ -294,7 +294,7 @@
     {% if recipe.comments %}
       <ul class="notes-list">
         {% for c in recipe.comments %}
-          <li class="note">
+          <li class="note{% if c.is_question %} note--question{% endif %}" id="note-{{ c.id }}">
             <div class="note-head">
               <span class="note-author">{{ c.author.name if c.author else "unknown" }}</span>
               <span class="note-when">{{ c.created_at | localdt }}</span>
@@ -303,7 +303,7 @@
                    still posts, and the server check is what actually guards. #}
                 <form method="post" class="note-delete"
                       action="{{ url_for('wizard.recipe_comment_delete', recipe_id=recipe.id, comment_id=c.id) }}"
-                      onsubmit="return confirm('Delete this note?');">
+                      onsubmit="return confirm('{{ 'Delete this question and its answer?' if c.is_question else 'Delete this note?' }}');">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="note-delete-btn" aria-label="Delete this note">{{ icon('delete') }}</button>
                 </form>
@@ -311,7 +311,34 @@
             </div>
             {# Autoescaped; newlines preserved by white-space: pre-wrap in CSS.
                Never |safe — this is user input. #}
-            <p class="note-body">{{ c.body }}</p>
+            {% if c.is_question %}
+              <p class="note-body"><span class="mention">{{ kitchen_mention }}</span> {{ c.body }}</p>
+              {# The AI's reply lives on the question's own row (Phase 27), shown
+                 as an indented reply. Plain text, autoescaped, pre-wrap. #}
+              {% set stale = c.id in stale_answer_ids %}
+              <div class="note-reply{% if c.answer_status == 'done' %} is-done{% endif %}">
+                <div class="note-head">
+                  {{ source_dot('ai') }}<span class="note-author">Kitchen</span>
+                  {% if c.answer_status == 'done' and c.answered_at %}<span class="note-when">{{ c.answered_at | localdt }}</span>{% endif %}
+                </div>
+                {% if c.answer_status == 'done' %}
+                  <p class="note-body">{{ c.answer }}</p>
+                {% elif c.answer_status == 'pending' and not stale %}
+                  <p class="note-thinking" data-pending>Thinking<span class="thinking-dots" aria-hidden="true"><span></span><span></span><span></span></span></p>
+                {% else %}
+                  <div class="note-failed">
+                    <span>Couldn't answer that just now.</span>
+                    <form method="post" action="{{ url_for('wizard.recipe_question_retry', recipe_id=recipe.id, comment_id=c.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="viewing_servings" class="js-viewing-servings" value="">
+                      <button type="submit" class="btn btn--sm btn--secondary">Try again</button>
+                    </form>
+                  </div>
+                {% endif %}
+              </div>
+            {% else %}
+              <p class="note-body">{{ c.body }}</p>
+            {% endif %}
           </li>
         {% endfor %}
       </ul>
@@ -322,11 +349,20 @@
     <form method="post" class="note-form"
           action="{{ url_for('wizard.recipe_comment_add', recipe_id=recipe.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <label class="note-form-label" for="note-body">Add a note</label>
+      <input type="hidden" name="viewing_servings" class="js-viewing-servings" value="">
+      <label class="note-form-label" for="note-body">Add a note, or ask {{ kitchen_mention }}</label>
       <textarea id="note-body" name="body" rows="3" maxlength="{{ comment_max_chars }}"
-                placeholder="How did it go? Any tweaks for next time?"></textarea>
-      <div>
-        <button type="submit" class="btn btn--secondary btn--sm">{{ icon('add') }} Add note</button>
+                placeholder="How did it go? Or start with {{ kitchen_mention }} to ask a question."></textarea>
+      <div class="note-form-actions">
+        {# One submit that changes with the mode: "Add note", or — once the box
+           starts with the mention — a primary "Ask @kitchen" with the pinwheel.
+           The chip below only switches modes, so it hides once it's done that. #}
+        <button type="submit" class="btn btn--secondary btn--sm note-submit" id="note-submit"
+                data-note-label="Add note" data-ask-label="Ask {{ kitchen_mention }}">{{ icon('add') }}{{ source_dot('ai') }}<span class="note-submit-label">Add note</span></button>
+        <button type="button" class="request-chip ask-chip" id="ask-chip" data-mention="{{ kitchen_mention }}"
+                {% if not questions_left %}disabled title="No @kitchen questions left today"{% endif %}>
+          {{ source_dot('ai') }}Ask {{ kitchen_mention }} instead
+        </button>
       </div>
     </form>
   </section>
@@ -340,6 +376,7 @@
   {# refine.js before servings.js: the scaler checks for window.mkRefine. #}
   {% if can_refine %}<script src="{{ url_for('static', filename='refine.js') }}"></script>{% endif %}
   <script src="{{ url_for('static', filename='servings.js') }}"></script>
+  <script src="{{ url_for('static', filename='notes.js') }}"></script>
   {% if recipe.ingredients %}
     <script src="{{ url_for('static', filename='recipe_links.js') }}"></script>
   {% endif %}

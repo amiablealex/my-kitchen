@@ -6,6 +6,12 @@ DEFAULT_MODELS = {
     "gemini": "gemini-3.5-flash",  # 3.5 reasons + writes noticeably better than 2.5-flash for this task
 }
 
+# Answering @kitchen questions (Phase 27): a short plain-text reply, so a Lite
+# model. Falls back to the main model if this one is refused (see qa.py).
+DEFAULT_QA_MODELS = {
+    "gemini": "gemini-3.5-flash-lite",
+}
+
 DEFAULT_TEMPERATURE = 0.8
 DEFAULT_MAX_TOKENS = 8000
 
@@ -38,8 +44,14 @@ class MockProvider:
         self.last_finish_reason = None  # set per generate() call
         self.last_usage = None
 
-    def generate(self, system_prompt, user_prompt, brief=None):
+    def generate(self, system_prompt, user_prompt, brief=None, json_mode=True, thinking=None):
         self.last_finish_reason = "stop"
+        if not json_mode:  # Phase 27: a plain-text @kitchen answer
+            out = ("Good question! (This is the mock provider.) Keep the heat at a "
+                   "steady medium and trust your eyes and nose over the timer.")
+            self.last_usage = {"input": (len(system_prompt) + len(user_prompt)) // 4,
+                               "output": len(out) // 4}
+            return out
         payload = _mock_payload(brief or {})
         if "REFINEMENT MODE" in system_prompt:  # Phase 26: make refines visible in dev
             payload["recipes"] = payload["recipes"][:1]
@@ -64,7 +76,8 @@ class AnthropicProvider:
         self.last_finish_reason = None
         self.last_usage = None
 
-    def generate(self, system_prompt, user_prompt, brief=None):
+    def generate(self, system_prompt, user_prompt, brief=None, json_mode=True, thinking=None):
+        # json_mode / thinking are Gemini knobs; Anthropic is steered by the prompt.
         self.last_usage = None
         try:
             from anthropic import Anthropic
@@ -104,7 +117,10 @@ class GeminiProvider:
         self.last_finish_reason = None
         self.last_usage = None
 
-    def generate(self, system_prompt, user_prompt, brief=None):
+    def generate(self, system_prompt, user_prompt, brief=None, json_mode=True, thinking=None):
+        """json_mode=False for plain text (Phase 27). thinking: an optional
+        thinking level ("low") to keep short answers fast and cheap; skipped if
+        this SDK can't express it, and dropped on retry if the API refuses it."""
         self.last_usage = None
         try:
             from google import genai
@@ -113,17 +129,34 @@ class GeminiProvider:
             raise ProviderError("The 'google-genai' package isn't installed. Run: pip install google-genai") from e
         client = genai.Client(api_key=self.api_key)
         self.last_finish_reason = None
+        cfg = {
+            "system_instruction": system_prompt,
+            "temperature": self.temperature,
+            "max_output_tokens": self.max_tokens,
+        }
+        if json_mode:
+            cfg["response_mime_type"] = "application/json"  # ask Gemini for clean JSON
+        thinking_cfg = None
+        if thinking:
+            try:
+                thinking_cfg = types.ThinkingConfig(thinking_level=thinking)
+            except Exception:
+                thinking_cfg = None  # older SDK: no thinking levels — just skip it
         try:
-            resp = client.models.generate_content(
-                model=self.model,
-                contents=user_prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    response_mime_type="application/json",  # ask Gemini for clean JSON
-                    temperature=self.temperature,
-                    max_output_tokens=self.max_tokens,
-                ),
-            )
+            try:
+                resp = client.models.generate_content(
+                    model=self.model, contents=user_prompt,
+                    config=types.GenerateContentConfig(
+                        **cfg, **({"thinking_config": thinking_cfg} if thinking_cfg else {})),
+                )
+            except Exception:
+                if thinking_cfg is None:
+                    raise
+                # The model may not take that thinking level; one plain retry.
+                resp = client.models.generate_content(
+                    model=self.model, contents=user_prompt,
+                    config=types.GenerateContentConfig(**cfg),
+                )
         except Exception as e:
             raise ProviderError(f"Gemini API call failed: {e}") from e
         # finish_reason lives on the candidate; defensive in case the shape varies.
@@ -142,13 +175,15 @@ class GeminiProvider:
         return resp.text
 
 
-def get_provider(config, model=None, max_tokens=None):
-    """The configured provider. `model` / `max_tokens` override the config
-    per call (Phase 25), so a cheaper task can use a smaller model and cap."""
+def get_provider(config, model=None, max_tokens=None, temperature=None):
+    """The configured provider. `model` / `max_tokens` / `temperature` override
+    the config per call (Phase 25/27), so a cheaper task can use a smaller
+    model, a tighter cap and a calmer temperature."""
     provider = (config.get("LLM_PROVIDER") or "mock").lower()
     common = {
         "model": model or config.get("LLM_MODEL") or None,
-        "temperature": config.get("LLM_TEMPERATURE", DEFAULT_TEMPERATURE),
+        "temperature": (temperature if temperature is not None
+                        else config.get("LLM_TEMPERATURE", DEFAULT_TEMPERATURE)),
         "max_tokens": max_tokens or config.get("LLM_MAX_TOKENS", DEFAULT_MAX_TOKENS),
     }
     if provider == "mock":
