@@ -17,7 +17,11 @@ Usage controls land before any new feature that calls the model.
 ## Phase 24 — Archive + servings scaler ✓
 See `phase24_summary.md`.
 
-## Phase 25 — Usage foundation + special request
+## Phase 25 — Usage foundation + special request ✓
+See `phase25_summary.md`. `LLM_QA_MODEL` and the questions limit land with
+Phase 27, the first thing that uses them (the adapter already takes per-call
+model/max-token overrides).
+
 
 **Token capture.** Each provider records `last_usage` (input, output including
 thinking) the same way it records `last_finish_reason`. Tokens are added up

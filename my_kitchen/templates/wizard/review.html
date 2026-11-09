@@ -82,9 +82,31 @@
 
     <form method="post" action="{{ url_for('wizard.generate') }}" id="generate-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      {# Special request (Phase 25): a free-text steer that rides along with the
+         brief. Optional; chips add common steers on tap. #}
+      <div class="special-request">
+        <label class="special-request-label" for="special-request">Anything in mind? <span class="muted">(optional)</span></label>
+        <p class="special-request-hint">A dish, a mood or a style — it steers both recipes. Leave it blank to let the kitchen decide.</p>
+        <textarea id="special-request" name="special_request" rows="2"
+                  maxlength="{{ special_request_max }}"
+                  placeholder="{{ special_request_placeholder }}">{{ special_request }}</textarea>
+        <div class="request-chips">
+          {% for chip in special_request_chips %}
+            <button type="button" class="request-chip" data-chip="{{ chip }}">{{ icon('add') }}{{ chip }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if limits.generations_left == 0 %}
+        <p class="generate-limit">{{ icon('info') }} You've reached today's limit for new recipes — it resets at midnight. Your saved recipes are still here.</p>
+      {% elif limits.generations_left <= 3 %}
+        <p class="generate-limit generate-limit--low">{{ limits.generations_left }} new recipe generation{{ "s" if limits.generations_left != 1 else "" }} left today.</p>
+      {% endif %}
+
       <div class="btn-row">
         <a class="btn btn--secondary" href="{{ url_for('wizard.step_cooking_for') }}">{{ icon('arrow_back') }} Back</a>
-        <button type="submit" class="btn btn--primary" id="generate-btn">{{ icon('cooking') }} Generate recipes</button>
+        <button type="submit" class="btn btn--primary" id="generate-btn"{% if limits.generations_left == 0 %} disabled{% endif %}>{{ icon('cooking') }} Generate recipes</button>
       </div>
     </form>
   </section>
@@ -92,6 +114,33 @@
 
 {% block scripts %}
   <script>
+    // Special request: chips append their text; the box survives a trip into a
+    // suggestion card and back via sessionStorage, and is cleared on submit
+    // (the server keeps it in the wizard state from then on).
+    (function () {
+      var box = document.getElementById("special-request");
+      if (!box) return;
+      var KEY = "mk:special-request";
+      try {
+        if (!box.value) box.value = sessionStorage.getItem(KEY) || "";
+      } catch (e) {}
+      function save() { try { sessionStorage.setItem(KEY, box.value); } catch (e) {} }
+      box.addEventListener("input", save);
+      document.querySelectorAll(".request-chip").forEach(function (chip) {
+        chip.addEventListener("click", function () {
+          var add = chip.dataset.chip;
+          var cur = box.value.replace(/[\s,.]+$/, "");
+          if (cur.toLowerCase().indexOf(add.toLowerCase()) !== -1) return;
+          var next = cur ? cur + ", " + add.toLowerCase() : add;
+          if (next.length <= box.maxLength) { box.value = next; save(); }
+          box.focus();
+        });
+      });
+      document.getElementById("generate-form").addEventListener("submit", function () {
+        try { sessionStorage.removeItem(KEY); } catch (e) {}
+      });
+    })();
+
     // Disable-on-submit guard. The POST is fast (starts the background job and
     // redirects to the generating page). Session idempotency is the real backstop.
     document.getElementById("generate-form").addEventListener("submit", function () {

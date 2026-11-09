@@ -28,6 +28,7 @@
 {% elif ep.startswith('history.') %}{% set nav_active.x = 'recipes' %}
 {% elif ep.startswith('manage.') %}{% set nav_active.x = 'manage' %}
 {% elif ep.startswith('users.') %}{% set nav_active.x = 'household' %}
+{% elif ep.startswith('usage.') %}{% set nav_active.x = 'usage' %}
 {% endif %}
 
 {% macro nav_item(href, key, icon_name, label, current) %}
@@ -62,6 +63,7 @@
       {{ nav_item(url_for('history.favourites'), 'favourites', 'star',       'Favourites', nav_active.x) }}
       {{ nav_item(url_for('manage.index'),       'manage',     'tune',       'Manage',     nav_active.x) }}
       {{ nav_item(url_for('users.index'),        'household',  'group',      'Household',  nav_active.x) }}
+      {{ nav_item(url_for('usage.index'),        'usage',      'bar_chart',  'Usage',      nav_active.x) }}
     </nav>
     <div class="nav-foot">
       <span class="who">Logged in as <strong>{{ current_user.name }}</strong></span>

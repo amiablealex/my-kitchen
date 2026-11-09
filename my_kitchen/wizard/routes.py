@@ -1,4 +1,5 @@
 import json
+import random
 import re
 import unicodedata
 from datetime import datetime, timezone
@@ -16,8 +17,10 @@ from ..models import (
     User, SECTION_CHOICES, DEFAULT_MEAL_TYPE, MEAL_TYPES, MEAL_TYPE_NAMES,
     meal_type_takes_cuisine, CUISINES, WIZARD_CUISINES, SURPRISE_ME,
     COMMENT_MAX_CHARS, TAG_TYPE_CHOICES, TAG_TYPE_HINTS, utcnow,
+    SPECIAL_REQUEST_MAX_CHARS,
 )
-from ..llm.service import start_generation, combined_dietary
+from ..llm.service import start_generation, combined_dietary, clean_special_request
+from ..usage.service import generation_blocked_reason, limits_today
 from .suggestions import suggest_recipes
 # Reuse the manage blueprint's ingredient-creation validation rather than
 # duplicating the name/category/staple handling (Phase 4a add-and-link). One-way
@@ -36,6 +39,18 @@ CUISINE_MEAL_TYPES = [n for n in MEAL_TYPE_NAMES if meal_type_takes_cuisine(n)]
 # A running generation older than this is treated as dead (no reaper process —
 # the check lives in the poll + the idempotency guard). Phase 12.
 STALE_AFTER_SECONDS = 5 * 60
+
+# Special request (Phase 25): one placeholder is picked per render so the box
+# teaches by example without a wall of help text; the chips add text on tap.
+SPECIAL_REQUEST_PLACEHOLDERS = [
+    "e.g. a proper curry, nothing too fiery",
+    "e.g. I'm tired — keep it really simple",
+    "e.g. something warming and comforting",
+    "e.g. traditional, true to the cuisine",
+    "e.g. fresh and light, nothing heavy",
+    "e.g. a one-pot I can leave to bubble away",
+]
+SPECIAL_REQUEST_CHIPS = ["Something spicy", "Keep it simple", "Traditional", "One pan"]
 
 
 def fresh_wizard():
@@ -253,12 +268,21 @@ def review():
         allergies=allergies, avoid=avoid, preferences=preferences,
         tag_hints=TAG_TYPE_HINTS,
         suggestions=suggestions,
+        special_request=w.get("special_request") or "",
+        special_request_max=SPECIAL_REQUEST_MAX_CHARS,
+        special_request_placeholder=random.choice(SPECIAL_REQUEST_PLACEHOLDERS),
+        special_request_chips=SPECIAL_REQUEST_CHIPS,
+        limits=limits_today(current_user.id),
     )
 
 
 @wizard_bp.route("/generate", methods=["POST"])
 def generate():
     w = get_wizard()
+    # Keep the typed request in the wizard state first, so if a guard below
+    # bounces the user back to review, their words are still in the box.
+    w["special_request"] = clean_special_request(request.form.get("special_request"))
+    save_wizard(w)
     # Synchronous pre-flight guard — runs BEFORE any row is created.
     if derived_servings(w) < 1:
         flash("Let me know who's eating before I cook.", "error")
@@ -275,6 +299,22 @@ def generate():
                 and (existing.status or "done") == "running"
                 and not _is_stale(existing)):
             return redirect(url_for("wizard.generating", generation_id=existing.id))
+
+    # One running generation per USER (Phase 25), not just per session: a
+    # second tab or device resumes the same wait instead of starting another
+    # paid call. Checked in the DB, so it holds across both gunicorn workers.
+    running = (Generation.query
+               .filter(Generation.created_by_user_id == current_user.id,
+                       Generation.status == "running")
+               .order_by(Generation.created_at.desc()).first())
+    if running is not None and not _is_stale(running):
+        return redirect(url_for("wizard.generating", generation_id=running.id))
+
+    # Daily limits (Phase 25). A calm explanation, never an error page.
+    blocked = generation_blocked_reason(current_user.id)
+    if blocked:
+        flash(blocked, "info")
+        return redirect(url_for("wizard.review"))
 
     time_label = dict(TIME_BANDS).get(w["time_band"], w["time_band"])
     # Capture the real app object for the thread's app-context push — never let

@@ -101,6 +101,9 @@ def create_app(config_class=Config):
     from .users.routes import users_bp
     app.register_blueprint(users_bp)
 
+    from .usage.routes import usage_bp
+    app.register_blueprint(usage_bp)
+
     # Friendly CSRF failures (the carry-over promised in CP1/CP2). A CSRF error
     # almost always means a stale token — a long-idle tab, or a restart with a
     # changed SECRET_KEY. Forms get a flash + redirect; the stock-list AJAX

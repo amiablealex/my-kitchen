@@ -14,6 +14,18 @@ class ProviderError(RuntimeError):
     """Raised when a provider can't be used (missing key, missing SDK, API error)."""
 
 
+def _int(v):
+    try:
+        return int(v or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+# Every provider sets `last_usage` per generate() call, the same way it sets
+# last_finish_reason: {"input": int, "output": int}, where output includes any
+# thinking tokens (they're billed as output). None when the API reported nothing.
+
+
 class MockProvider:
     """Returns canned-but-brief-aware recipe JSON. No key or SDK required.
     Ignores temperature/max_tokens; never truncates."""
@@ -24,10 +36,15 @@ class MockProvider:
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.last_finish_reason = None  # set per generate() call
+        self.last_usage = None
 
     def generate(self, system_prompt, user_prompt, brief=None):
         self.last_finish_reason = "stop"
-        return json.dumps(_mock_payload(brief or {}))
+        out = json.dumps(_mock_payload(brief or {}))
+        # Rough chars/4 estimate so the usage page has numbers to show in dev.
+        self.last_usage = {"input": (len(system_prompt) + len(user_prompt)) // 4,
+                           "output": len(out) // 4}
+        return out
 
 
 class AnthropicProvider:
@@ -41,8 +58,10 @@ class AnthropicProvider:
         self.temperature = DEFAULT_TEMPERATURE if temperature is None else temperature
         self.max_tokens = max_tokens or DEFAULT_MAX_TOKENS
         self.last_finish_reason = None
+        self.last_usage = None
 
     def generate(self, system_prompt, user_prompt, brief=None):
+        self.last_usage = None
         try:
             from anthropic import Anthropic
         except ImportError as e:
@@ -61,6 +80,10 @@ class AnthropicProvider:
             raise ProviderError(f"Anthropic API call failed: {e}") from e
         # "max_tokens" here means the response was cut off — the harness reads this.
         self.last_finish_reason = getattr(resp, "stop_reason", None)
+        usage = getattr(resp, "usage", None)
+        if usage is not None:
+            self.last_usage = {"input": _int(getattr(usage, "input_tokens", 0)),
+                               "output": _int(getattr(usage, "output_tokens", 0))}
         return "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
 
 
@@ -75,8 +98,10 @@ class GeminiProvider:
         self.temperature = DEFAULT_TEMPERATURE if temperature is None else temperature
         self.max_tokens = max_tokens or DEFAULT_MAX_TOKENS
         self.last_finish_reason = None
+        self.last_usage = None
 
     def generate(self, system_prompt, user_prompt, brief=None):
+        self.last_usage = None
         try:
             from google import genai
             from google.genai import types
@@ -102,15 +127,25 @@ class GeminiProvider:
             self.last_finish_reason = resp.candidates[0].finish_reason
         except (AttributeError, IndexError, TypeError):
             self.last_finish_reason = None
+        meta = getattr(resp, "usage_metadata", None)
+        if meta is not None:
+            self.last_usage = {
+                "input": _int(getattr(meta, "prompt_token_count", 0)),
+                # Thinking tokens are billed at the output rate.
+                "output": _int(getattr(meta, "candidates_token_count", 0))
+                          + _int(getattr(meta, "thoughts_token_count", 0)),
+            }
         return resp.text
 
 
-def get_provider(config):
+def get_provider(config, model=None, max_tokens=None):
+    """The configured provider. `model` / `max_tokens` override the config
+    per call (Phase 25), so a cheaper task can use a smaller model and cap."""
     provider = (config.get("LLM_PROVIDER") or "mock").lower()
     common = {
-        "model": config.get("LLM_MODEL") or None,
+        "model": model or config.get("LLM_MODEL") or None,
         "temperature": config.get("LLM_TEMPERATURE", DEFAULT_TEMPERATURE),
-        "max_tokens": config.get("LLM_MAX_TOKENS", DEFAULT_MAX_TOKENS),
+        "max_tokens": max_tokens or config.get("LLM_MAX_TOKENS", DEFAULT_MAX_TOKENS),
     }
     if provider == "mock":
         return MockProvider(**common)

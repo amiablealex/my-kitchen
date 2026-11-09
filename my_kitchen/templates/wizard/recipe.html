@@ -64,6 +64,10 @@
   </div>
   <script type="application/json" id="tag-cuisine-meal-types">{{ cuisine_meal_types | tojson }}</script>
 
+  {% if recipe.generation and recipe.generation.special_request %}
+    <p class="recipe-request">{{ icon('comment') }}<span>You asked for: <q>{{ recipe.generation.special_request }}</q></span></p>
+  {% endif %}
+
   {% if recipe.intro %}
     <p class="recipe-intro">{{ recipe.intro }}</p>
   {% endif %}

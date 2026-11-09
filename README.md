@@ -74,6 +74,8 @@ provider. Both are on the list; see [the roadmap](https://my-kitchen.io/approach
 | `LLM_MODEL` | Override the provider's default model | `gemini-3.5-flash` |
 | `LLM_TEMPERATURE` | Generation variety | 0.8 |
 | `LLM_MAX_TOKENS` | Output ceiling per generation | 8000 |
+| `LIMIT_GENERATIONS_PER_USER_DAY` | Recipe generations each person can start per day | 10 |
+| `LIMIT_HOUSEHOLD_CALLS_DAY` | All AI calls across the household per day | 40 |
 | `APP_TIMEZONE` | Timestamps in history | Europe/London |
 | `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | API key for the chosen provider | — |
 

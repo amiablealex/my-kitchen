@@ -303,6 +303,7 @@ th { color: var(--text-muted); font-weight: 600; }
 }
 .flash-success { border-left-color: var(--success); }
 .flash-error   { border-left-color: var(--danger); }
+.flash-info    { border-left-color: var(--info); }
 .flash-warning { border-left-color: var(--warning); }
 
 /* ============================================================ components === */
@@ -1190,3 +1191,39 @@ th { color: var(--text-muted); font-weight: 600; }
 .servings-reset[hidden], .servings-note[hidden] { display: none; }
 .servings-note { flex-basis: 100%; margin: 0; color: var(--text-muted); font-size: var(--fs-small); }
 .ing-amt.is-scaled { color: var(--accent-1); font-weight: 600; }
+
+/* --- special request (Phase 25) --- */
+.special-request { margin: var(--space-4) 0 var(--space-3); }
+.special-request-label { display: block; font-weight: 600; }
+.special-request-hint { margin: 2px 0 var(--space-2); color: var(--text-muted); font-size: var(--fs-small); }
+.special-request textarea { width: 100%; resize: vertical; min-height: 3.2em; }
+.request-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+.request-chip { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 var(--space-3);
+  border: 1px solid var(--divider); border-radius: 999px; background: var(--surface); color: var(--text);
+  font: inherit; font-size: var(--fs-small); cursor: pointer; }
+.request-chip:hover, .request-chip:focus-visible { background: var(--surface-2); border-color: var(--accent-1); }
+.request-chip .icon { width: 1em; height: 1em; color: var(--accent-1); }
+.generate-limit { display: flex; align-items: center; gap: var(--space-2); color: var(--text-muted); font-size: var(--fs-small); }
+.generate-limit .icon { width: 1.2em; height: 1.2em; color: var(--warning); flex: none; }
+.generate-limit--low { color: var(--warning); }
+.recipe-request { display: flex; align-items: flex-start; gap: var(--space-2); color: var(--text-muted); font-size: var(--fs-small); }
+.recipe-request .icon { width: 1.1em; height: 1.1em; flex: none; margin-top: 2px; color: var(--accent-1); }
+.recipe-request q { color: var(--text); font-style: italic; }
+
+/* --- usage page (Phase 25) --- */
+.usage-limits { display: grid; gap: var(--space-3); }
+.usage-meter-head { display: flex; justify-content: space-between; gap: var(--space-2); font-size: var(--fs-small); margin-bottom: 4px; }
+.usage-meter-count { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.usage-meter-bar { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.usage-meter-bar span { display: block; height: 100%; background: var(--accent-1); border-radius: inherit; }
+.usage-meter-bar.is-high span { background: var(--accent-3); }
+.usage-meter-bar.is-full span { background: var(--accent-4); }
+.usage-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.usage-table { font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.usage-table td { text-align: right; white-space: nowrap; }
+.usage-table th[scope="row"] { color: var(--text); white-space: nowrap; }
+.usage-table--recent td { text-align: left; }
+.usage-table--recent td:nth-child(n+5) { text-align: right; }
+.usage-failed { color: var(--danger); }
+.usage-sub { font-size: var(--fs-small); font-weight: 400; font-family: var(--font-body); }
+.usage-foot { font-size: var(--fs-small); margin-top: var(--space-4); }

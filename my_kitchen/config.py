@@ -48,3 +48,9 @@ class Config:
     # The richer intro/steps/tips output is longer — give it headroom so a good
     # response isn't truncated mid-recipe.
     LLM_MAX_TOKENS = int(os.environ.get("LLM_MAX_TOKENS", "4000"))
+
+    # Model-call limits (Phase 25), counted per local calendar day. Generous
+    # enough never to bite on a normal evening; there to stop a runaway (a bug,
+    # or repeated taps) at a known ceiling. See usage/service.py.
+    LIMIT_GENERATIONS_PER_USER_DAY = int(os.environ.get("LIMIT_GENERATIONS_PER_USER_DAY", "10"))
+    LIMIT_HOUSEHOLD_CALLS_DAY = int(os.environ.get("LIMIT_HOUSEHOLD_CALLS_DAY", "40"))

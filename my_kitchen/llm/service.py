@@ -4,6 +4,7 @@ from ..extensions import db
 from ..models import (
     Ingredient, Equipment, Generation, Recipe, RecipeIngredient, User,
     DEFAULT_MEAL_TYPE, meal_type_takes_cuisine, recipe_cuisine_from,
+    SPECIAL_REQUEST_MAX_CHARS,
 )
 from .prompt import SYSTEM_PROMPT, build_user_prompt
 from .schema import extract_json, validate_and_normalize
@@ -41,6 +42,14 @@ def _is_truncated(finish_reason):
     Anthropic 'max_tokens' and Gemini 'FinishReason.MAX_TOKENS' shapes."""
     s = str(finish_reason).lower()
     return "max_token" in s or "length" in s
+
+
+def _add_usage(gen, usage):
+    """Accumulate one call's token usage onto the Generation row."""
+    if not usage:
+        return
+    gen.input_tokens = (gen.input_tokens or 0) + int(usage.get("input") or 0)
+    gen.output_tokens = (gen.output_tokens or 0) + int(usage.get("output") or 0)
 
 
 def combined_dietary(user_ids):
@@ -93,6 +102,16 @@ def recent_recipe_titles(limit):
         if len(titles) >= limit:
             break
     return titles
+
+
+def clean_special_request(text):
+    """Normalise the free-text steer: collapse whitespace, strip the prompt's
+    fence markers (so it can't close its own fence), cap the length. Returns
+    None when nothing is left."""
+    if not text:
+        return None
+    s = " ".join(str(text).replace("<<<", "").replace(">>>", "").split())
+    return s[:SPECIAL_REQUEST_MAX_CHARS].strip() or None
 
 
 def build_brief(wizard_state, time_label, app_config):
@@ -159,6 +178,12 @@ def build_brief(wizard_state, time_label, app_config):
     if not meal_type_takes_cuisine(meal_type):
         cuisine = None
 
+    # Special request (Phase 25). Already cleaned at the route; re-asserted
+    # here. When present it suppresses the creative seed — a random regional
+    # angle on recipe 1 would pull against "make it traditional" exactly the way
+    # 0.17's regional nudges pulled against a chosen cuisine.
+    special_request = clean_special_request(wizard_state.get("special_request"))
+
     return {
         "must_use": must_use,
         "available": available,
@@ -177,7 +202,8 @@ def build_brief(wizard_state, time_label, app_config):
         "recent_titles": recent_recipe_titles(
             int(app_config.get("LLM_RECENT_TITLES_N", 10))
         ),
-        "creative_seed": pick_seed_for(meal_type, cuisine),
+        "special_request": special_request,
+        "creative_seed": None if special_request else pick_seed_for(meal_type, cuisine),
     }
 
 
@@ -208,6 +234,7 @@ def start_generation(app, wizard_state, time_label, user_id=None):
         guest_count=brief["guest_count"],
         selected_ingredient_ids=wizard_state.get("selected_ingredient_ids") or [],
         creative_seed=brief["creative_seed"],
+        special_request=brief["special_request"],
         raw_prompt=user_prompt,
         status="running",
     )
@@ -256,7 +283,13 @@ def _run_generation_job(app, generation_id, user_prompt, brief):
             last_error, last_raw, normalized = None, None, None
             for attempt in range(1, MAX_ATTEMPTS + 1):
                 try:
-                    last_raw = provider.generate(SYSTEM_PROMPT, user_prompt, brief=brief)
+                    try:
+                        last_raw = provider.generate(SYSTEM_PROMPT, user_prompt, brief=brief)
+                    finally:
+                        # Count every attempt's tokens (a retry is a second paid
+                        # call). Set on the row now so whichever commit follows —
+                        # success or any error branch — records it.
+                        _add_usage(gen, getattr(provider, "last_usage", None))
                     finish = getattr(provider, "last_finish_reason", None)
                     if finish is not None and _is_truncated(finish):
                         # Output hit the token ceiling — retrying won't help; the

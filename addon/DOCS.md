@@ -21,6 +21,13 @@ Self-hosted, LLM-powered household recipe generator.
    log in. Change the password in the app. (A direct-LAN port is also exposed,
    but the installable PWA only comes fully alive over the HTTPS ingress URL.)
 
+## Usage limits & cost
+`limit_generations_per_user_day` (default 10) and `limit_household_calls_day`
+(default 40) cap AI calls per local calendar day — generous for normal use,
+there to stop a runaway. The app's **Usage** page shows calls, tokens and an
+estimated cost. For a hard stop on the provider side as well, set a budget
+alert and a daily request quota on your API key.
+
 ## Data & backups
 - The SQLite database lives in the add-on's `/data` and is included in Home
   Assistant backups automatically.

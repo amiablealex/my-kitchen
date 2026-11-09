@@ -27,6 +27,8 @@ DIRECT_MAP = {
     "llm_temperature": "LLM_TEMPERATURE",
     "llm_max_tokens": "LLM_MAX_TOKENS",
     "llm_recent_titles_n": "LLM_RECENT_TITLES_N",
+    "limit_generations_per_user_day": "LIMIT_GENERATIONS_PER_USER_DAY",
+    "limit_household_calls_day": "LIMIT_HOUSEHOLD_CALLS_DAY",
     "app_timezone": "APP_TIMEZONE",
     "gunicorn_workers": "GUNICORN_WORKERS",
     "gunicorn_threads": "GUNICORN_THREADS",

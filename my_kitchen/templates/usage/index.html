@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Usage — My Kitchen{% endblock %}
+{% block page_title %}Usage{% endblock %}
+
+{% macro money(c) -%}
+  {%- if c is none -%}—{%- elif c >= 1 -%}${{ "%.2f" | format(c) }}{%- else -%}${{ "%.4f" | format(c) }}{%- endif -%}
+{%- endmacro %}
+{% macro num(n) -%}{{ "{:,}".format(n or 0) }}{%- endmacro %}
+{% macro meter(used, limit, label) %}
+  {% set pct = [100, (used * 100 / limit) | round | int] | min if limit else 0 %}
+  <div class="usage-meter">
+    <div class="usage-meter-head"><span>{{ label }}</span><span class="usage-meter-count">{{ used }} of {{ limit }}</span></div>
+    <div class="usage-meter-bar{% if used >= limit %} is-full{% elif pct >= 70 %} is-high{% endif %}"><span style="width: {{ pct }}%"></span></div>
+  </div>
+{% endmacro %}
+
+{% block content %}
+  <h1>Usage</h1>
+  <p class="lead">AI calls made by the household, with an estimated cost. Limits reset at midnight.</p>
+
+  <section class="card usage-limits">
+    <h2 class="card-title">Today</h2>
+    {{ meter(limits.generations, limits.generations_limit, "Your recipe generations") }}
+    {{ meter(limits.household, limits.household_limit, "Household AI calls") }}
+  </section>
+
+  <section class="section">
+    <h2>Totals</h2>
+    <div class="usage-scroll">
+      <table class="usage-table">
+        <thead><tr><th></th><th>Calls</th><th>Failed</th><th>Tokens in</th><th>Tokens out</th><th>Est. cost</th></tr></thead>
+        <tbody>
+          {% for label, s in periods %}
+            <tr><th scope="row">{{ label }}</th><td>{{ s.calls }}</td><td>{{ s.failed }}</td>
+              <td>{{ num(s.input) }}</td><td>{{ num(s.output) }}</td>
+              <td>{{ money(s.cost) }}{% if s.unpriced %}<span class="muted" title="Calls without token data or a known price">*</span>{% endif %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% if people %}
+    <section class="section">
+      <h2>By person <span class="muted usage-sub">last 30 days</span></h2>
+      <div class="usage-scroll">
+        <table class="usage-table">
+          <thead><tr><th></th><th>Calls</th><th>Failed</th><th>Est. cost</th></tr></thead>
+          <tbody>
+            {% for name, s in people %}
+              <tr><th scope="row">{{ name }}</th><td>{{ s.calls }}</td><td>{{ s.failed }}</td><td>{{ money(s.cost) }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
+  {% if recent %}
+    <section class="section">
+      <h2>Recent calls</h2>
+      <div class="usage-scroll">
+        <table class="usage-table usage-table--recent">
+          <thead><tr><th>When</th><th>Who</th><th>Type</th><th>Result</th><th>Tokens in / out</th><th>Est. cost</th></tr></thead>
+          <tbody>
+            {% for row in recent %}
+              {% set g = row.gen %}
+              <tr>
+                <td>{{ g.created_at | localdt }}</td>
+                <td>{{ g.created_by.name if g.created_by else "unknown" }}</td>
+                <td>{{ row.kind }}</td>
+                <td>{% if (g.status or "done") == "error" %}<span class="usage-failed">Failed</span>{% elif g.status == "running" %}Running{% else %}Done{% endif %}</td>
+                <td>{% if g.input_tokens is none and g.output_tokens is none %}<span class="muted">not tracked</span>{% else %}{{ num(g.input_tokens) }} / {{ num(g.output_tokens) }}{% endif %}</td>
+                <td>{{ money(row.cost) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
+  <p class="muted usage-foot">
+    Costs are estimates in US dollars at list prices, which is how the providers price their APIs — your bill may differ.
+    {% if periods[-1][1].unpriced %}* Some calls have no cost: they were made before usage tracking began (0.25.0), or by a model with no price on file.{% endif %}
+  </p>
+{% endblock %}

@@ -95,6 +95,11 @@ WIZARD_CUISINES = CUISINES + [SURPRISE_ME]
 # attribute is only a courtesy to the browser.
 COMMENT_MAX_CHARS = 2000
 
+# Special request (Phase 25): the free-text steer typed on the wizard's review
+# step. Short on purpose — it's a nudge on the dish, not a second brief — and
+# capped server-side; the textarea's maxlength is a courtesy.
+SPECIAL_REQUEST_MAX_CHARS = 280
+
 def recipe_cuisine_from(value):
     """Map a generation's requested cuisine to a recipe cuisine TAG. 'Surprise me'
     and None/'' aren't real cuisines -> None; a concrete one is kept (validated
@@ -234,6 +239,15 @@ class Generation(db.Model):
     # recipes to archive. A generation with recipes is archived through its
     # recipes (recipes.archived_at is the truth for anything with content).
     archived_at = db.Column(db.DateTime, nullable=True)
+    # special_request (Phase 25): the cook's free-text steer for this run,
+    # already cleaned + capped. NULL = none given.
+    special_request = db.Column(db.Text, nullable=True)
+    # Token usage (Phase 25), summed across the retry-once attempts. output
+    # includes thinking tokens (billed as output). NULL = not tracked (pre-0.25
+    # rows, or the provider reported nothing). Cost is never stored — the usage
+    # page prices tokens at render time from MODEL_PRICES.
+    input_tokens = db.Column(db.Integer, nullable=True)
+    output_tokens = db.Column(db.Integer, nullable=True)
 
     recipes = db.relationship("Recipe", backref="generation")
     # Read-only link to the cook. The created_by_user_id FK column already

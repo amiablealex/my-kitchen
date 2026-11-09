@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.25.0 — Special requests and a usage page
+
+**Tell the kitchen what you fancy.** The last step of Lets Cook has a new
+optional box: *Anything in mind?* Type a dish, a mood or a style ("a proper
+curry, nothing too fiery", "I'm tired, keep it simple") or tap one of the
+suggestions, and both recipes are built around it. It never overrides an
+allergy or an ingredient you chose to use up. If you name a food someone
+dislikes, though, you get it. Recipes made this way show what you asked for.
+
+**New Usage page** (in the menu). It shows how many AI calls the household has
+made, the tokens used and an estimated cost: today, this week, this month,
+per person, and the most recent calls.
+
+**Daily limits.** By default each person can start 10 recipe generations a day
+and the household 40 AI calls a day. Both are new add-on options. The limits
+are there to stop anything running away, not to get in the way, and they reset
+at midnight. If you start a generation while one of yours is already running
+(another tab or device), you're taken back to the one in progress.
+
 ## 0.24.0 — Archive and servings
 
 **Archive recipes you don't need to see.** Each row on the Recipes page now
