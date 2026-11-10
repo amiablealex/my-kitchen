@@ -87,6 +87,7 @@ The four-quadrant **pinwheel** (teal, lime, orange, pink, clockwise from 12) bes
 - **Manage index:** grouped lists (Kitchen, People) of bead rows with a count and an arrow, not tiles. Household is a People entry, not a nav item.
 - **Manage lists (0.29.4):** no buttons on list rows. A plain name is a chip (`link_chip`); a thing with something to say is a row with a meta line and an arrow (`link_row`). Either opens the item's page: `edit-head` (name + one meta line), the form, a docked Save. Destructive actions live behind ⋯ (`danger_form`). On/off and pick-one fields are option chips (`toggle_chip`, `section_chips`), picked in the colour of what they mean.
 - **Confirm:** anything destructive uses `data-confirm` / `data-confirm-title` / `data-confirm-ok` on the form; `confirm.js` shows the app's dialog with a pink bead. Never `confirm()`.
+- **Category tree (0.29.5):** sections are coloured groups; categories hang off a 2px trunk in the section colour (55% mix), with `├`-style branches and a rounded `└` on the last node, which is always the inline *Add a category*. One number per node (ingredients); the section header carries the total.
 - **Empty states** and the **generating** state as before (polka panel, bouncing four-colour dots).
 - **States:** focus (3px teal outline, including options via `:has(input:focus-visible)`), hover (desktop), disabled (the double-submit guard).
 

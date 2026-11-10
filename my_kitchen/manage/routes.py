@@ -199,6 +199,8 @@ def categories():
         "manage/categories.html",
         categories=cats, counts=counts,
         sections=SECTION_CHOICES, next_order=_next_display_order(),
+        section_totals={k: sum(counts[c.id] for c in cats if c.section == k) for k, _ in SECTION_CHOICES},
+        examples={"protein": "Fish", "carb": "Grains", "veg": "Leaves", "other": "Baking"},
     )
 
 

@@ -191,3 +191,16 @@ end of its function, not to the next `@route`. Helper functions sit between
 sections.
 
 `sw.js` cache → v10.
+
+
+## 0.29.5 — categories as a tree
+`manage/categories.html` loops `SECTION_CHOICES`. Each section is a
+`recipe-group--<section>` with the section's ingredient total
+(`section_totals`, computed in the route). Its categories are `ul.cat-tree`
+nodes drawn with `::before`/`::after` in `--trunk`. The last node is a
+`details.cat-add` with an inline name field that posts `section` and
+`display_order` (next) to `manage.category_add`. The top-of-page add form and
+its section picker are gone; moving a category between sections stays on its
+page. `examples` supplies the placeholder per section.
+
+`sw.js` cache → v11.

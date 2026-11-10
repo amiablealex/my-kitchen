@@ -1738,3 +1738,29 @@ dialog.confirm::backdrop { background: rgba(20, 4, 32, 0.74); }
 .confirm--warn .confirm-bead { background: var(--accent-4); }
 .confirm-body[hidden] { display: none; }
 .manage-add .option:not(:has(input:checked)) { background: var(--surface-2); }
+
+/* ===================================================== category tree (0.29.5)
+   Section = group (fixed, coloured); categories hang off a trunk in the
+   section colour, like a file tree. The trunk lines up under the header bead;
+   the last branch curves (└) and is the "add" node. */
+.cat-section { --trunk: color-mix(in srgb, var(--group) 55%, transparent); }
+.content .cat-tree { list-style: none; margin: 0; padding: 0 var(--space-2) var(--space-2) calc(var(--space-3) + 10px); }
+.cat-node { position: relative; padding-left: 20px; }
+.cat-node::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; border-left: 2px solid var(--trunk); }
+.cat-node::after { content: ""; position: absolute; left: 0; top: 24px; width: 14px; border-top: 2px solid var(--trunk); }
+.cat-node:last-child::before { bottom: auto; height: 25px; width: 14px; border-bottom: 2px solid var(--trunk);
+  border-bottom-left-radius: 9px; }
+.cat-node:last-child::after { display: none; }
+.cat-link { display: flex; align-items: center; gap: var(--space-2); min-height: 48px; padding: 0 var(--space-2) 0 var(--space-3);
+  border-radius: var(--petal-sm); color: var(--text); font-weight: 700; text-decoration: none; }
+.cat-link:hover { background: var(--surface-2); text-decoration: none; }
+.cat-name { flex: 1; min-width: 0; }
+.cat-count { color: var(--text-muted); font-size: 0.78rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cat-add > summary { display: flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 var(--space-3);
+  list-style: none; cursor: pointer; color: var(--text-muted); font-size: var(--fs-small); font-weight: 600; border-radius: var(--petal-sm); }
+.cat-add > summary::-webkit-details-marker { display: none; }
+.cat-add > summary:hover { color: var(--text); background: var(--surface-2); }
+.cat-add > summary .icon { width: 1.1em; height: 1.1em; color: var(--group); }
+.cat-add[open] > summary { color: var(--text); }
+.cat-add-form { display: flex; gap: var(--space-2); align-items: center; padding: 0 0 var(--space-2) var(--space-3); }
+.cat-add-form input[type="text"] { flex: 1; min-width: 0; min-height: 40px; }

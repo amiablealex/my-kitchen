@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.29.5
+- **Categories as a tree.** Manage → Categories now shows the four fixed
+  sections (Protein, Carb, Veg, Other, the lanes in Lets Cook) as coloured
+  groups. Your categories branch off each one, so it's clear that Vegetable
+  and Herb both sit under Veg. Each category shows how many ingredients it
+  has, and each section shows its total.
+- **Add a category where it belongs.** The last branch of each section is
+  *Add a category*. Type a name and it's added to that section. An empty
+  section says so, because its lane in Lets Cook will be empty too.
+
 ## 0.29.4
 - **Manage lists without buttons.** Ingredients and Equipment are chips,
   grouped as before. Categories and Dietary tags are rows that say something
