@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.29.7
+- Diagnostic: a viewport readout for chasing a Chrome-on-Android layout bug.
+  It's off by default. Add `?vp=1` to any page to switch it on and `?vp=0`
+  to switch it off. Nothing else changes.
+
 ## 0.29.6
 - **Fix: the bottom bar could slip behind Chrome's address bar on Lets Cook**
   (Android, address bar at the bottom). The wizard steps sized themselves to
