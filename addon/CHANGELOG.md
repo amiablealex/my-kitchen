@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.29.6
+- **Fix: the bottom bar could slip behind Chrome's address bar on Lets Cook**
+  (Android, address bar at the bottom). The wizard steps sized themselves to
+  the *dynamic* screen height, which changes as Chrome's bar slides in and
+  out. They now use the stable height, so the bar and *Continue* stay put.
+
 ## 0.29.5
 - **Categories as a tree.** Manage → Categories now shows the four fixed
   sections (Protein, Carb, Veg, Other, the lanes in Lets Cook) as coloured

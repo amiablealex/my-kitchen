@@ -204,3 +204,18 @@ its section picker are gone; moving a category between sections stays on its
 page. `examples` supplies the placeholder per section.
 
 `sw.js` cache → v11.
+
+
+## 0.29.6 — svh, not dvh
+On Chrome for Android with the address bar at the bottom, the bottom nav and
+the wizard dock slipped together behind the toolbar, but only on Lets Cook.
+The wizard steps are the only pages whose height is tied to the viewport
+(`.wizard-step` min-height = 100dvh minus the bars, so the dock sits at the
+bottom). `dvh` changes while the toolbar animates, so the page's height
+changed on scroll, and the fixed bar could end up placed for the toolbar-hidden
+viewport while the toolbar was showing. Every `100dvh` is now `100svh` (the
+small, stable viewport), with a `100vh` fallback on `body`. A short step's dock may sit a
+toolbar's height higher than the true bottom when the bar is hidden; that's
+the trade.
+
+`sw.js` cache → v12.

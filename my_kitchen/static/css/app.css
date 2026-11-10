@@ -102,7 +102,7 @@ html { -webkit-text-size-adjust: 100%; font-size: 14px; }
 
 body {
   margin: 0;
-  min-height: 100dvh;
+  min-height: 100vh; min-height: 100svh;  /* svh, not dvh: see 0.29.6 */
   background: var(--grape);
   color: var(--text);
   font-family: var(--font-body);
@@ -166,7 +166,7 @@ img, svg { max-width: 100%; }
 .display { font-size: var(--fs-display); margin: 0 0 var(--space-4); }
 
 /* ============================================================ app shell === */
-.app { min-height: 100dvh; }
+.app { min-height: 100svh; }
 
 .topbar {
   position: sticky; top: 0; z-index: 30;
@@ -218,7 +218,7 @@ img, svg { max-width: 100%; }
 }
 .app.nav-open .nav-scrim { opacity: 1; pointer-events: auto; }
 
-.app-body { display: flex; flex-direction: column; min-height: 100dvh; }
+.app-body { display: flex; flex-direction: column; min-height: 100svh; }
 .content {
   flex: 1; width: 100%; max-width: var(--content-max); margin: 0 auto;
   padding: var(--space-5) var(--space-4);
@@ -1458,7 +1458,7 @@ dialog.confirm::backdrop { background: rgba(20, 4, 32, 0.74); }
    it floats while you scroll. Right-aligned so it never covers the labels. */
 .wizard-step {
   display: flex; flex-direction: column;
-  min-height: calc(100dvh - var(--topbar-h) - var(--bottomnav-h) - 2 * var(--space-5));
+  min-height: calc(100svh - var(--topbar-h) - var(--bottomnav-h) - 2 * var(--space-5));
 }
 .wizard-step .steps { margin-bottom: var(--space-4); }
 .wizard-form { flex: 1; display: flex; flex-direction: column; }
@@ -1474,7 +1474,7 @@ dialog.confirm::backdrop { background: rgba(20, 4, 32, 0.74); }
 .wizard-dock > * { pointer-events: auto; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.42); }
 .wizard-dock .btn--primary { padding: 0 1.1rem 0 1.3rem; }
 @media (min-width: 880px) {
-  .wizard-step { min-height: calc(100dvh - var(--topbar-h) - var(--space-5) - var(--space-6)); }
+  .wizard-step { min-height: calc(100svh - var(--topbar-h) - var(--space-5) - var(--space-6)); }
   .wizard-dock { bottom: var(--space-4); }
 }
 
