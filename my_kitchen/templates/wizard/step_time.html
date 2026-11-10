@@ -4,10 +4,12 @@
 {% block title %}Cook — Time{% endblock %}
 {% block page_title %}Lets Cook{% endblock %}
 {% block content %}
+<div class="wizard-step wizard-step--center">
   {{ step_dots(3) }}
-  <h1>How much time?</h1>
-  <form method="post" action="{{ url_for('wizard.step_time') }}">
+  <form class="wizard-form" method="post" action="{{ url_for('wizard.step_time') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="wizard-body">
+    <h1>How much time?</h1>
     <div class="options">
       {% for value, label in time_bands %}
         <label class="option">
@@ -16,9 +18,11 @@
         </label>
       {% endfor %}
     </div>
-    <div class="btn-row">
-      <a class="btn btn--secondary" href="{{ url_for('wizard.step_cuisine') }}">{{ icon('arrow_back') }} Back</a>
-      <button type="submit" class="btn btn--primary">Continue {{ icon('arrow_forward') }}</button>
+    </div>
+    <div class="wizard-dock">
+      <a class="btn btn--secondary btn--square" href="{{ url_for('wizard.step_cuisine') }}" aria-label="Back">{{ icon('arrow_back') }}</a>
+      <button type="submit" class="btn btn--primary"><span>Continue</span>{{ icon('arrow_forward') }}</button>
     </div>
   </form>
+</div>
 {% endblock %}

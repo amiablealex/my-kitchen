@@ -46,10 +46,11 @@
 
   --font-display: "Grandstander", system-ui, sans-serif;
   --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --fs-display: clamp(2rem, 7vw, 3rem);
-  --fs-h1: 1.6rem;
-  --fs-h2: 1.25rem;
-  --fs-h3: 1.05rem;
+  /* 0.28: display steps down harder than body; Grandstander reads large. */
+  --fs-display: clamp(1.8rem, 6.5vw, 2.6rem);
+  --fs-h1: 1.45rem;
+  --fs-h2: 1.2rem;
+  --fs-h3: 1.02rem;
   --fs-body: 1rem;
   --fs-small: 0.85rem;
   --lh: 1.55;
@@ -58,6 +59,22 @@
   --radius-sm: 10px;
   --radius-lg: 22px;
   --radius-pill: 999px;
+  /* Petals (0.28): one sharp corner, bottom-left. Pressing flips it top-left. */
+  --petal-sm: 16px 16px 16px 5px;
+  --petal: 20px 20px 20px 6px;
+  --petal-lg: 24px 24px 24px 8px;
+  --petal-flip-sm: 5px 16px 16px 16px;
+  --petal-flip: 6px 20px 20px 20px;
+  --petal-flip-lg: 8px 24px 24px 24px;
+  --pinwheel: conic-gradient(var(--accent-1) 0deg 90deg, var(--accent-2) 90deg 180deg,
+              var(--accent-3) 180deg 270deg, var(--accent-4) 270deg 360deg);
+  /* --k: the accent an element "belongs to" (destination, step, notice kind).
+     Beads fill with var(--kbg, var(--k)): --kbg is only set where the fill
+     differs from --k (the pinwheel for Cook). Not defined here on purpose —
+     a root value would resolve once and stop .k-* classes from changing it. */
+  --k: var(--accent-1);
+  /* --pick: fill for a selected option/chip; wizard steps set it per step. */
+  --pick: var(--accent-1);
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -158,8 +175,8 @@ img, svg { max-width: 100%; }
   background: var(--surface); border-bottom: 1px solid var(--divider);
 }
 .topbar-title {
-  font-family: var(--font-body); font-size: 1.05rem; font-weight: 700; margin: 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-family: var(--font-body); font-size: 1rem; font-weight: 700; margin: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0;
 }
 
 .nav-rail {
@@ -173,18 +190,21 @@ img, svg { max-width: 100%; }
 .app.nav-open .nav-rail { transform: translateX(0); box-shadow: var(--shadow-2); }
 
 .nav-brand { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
-.brand-logo { font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; text-decoration: none; }
+.brand-logo { font-family: var(--font-display); font-size: 1.35rem; font-weight: 800; text-decoration: none; }
 .brand-logo:hover { text-decoration: none; }
 
 .nav-links { display: flex; flex-direction: column; gap: 2px; }
 .nav-link {
   display: flex; align-items: center; gap: var(--space-3);
-  min-height: var(--touch); padding: 0 var(--space-3);
-  border-radius: var(--radius-sm); color: var(--text-muted); font-weight: 600; text-decoration: none;
+  min-height: var(--touch); padding: 0 var(--space-3) 0 var(--space-1);
+  border-radius: var(--petal); color: var(--text-muted); font-weight: 600; text-decoration: none;
 }
-.nav-link .icon { width: 1.5em; height: 1.5em; }
+/* the icon is a bead: empty until active, then filled in the destination's colour */
+.nav-link .icon { box-sizing: content-box; width: 1.35em; height: 1.35em; padding: 0.4rem;
+  border-radius: 50%; transition: background 0.15s ease, border-radius 0.15s ease; }
 .nav-link:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
-.nav-link.is-active { background: var(--surface-2); color: var(--text); box-shadow: inset 3px 0 0 var(--accent-1); }
+.nav-link.is-active { background: var(--surface-2); color: var(--text); }
+.nav-link.is-active .icon { background: var(--kbg, var(--k)); color: var(--on-accent); border-radius: var(--petal-sm); }
 
 .nav-foot {
   margin-top: auto; padding-top: var(--space-4);
@@ -211,13 +231,22 @@ img, svg { max-width: 100%; }
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 .bn-item {
-  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  min-height: var(--touch); color: var(--text-muted); font-size: 0.68rem; font-weight: 600;
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  min-height: var(--touch); color: var(--text-muted); font-size: 0.72rem; font-weight: 600;
   text-decoration: none; border: 0; background: transparent; cursor: pointer; font-family: inherit;
 }
-.bn-item .icon { width: 1.55em; height: 1.55em; }
+.bn-item .icon { box-sizing: content-box; width: 1.5em; height: 1.5em; padding: 0.3rem;
+  border-radius: 50%; transition: background 0.15s ease, border-radius 0.15s ease; }
 .bn-item:hover { color: var(--text); text-decoration: none; }
-.bn-item.is-active { color: var(--accent-1); }
+.bn-item.is-active { color: var(--text); }
+.bn-item.is-active .icon { background: var(--kbg, var(--k)); color: var(--on-accent); border-radius: var(--petal-sm); }
+
+/* destination colours: one accent per place, shared by nav, bottom bar and home tiles */
+.k-home, .k-manage, .k-household, .k-usage { --k: var(--accent-1); }
+.k-cook       { --k: var(--accent-3); --kbg: var(--pinwheel); }
+.k-stock      { --k: var(--accent-2); }
+.k-recipes    { --k: var(--accent-3); }
+.k-favourites { --k: var(--accent-4); }
 
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -245,32 +274,44 @@ button, input[type="submit"], input[type="button"] { font-family: inherit; }
 .btn,
 :where(button:not(.icon-btn):not(.bn-item):not(.nav-toggle)) {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
-  min-height: 44px; padding: 0 var(--space-4);
-  border: 1px solid var(--divider); border-radius: var(--radius-sm);
+  min-height: 44px; padding: 0 1.1rem;
+  border: 0; border-radius: var(--petal);
   background: var(--surface-2); color: var(--text);
-  font-family: var(--font-body); font-size: var(--fs-body); font-weight: 600; line-height: 1;
+  font-family: var(--font-body); font-size: var(--fs-body); font-weight: 700; line-height: 1;
   text-decoration: none; cursor: pointer;
-  transition: filter 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+  transition: filter 0.15s ease, background 0.15s ease, opacity 0.15s ease, border-radius 0.18s ease;
 }
 .btn:hover,
 :where(button:not(.icon-btn):not(.bn-item):not(.nav-toggle)):hover { filter: brightness(1.08); text-decoration: none; }
+/* the petal's sharp corner flips on press — the house "tap" feel */
+.btn:active, :where(button:not(.icon-btn):not(.bn-item):not(.nav-toggle):active) { border-radius: var(--petal-flip); }
 .btn:disabled, button:disabled { opacity: 0.55; cursor: not-allowed; filter: none; }
 
-.btn--primary   { background: var(--accent-1); border-color: transparent; color: var(--on-accent); }
-.btn--secondary { background: transparent; border-color: var(--accent-1); color: var(--text); }
-.btn--danger    { background: transparent; border-color: var(--danger); color: var(--text); }
+/* Plain petals: no outlines anywhere. Primary is the one teal fill; secondary is
+   a tonal fill with its icon in the element's accent (--k). */
+.btn--primary   { background: var(--accent-1); color: var(--on-accent); }
+.btn--secondary { background: var(--surface-2); color: var(--text); }
+.btn--secondary .icon { color: var(--k); }
+.btn--ghost     { background: transparent; color: var(--accent-1); padding: 0 var(--space-2); }
+.btn--ghost:hover { background: rgba(255, 255, 255, 0.06); filter: none; }
+.btn--danger    { background: color-mix(in srgb, var(--danger) 18%, var(--surface)); color: #ffd0de; }
+.btn--danger .icon { color: var(--danger); }
 .btn--block     { width: 100%; }
-.btn--sm        { min-height: 36px; padding: 0 var(--space-3); font-size: var(--fs-small); }
-.btn .icon      { width: 1.2em; height: 1.2em; }
+.btn--sm        { min-height: 36px; padding: 0 0.8rem; font-size: var(--fs-small); border-radius: var(--petal-sm); }
+.btn--sm:active { border-radius: var(--petal-flip-sm); }
+.btn--grow      { flex: 1; justify-content: space-between; padding: 0 1.1rem 0 1.3rem; }
+.btn--square    { width: 48px; padding: 0; flex: none; }
+.btn .icon      { width: 1.25em; height: 1.25em; }
 
 /* hero "Lets Cook" CTA — the one place a two-accent gradient fill appears */
 .btn--cta {
-  min-height: 60px; padding: 0 var(--space-6);
-  font-family: var(--font-display); font-size: 1.4rem; font-weight: 800;
+  min-height: 56px; padding: 0 1.8rem 0 1.5rem;
+  font-family: var(--font-display); font-size: 1.3rem; font-weight: 800;
   color: var(--on-accent);
   background: linear-gradient(100deg, var(--accent-3), var(--accent-4));
-  border: 0; border-radius: var(--radius-pill); box-shadow: var(--shadow-2);
+  border: 0; border-radius: var(--petal-lg); box-shadow: var(--shadow-2);
 }
+.btn--cta:active { border-radius: var(--petal-flip-lg); }
 .btn--cta .icon { width: 1.4em; height: 1.4em; }
 .btn--cta:hover { filter: brightness(1.05); }
 
@@ -280,8 +321,8 @@ button, input[type="submit"], input[type="button"] { font-family: inherit; }
 input[type="text"], input[type="search"], input[type="password"], input[type="number"],
 select, textarea {
   font-family: inherit; font-size: var(--fs-body); color: var(--text);
-  background: var(--grape); border: 1px solid var(--divider); border-radius: var(--radius-sm);
-  padding: 0.6rem 0.7rem; min-height: 44px; max-width: 100%;
+  background: var(--grape); border: 1px solid var(--divider); border-radius: var(--petal-sm);
+  padding: 0.6rem 0.75rem; min-height: 44px; max-width: 100%;
 }
 input::placeholder { color: var(--text-muted); opacity: 0.8; }
 input:focus, select:focus, textarea:focus {
@@ -298,18 +339,23 @@ th { color: var(--text-muted); font-weight: 600; }
 /* --------------------------------------------------------------- flashes -- */
 .flashes { list-style: none; margin: 0 0 var(--space-4); padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
 .flash {
-  padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm);
-  border-left: 4px solid var(--info); background: var(--surface); color: var(--text);
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2); border-radius: var(--petal);
+  background: var(--surface); color: var(--text); --k: var(--info);
 }
-.flash-success { border-left-color: var(--success); }
-.flash-error   { border-left-color: var(--danger); }
-.flash-info    { border-left-color: var(--info); }
-.flash-warning { border-left-color: var(--warning); }
+.flash > .icon, .notice > .icon, .recipe-intro > .icon {
+  box-sizing: content-box; flex: none; width: 1.15rem; height: 1.15rem; padding: 0.45rem;
+  border-radius: var(--petal-sm); background: var(--k); color: var(--on-accent); vertical-align: 0;
+}
+.flash-success { --k: var(--success); }
+.flash-error   { --k: var(--danger); }
+.flash-info    { --k: var(--info); }
+.flash-warning { --k: var(--warning); }
 
 /* ============================================================ components === */
 
 /* --- text / layout helpers --- */
-.lead { font-size: 1.05rem; color: var(--text-muted); margin-bottom: var(--space-5); }
+.lead { font-size: 1rem; color: var(--text-muted); margin-bottom: var(--space-5); }
 .muted { color: var(--text-muted); }
 .stack > * + * { margin-top: var(--space-4); }
 .section { margin-bottom: var(--space-6); }
@@ -322,8 +368,8 @@ th { color: var(--text-muted); font-weight: 600; }
 
 /* --- cards / surfaces --- */
 .card {
-  background: var(--surface); border: 1px solid var(--divider);
-  border-radius: var(--radius); padding: var(--space-4); box-shadow: var(--shadow-1);
+  background: var(--surface); border: 0;
+  border-radius: var(--petal); padding: var(--space-4); box-shadow: var(--shadow-1);
 }
 .card + .card { margin-top: var(--space-3); }
 .card-title { font-family: var(--font-display); font-size: var(--fs-h3); margin: 0 0 var(--space-2); }
@@ -347,21 +393,40 @@ th { color: var(--text-muted); font-weight: 600; }
 
 /* tappable single-select / multi-select option rows (cuisine, time, cooking-for, dietary) */
 .options { display: flex; flex-direction: column; gap: var(--space-2); margin: 0 0 var(--space-4); }
+/* Options are petals. The native radio/checkbox stays in the DOM (keyboard,
+   forms, :checked) but is visually hidden; a picked option fills solid in
+   --pick with a drawn tick, and its corner goes sharp. */
 .option {
-  display: flex; align-items: center; gap: var(--space-3);
-  min-height: var(--touch); padding: var(--space-2) var(--space-3);
-  background: var(--surface); border: 1px solid var(--divider);
-  border-radius: var(--radius-sm); cursor: pointer; font-weight: 600;
+  position: relative;
+  display: flex; align-items: center; gap: var(--space-2);
+  min-height: 44px; padding: var(--space-2) var(--space-4);
+  background: var(--surface); border: 0;
+  border-radius: 22px; cursor: pointer; font-weight: 600;
+  transition: background 0.15s ease, color 0.15s ease, border-radius 0.18s ease;
 }
 .option:hover { background: var(--surface-2); }
-.option input { width: auto; min-height: 0; margin: 0; accent-color: var(--accent-1); }
+.option input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
 .option .opt-meta { color: var(--text-muted); font-weight: 400; font-size: var(--fs-small); }
-.option:has(input:checked) { border-color: var(--accent-1); box-shadow: inset 0 0 0 1px var(--accent-1); }
+.option:has(input:focus-visible) { outline: 3px solid var(--accent-1); outline-offset: 2px; }
+.option:has(input:checked) {
+  background: var(--pick); color: var(--on-accent); font-weight: 800;
+  border-radius: 22px 22px 22px 6px; padding-left: var(--space-3);
+}
+.option:has(input:checked)::before {
+  content: ""; flex: none; width: 5px; height: 10px; margin: 0 4px 3px 3px;
+  border: solid currentColor; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg);
+}
+.option:has(input:checked) .opt-meta, .option:has(input:checked) .opt-eg { color: var(--on-accent); opacity: 0.78; }
+.option:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
+/* wizard: each step picks in its own colour (dots 1→4); step 1's lanes use their section colour */
+.steps:has(.s2.is-current) ~ * { --pick: var(--accent-2); --k: var(--accent-2); }
+.steps:has(.s3.is-current) ~ * { --pick: var(--accent-3); --k: var(--accent-3); }
+.steps:has(.s4.is-current) ~ * { --pick: var(--accent-4); --k: var(--accent-4); }
 .options--grid { display: grid; grid-template-columns: 1fr; }
 /* stacked option rows: name + explanation + example, for the dietary type picker */
 .field-label { display: block; font-weight: 600; margin-bottom: var(--space-3); }
-.option--stacked { align-items: flex-start; padding: var(--space-3); font-weight: 400; }
-.option--stacked input { margin-top: 4px; flex: none; }
+.option--stacked { align-items: flex-start; padding: var(--space-3) var(--space-4); font-weight: 400; border-radius: var(--petal); }
+.option--stacked:has(input:checked)::before { margin-top: 5px; }
 .opt-body { display: flex; flex-direction: column; gap: 2px; }
 .opt-name { font-weight: 600; }
 .option--stacked .opt-meta { line-height: 1.4; }
@@ -375,7 +440,7 @@ th { color: var(--text-muted); font-weight: 600; }
 .row {
   display: flex; align-items: center; gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius);
+  background: var(--surface); border: 0; border-radius: var(--petal);
 }
 .row-main { flex: 1; min-width: 0; }
 .row-title { font-weight: 600; }
@@ -389,7 +454,7 @@ th { color: var(--text-muted); font-weight: 600; }
 .recipe-row .row-title { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-2); min-width: 0; }
 .recipe-row .row-title .source-dot { margin: 0; }
 .recipe-row .row-title a { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.row-star { flex: none; color: var(--accent-2); display: inline-flex; align-items: center; }
+.row-star { flex: none; color: var(--accent-4); display: inline-flex; align-items: center; }
 .row-star .icon { width: 1.15em; height: 1.15em; }
 /* Per-row archive (Phase 24). Quiet until hovered/focused; a full 40px target. */
 .row-archive { flex: none; display: inline-flex; align-items: center; justify-content: center;
@@ -402,33 +467,33 @@ th { color: var(--text-muted); font-weight: 600; }
 /* --- History restyle: source-grouped tables (mirrors the stock editor) --- */
 .recipe-toolbar { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin-bottom: var(--space-3); }
 .recipe-filter { display: flex; align-items: center; gap: var(--space-2); flex: 1 1 12rem;
-  background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius); padding: 0 var(--space-3); }
+  background: var(--surface); border: 0; border-radius: var(--petal); padding: 0 var(--space-4); }
 .recipe-filter .icon { width: 1.2em; height: 1.2em; color: var(--text-muted); flex: none; }
-.recipe-filter input { flex: 1; min-height: 40px; background: none; border: none; }
+.recipe-filter input { flex: 1; min-height: 44px; background: none; border: none; }
 .recipe-filter input:focus { outline: none; }
 
+/* Groups (recipes, manage tables, stock): a petal card whose header carries a
+   bead in the group colour. --group-bg lets the AI group use the pinwheel. */
 .recipe-group {
-  --group: var(--accent-2); --group-tint: rgba(177, 228, 109, 0.14);
+  --group: var(--accent-2); --group-tint: rgba(177, 228, 109, 0.14); --group-bg: var(--group);
   position: relative; margin-bottom: var(--space-3); background: var(--surface);
-  border: 1px solid var(--divider); border-left: 4px solid var(--group);
-  border-radius: var(--radius); overflow: hidden;
+  border: 0; border-radius: var(--petal-lg); overflow: hidden; padding: var(--space-1);
 }
 .recipe-group[hidden] { display: none; }
 .recipe-group--hand     { --group: var(--accent-2); --group-tint: rgba(177, 228, 109, 0.14); }
 .recipe-group--imported { --group: var(--accent-3); --group-tint: rgba(254, 155, 70, 0.14); }
-.recipe-group--ai { --group-tint: rgba(255, 255, 255, 0.05); border-left-color: transparent; }
-.recipe-group--ai::before {
-  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
-  background: linear-gradient(180deg, #FF5F91, #FE9B46, #FFD24A, #B1E46D, #56D0BB, #5AB0FF, #B488FF);
-}
+.recipe-group--ai { --group: var(--accent-1); --group-tint: rgba(255, 255, 255, 0.05); --group-bg: var(--pinwheel); }
 
-.recipe-group-head { display: flex; align-items: baseline; gap: var(--space-2);
-  padding: var(--space-1) var(--space-3); background: var(--group-tint); }
+.recipe-group-head, .stock-group-head { display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-2); }
+.recipe-group-head::before, .stock-group-head::before {
+  content: ""; flex: none; width: 22px; height: 22px; border-radius: 11px 11px 11px 4px; background: var(--group-bg, var(--group)); }
 .recipe-group-name { font-family: var(--font-display); font-size: var(--fs-h3); color: var(--text); margin: 0; }
-.recipe-group-count { margin-left: auto; color: var(--text-muted); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.recipe-group-count, .stock-group-count { margin-left: auto; color: var(--text-muted); font-size: 0.75rem; font-weight: 700;
+  font-variant-numeric: tabular-nums; background: var(--surface-2); border-radius: 999px; padding: 1px 9px; }
 
 .recipe-list { list-style: none; margin: 0; padding: 0; }
-.recipe-list > .recipe-row { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); }
+.recipe-list > .recipe-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); }
 .recipe-list > .recipe-row[hidden] { display: none; }
 .recipe-list > .recipe-row + .recipe-row { border-top: 1px solid var(--divider); }
 .recipe-nomatch { color: var(--text-muted); }
@@ -478,8 +543,8 @@ th { color: var(--text-muted); font-weight: 600; }
 .pantry-filter {
   display: flex; align-items: center; gap: var(--space-2);
   min-height: 44px;
-  background: var(--surface); border: 1px solid var(--divider);
-  border-radius: var(--radius); padding: 0 var(--space-3);
+  background: var(--surface); border: 1px solid transparent;
+  border-radius: var(--petal); padding: 0 var(--space-4);
 }
 .pantry-filter .icon { width: 1.2em; height: 1.2em; color: var(--text-muted); flex: none; }
 .pantry-filter input[type="search"] {
@@ -495,8 +560,7 @@ th { color: var(--text-muted); font-weight: 600; }
 .stock-group {
   --group: var(--accent-1); --group-tint: rgba(86, 208, 187, 0.14);
   margin-bottom: var(--space-3); background: var(--surface);
-  border: 1px solid var(--divider); border-left: 4px solid var(--group);
-  border-radius: var(--radius); overflow: hidden;
+  border: 0; border-radius: var(--petal-lg); overflow: hidden; padding: var(--space-1);
 }
 .stock-group[hidden] { display: none; }
 .stock-group--protein { --group: var(--accent-4); --group-tint: rgba(255, 95, 145, 0.14); }
@@ -504,12 +568,7 @@ th { color: var(--text-muted); font-weight: 600; }
 .stock-group--veg     { --group: var(--accent-2); --group-tint: rgba(177, 228, 109, 0.14); }
 .stock-group--other   { --group: var(--accent-1); --group-tint: rgba(86, 208, 187, 0.14); }
 
-.stock-group-head {
-  display: flex; align-items: baseline; gap: var(--space-2);
-  padding: var(--space-1) var(--space-3); background: var(--group-tint);
-}
 .stock-group-name { font-family: var(--font-display); font-size: var(--fs-h3); color: var(--text); margin: 0; }
-.stock-group-count { margin-left: auto; color: var(--text-muted); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
 
 .stock-list { list-style: none; margin: 0; padding: 0; }
 .stock-item {
@@ -555,7 +614,7 @@ th { color: var(--text-muted); font-weight: 600; }
 .search-result {
   display: flex; align-items: center; gap: var(--space-2);
   padding: var(--space-2) var(--space-3); background: var(--surface);
-  border: 1px solid var(--divider); border-radius: var(--radius-sm);
+  border: 0; border-radius: var(--petal-sm);
 }
 .search-result small { color: var(--text-muted); margin-right: auto; }
 .stock-add {
@@ -571,21 +630,22 @@ th { color: var(--text-muted); font-weight: 600; }
 @media (min-width: 720px) { .choice-grid { grid-template-columns: 1fr 1fr; } }
 .choice-card {
   display: flex; flex-direction: column; gap: var(--space-3);
-  background: var(--surface); border: 1px solid var(--divider);
-  border-radius: var(--radius-lg); padding: var(--space-5); box-shadow: var(--shadow-1);
+  background: var(--surface); border: 0;
+  border-radius: var(--petal-lg); padding: var(--space-5); box-shadow: var(--shadow-1);
 }
 .choice-card h2 { margin: 0; }
 .choice-card .blurb { color: var(--text-muted); flex: 1; }
 
 /* --- recipe display --- */
-.recipe-title { font-size: clamp(2rem, 8vw, 3.2rem); margin-bottom: var(--space-2); }
-.recipe-blurb { color: var(--text-muted); font-size: 1.05rem; margin-bottom: var(--space-2); }
+.recipe-title { font-size: clamp(1.75rem, 7vw, 2.6rem); margin-bottom: var(--space-2); }
+.recipe-blurb { color: var(--text-muted); font-size: 1rem; margin-bottom: var(--space-2); }
 .recipe-serves { color: var(--text-muted); font-weight: 600; margin-bottom: var(--space-4); }
 .recipe-intro {
-  background: var(--surface); border-left: 4px solid var(--accent-3);
-  border-radius: var(--radius); padding: var(--space-4);
-  font-size: 1.05rem; margin-bottom: var(--space-5);
+  display: flex; align-items: flex-start; gap: var(--space-3); --k: var(--accent-3);
+  background: var(--surface); border-radius: var(--petal-lg); padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3);
+  margin-bottom: var(--space-5);
 }
+p.recipe-intro { display: block; padding: var(--space-4); }
 .recipe-section { margin-bottom: var(--space-5); }
 .ingredient-list { list-style: none; padding: 0; margin: 0; }
 .ingredient-list li { padding: var(--space-2) 0; border-bottom: 1px solid var(--divider); }
@@ -660,14 +720,15 @@ th { color: var(--text-muted); font-weight: 600; }
 
 /* --- notices (allergy caveat etc.) --- */
 .notice {
+  --k: var(--warning);
   display: flex; gap: var(--space-3); align-items: flex-start;
-  padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4);
-  background: var(--surface); border-left: 4px solid var(--warning); border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3); margin-bottom: var(--space-4);
+  background: var(--surface); border-radius: var(--petal-lg);
 }
-.notice .icon { color: var(--warning); width: 1.4em; height: 1.4em; flex: none; margin-top: 2px; }
-.notice-body { flex: 1; }
-.notice--archived { border-left-color: var(--text-muted); align-items: center; }
-.notice--archived .icon { color: var(--text-muted); }
+.notice-body { flex: 1; align-self: center; }
+.notice-body .btn { margin-top: var(--space-2); }
+.notice--archived { align-items: center; }
+.notice--archived > .icon { background: var(--surface-2); color: var(--text); }
 
 /* --- empty states --- */
 .empty { text-align: center; padding: var(--space-6) var(--space-4); color: var(--text-muted); }
@@ -677,10 +738,9 @@ th { color: var(--text-muted); font-weight: 600; }
 /* --- home / landing --- */
 .home-hero { text-align: center; padding: var(--space-6) 0 var(--space-5); }
 .home-eyebrow { color: var(--text-muted); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-size: var(--fs-small); margin-bottom: var(--space-2); }
-.home-title { font-size: clamp(2.6rem, 13vw, 4.6rem); margin-bottom: var(--space-5); }
-.home-link { display: flex; align-items: center; gap: var(--space-3); color: var(--text); font-weight: 600; text-decoration: none; }
+.home-title { font-size: clamp(2.3rem, 11vw, 3.8rem); margin-bottom: var(--space-5); }
+.home-link { display: flex; align-items: center; gap: var(--space-3); color: var(--text); font-weight: 700; text-decoration: none; }
 .home-link:hover { background: var(--surface-2); text-decoration: none; }
-.home-link .icon { color: var(--accent-1); width: 1.6em; height: 1.6em; }
 
 /* --- generating wait (Phase 12: its own page; the overlay was relocated here
    from review.html). .gen-overlay below is retained for the legacy full-screen
@@ -703,7 +763,7 @@ th { color: var(--text-muted); font-weight: 600; }
   border: 4px solid var(--surface-2); border-top-color: var(--accent-3); animation: gen-spin 0.9s linear infinite;
 }
 @keyframes gen-spin { to { transform: rotate(360deg); } }
-.gen-title { font-family: var(--font-display); font-size: 1.6rem; margin-bottom: var(--space-2); }
+.gen-title { font-family: var(--font-display); font-size: 1.45rem; margin-bottom: var(--space-2); }
 .gen-sub { color: var(--text-muted); }
 
 /* --------------------------------------------------------------- motion --- */
@@ -757,10 +817,10 @@ th { color: var(--text-muted); font-weight: 600; }
 .recipe-tags-view { display:flex; align-items:center; gap:var(--space-2); flex-wrap:wrap; }
 .recipe-tags-view[hidden],
 .recipe-tags-edit[hidden] { display: none; }
-.tag-pill { background:var(--surface-2); border-radius:999px; padding:2px var(--space-3); font-size:.85rem; }
+.tag-pill { display:inline-flex; align-items:center; min-height:30px; background:var(--surface-2); border-radius:999px; padding:0 0.8rem; font-size:.85rem; }
 .tag-pill--none { color:var(--text-muted); font-style:italic; }
 .recipe-tags-edit { display:flex; align-items:flex-end; gap:var(--space-3); flex-wrap:wrap;
-  margin-top:var(--space-2); background:var(--surface); border-radius:var(--radius); padding:var(--space-3); }
+  margin-top:var(--space-2); background:var(--surface); border-radius:var(--petal); padding:var(--space-3); }
 .tag-edit-actions { display:flex; gap:var(--space-2); }
 .tag-error { color:var(--accent-4); width:100%; }
 
@@ -790,13 +850,13 @@ th { color: var(--text-muted); font-weight: 600; }
   flex: 0 0 78%; max-width: 280px; scroll-snap-align: start;
   display: flex; flex-direction: column; gap: var(--space-2);
   padding: var(--space-4);
-  background: var(--surface); border: 1px solid var(--divider);
-  border-radius: var(--radius); box-shadow: var(--shadow-1);
+  background: var(--surface); border: 0;
+  border-radius: var(--petal); box-shadow: var(--shadow-1);
   color: var(--text); text-decoration: none;
 }
 .sugg-card:hover { background: var(--surface-2); text-decoration: none; }
 .sugg-card-top { display: flex; align-items: center; }
-.sugg-card-title { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; line-height: 1.2; }
+.sugg-card-title { font-family: var(--font-display); font-weight: 700; font-size: 1.02rem; line-height: 1.2; }
 .sugg-card-tags { display: flex; flex-wrap: wrap; gap: var(--space-1); }
 .sugg-card-serves { font-size: var(--fs-small); }
 @media (min-width: 620px) { .sugg-card { flex-basis: 240px; } }
@@ -805,15 +865,15 @@ th { color: var(--text-muted); font-weight: 600; }
 .manage-add { margin-bottom: var(--space-4); }
 .manage-add > summary {
   list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2);
-  min-height: 36px; padding: 0 var(--space-4); border-radius: var(--radius-pill);
-  background: var(--accent-1); color: var(--on-accent); font-weight: 600;
+  min-height: 40px; padding: 0 var(--space-4); border-radius: var(--petal-sm);
+  background: var(--accent-1); color: var(--on-accent); font-weight: 700;
 }
 .manage-add > summary::-webkit-details-marker { display: none; }
 .manage-add > summary .icon { width: 1.15em; height: 1.15em; }
 .manage-add[open] > summary { background: var(--surface-2); color: var(--text); margin-bottom: var(--space-3); }
-.manage-add .form { background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius); padding: var(--space-4); }
+.manage-add .form { background: var(--surface); border: 0; border-radius: var(--petal); padding: var(--space-4); }
 
-.recipe-group--plain   { --group: var(--divider); --group-tint: rgba(255, 255, 255, 0.04); }
+.recipe-group--plain   { --group: var(--surface-2); --group-tint: rgba(255, 255, 255, 0.04); }
 /* dietary tag types — modifier name IS the type key (see TAG_TYPE_CHOICES),
    so a new type needs one line here and no template change. Severity reads
    pink -> orange -> teal, matching the order of the constant. */
@@ -850,16 +910,14 @@ th { color: var(--text-muted); font-weight: 600; }
 .warn-text { color: var(--warning); }
 
 /* --- wizard: section-coloured "use up" lanes (mirror the stock sections) --- */
-.wizard-lane { --group: var(--accent-1); --group-tint: rgba(86, 208, 187, 0.14);
-  border-left: 4px solid var(--group); padding-left: var(--space-3); margin-bottom: var(--space-5); }
+.wizard-lane { --group: var(--accent-1); --group-tint: rgba(86, 208, 187, 0.14); --pick: var(--group);
+  margin-bottom: var(--space-5); }
 .wizard-lane--protein { --group: var(--accent-4); --group-tint: rgba(255, 95, 145, 0.14); }
 .wizard-lane--carb    { --group: var(--accent-3); --group-tint: rgba(254, 155, 70, 0.14); }
 .wizard-lane--veg     { --group: var(--accent-2); --group-tint: rgba(177, 228, 109, 0.14); }
 .wizard-lane--other   { --group: var(--accent-1); --group-tint: rgba(86, 208, 187, 0.14); }
-.lane-head { display: inline-block; margin: 0 0 var(--space-3); padding: var(--space-1) var(--space-3);
-  background: var(--group-tint); border-radius: var(--radius-sm); color: var(--text); }
-.wizard-lane .option input { accent-color: var(--group); }
-.wizard-lane .option:has(input:checked) { border-color: var(--group); box-shadow: inset 0 0 0 1px var(--group); }
+.lane-head { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-3); color: var(--text); }
+.lane-head::before { content: ""; flex: none; width: 20px; height: 20px; border-radius: 10px 10px 10px 4px; background: var(--group); }
 
 /* --- review: compact brief panel --- */
 .brief { padding: 0; overflow: hidden; }
@@ -894,12 +952,6 @@ th { color: var(--text-muted); font-weight: 600; }
   margin-bottom: var(--space-5);
 }
 
-/* Home tiles — colour-coded across the four accents (icon + left spine). */
-.card-grid .home-link { --tile: var(--accent-1); border-left: 3px solid var(--tile); }
-.card-grid .home-link:nth-child(2) { --tile: var(--accent-2); }
-.card-grid .home-link:nth-child(3) { --tile: var(--accent-3); }
-.card-grid .home-link:nth-child(4) { --tile: var(--accent-4); }
-.card-grid .home-link .icon { color: var(--tile); }
 
 /* Empty states — friendlier: the icon sits in a soft accent disc. */
 .empty .icon {
@@ -935,8 +987,7 @@ th { color: var(--text-muted); font-weight: 600; }
   pointer-events: auto; display: flex; align-items: center; gap: var(--space-3);
   width: 100%; max-width: 460px;
   background: var(--surface-2); color: var(--text);
-  border: 1px solid var(--divider); border-left: 4px solid var(--accent-1);
-  border-radius: var(--radius); padding: var(--space-3);
+  border: 0; border-radius: var(--petal); padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
   box-shadow: var(--shadow-2);
   transform: translateY(140%); opacity: 0; transition: transform 0.22s ease, opacity 0.22s ease;
 }
@@ -956,7 +1007,7 @@ th { color: var(--text-muted); font-weight: 600; }
 .tab { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 34px;
   padding: 0 var(--space-4); border: none; background: none; color: var(--text-muted);
   border-radius: var(--radius-pill); font-weight: 600; cursor: pointer; }
-.tab.is-active { background: var(--accent-1); color: var(--on-accent); }
+.tab.is-active { background: var(--accent-1); color: var(--on-accent); border-radius: 17px 17px 17px 5px; }
 .tab-count { font-size: var(--fs-small); font-variant-numeric: tabular-nums; opacity: 0.85; }
 .tab-panel[hidden] { display: none; }
 
@@ -964,8 +1015,8 @@ th { color: var(--text-muted); font-weight: 600; }
 .staple-pin.is-on { color: var(--accent-2); border-color: var(--accent-2); }
 .help .icon { width: 1.1em; height: 1.1em; vertical-align: -2px; }
 
-/* let dense action clusters wrap under the name instead of overflowing */
-.recipe-list > .recipe-row { flex-wrap: wrap; }
+/* manage tables still carry action clusters: let those wrap under the name */
+.recipe-list > .recipe-row:has(.row-actions) { flex-wrap: wrap; }
 
 .edit-danger { margin-top: var(--space-5); border-top: 1px solid var(--divider); padding-top: var(--space-4); }
 
@@ -1049,7 +1100,7 @@ th { color: var(--text-muted); font-weight: 600; }
   /* Backgrounds don't print unless the user enables background graphics, so
      the timer pill would collapse to bare faint text. A border keeps its shape
      regardless. (.recipe-intro / .notice already survive on their left border.) */
-  .timer { border: 1px solid var(--divider); }
+  .timer, .recipe-intro, .notice { border: 1px solid var(--divider); }
 
   /* Keep each heading with its content and stop a step splitting across pages.
      break-inside on the whole section was a no-op — browsers ignore it on
@@ -1067,7 +1118,7 @@ th { color: var(--text-muted); font-weight: 600; }
 .notes-section { margin-top: var(--space-6); }
 .notes-list { list-style: none; padding: 0; margin: 0 0 var(--space-4); }
 .note {
-  background: var(--surface); border-radius: var(--radius);
+  background: var(--surface); border-radius: var(--petal);
   padding: var(--space-3) var(--space-4); margin-bottom: var(--space-2);
 }
 /* align-items: center, not baseline — the delete button holds only an SVG, so
@@ -1104,8 +1155,8 @@ th { color: var(--text-muted); font-weight: 600; }
    already separates staples in stock and in Manage. */
 .wizard-staples {
   margin: var(--space-5) 0 var(--space-4);
-  background: var(--surface); border: 1px solid var(--divider);
-  border-radius: var(--radius);
+  background: var(--surface); border: 0;
+  border-radius: var(--petal-lg);
 }
 .wizard-staples > summary {
   display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2);
@@ -1177,13 +1228,13 @@ th { color: var(--text-muted); font-weight: 600; }
   margin: 0 0 var(--space-3); }
 .servings[hidden] { display: none; }
 .servings-label { color: var(--text-muted); }
-.servings-stepper { display: inline-flex; align-items: center; background: var(--surface);
-  border: 1px solid var(--divider); border-radius: 999px; }
-.servings-btn { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 44px;
-  padding: 0; border: none; background: none; color: var(--text); cursor: pointer; border-radius: 999px; }
+.servings-stepper { display: inline-flex; align-items: center; gap: 2px; background: var(--surface);
+  border: 0; border-radius: 999px; padding: 3px; }
+.servings-btn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px;
+  padding: 0; border: none; background: var(--surface-2); color: var(--text); cursor: pointer; border-radius: 20px 20px 20px 6px; }
 .servings-btn:hover:not([disabled]), .servings-btn:focus-visible { background: var(--surface-2); }
 .servings-btn[disabled] { opacity: 0.35; cursor: default; }
-.servings-btn .icon { width: 1.3em; height: 1.3em; }
+.servings-btn .icon { width: 1.2em; height: 1.2em; }
 .servings-value { min-width: 2.2ch; text-align: center; font-weight: 700; font-size: 1.15em;
   font-variant-numeric: tabular-nums; }
 .servings-reset { border: none; background: none; padding: var(--space-1) 0; color: var(--accent-1);
@@ -1199,9 +1250,9 @@ th { color: var(--text-muted); font-weight: 600; }
 .special-request textarea { width: 100%; resize: vertical; min-height: 3.2em; }
 .request-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
 .request-chip { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 var(--space-3);
-  border: 1px solid var(--divider); border-radius: 999px; background: var(--surface); color: var(--text);
-  font: inherit; font-size: var(--fs-small); cursor: pointer; }
-.request-chip:hover, .request-chip:focus-visible { background: var(--surface-2); border-color: var(--accent-1); }
+  border: 0; border-radius: 18px; background: var(--surface-2); color: var(--text);
+  font: inherit; font-size: var(--fs-small); font-weight: 600; cursor: pointer; }
+.request-chip:hover, .request-chip:focus-visible { filter: brightness(1.1); }
 .request-chip .icon { width: 1em; height: 1em; color: var(--accent-1); }
 .generate-limit { display: flex; align-items: center; gap: var(--space-2); color: var(--text-muted); font-size: var(--fs-small); }
 .generate-limit .icon { width: 1.2em; height: 1.2em; color: var(--warning); flex: none; }
@@ -1233,7 +1284,7 @@ th { color: var(--text-muted); font-weight: 600; }
 .retry-panel > summary { list-style: none; display: inline-flex; cursor: pointer; }
 .retry-panel > summary::-webkit-details-marker { display: none; }
 .retry-panel[open] > summary { margin-bottom: var(--space-3); }
-.retry-form { background: var(--surface); border-radius: var(--radius); padding: var(--space-3) var(--space-4); }
+.retry-form { background: var(--surface); border-radius: var(--petal); padding: var(--space-3) var(--space-4); }
 .retry-form textarea, .refine-panel textarea { width: 100%; resize: vertical; min-height: 3.2em; }
 .choice-nav { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
 
@@ -1241,7 +1292,7 @@ th { color: var(--text-muted); font-weight: 600; }
 .version-trail ol { display: flex; align-items: center; gap: 0; list-style: none; margin: 0; padding: 2px 0; }
 .version-trail li { display: flex; align-items: center; flex: none; }
 .version-trail li + li::before { content: ""; width: 18px; height: 2px; background: var(--divider); margin: 0 4px; flex: none; }
-.version-step { display: inline-flex; align-items: center; gap: 6px; max-width: 14rem; min-height: 36px;
+.version-step { display: inline-flex; align-items: center; gap: 6px; max-width: 13rem; min-height: 36px;
   padding: 0 var(--space-3) 0 4px; border: 1px solid var(--divider); border-radius: 999px;
   background: var(--surface); color: var(--text-muted); font-size: var(--fs-small); text-decoration: none; }
 a.version-step:hover, a.version-step:focus-visible { border-color: var(--accent-1); color: var(--text); }
@@ -1249,20 +1300,32 @@ a.version-step:hover, a.version-step:focus-visible { border-color: var(--accent-
   border-radius: 999px; background: var(--surface-2); color: var(--text); font-weight: 700; font-size: 0.8em; }
 .version-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .version-trail li.is-current .version-step { border-color: var(--accent-1); color: var(--text); }
-.version-trail li.is-current .version-n { background: var(--accent-1); color: var(--grape); }
-.version-badge { flex: none; padding: 1px 7px; border-radius: 999px; background: var(--surface-2);
-  color: var(--accent-1); font-size: 0.75em; font-weight: 700; }
+.version-trail li.is-current .version-n { background: var(--accent-1); color: var(--grape); border-radius: 14px 14px 14px 4px; }
+.version-badge { flex: none; padding: 1px 6px; border-radius: 9px 9px 9px 3px; background: var(--accent-1);
+  color: var(--on-accent); font-size: 0.72rem; font-weight: 800; }
 .refine-done { display: flex; align-items: center; gap: var(--space-2); color: var(--accent-2); font-size: var(--fs-small); }
 .refine-done .icon { width: 1.2em; height: 1.2em; flex: none; }
 
-.refine-panel { margin: var(--space-5) 0 var(--space-4); background: var(--surface); border-radius: var(--radius);
-  border-left: 4px solid var(--accent-1); }
-.refine-panel > summary { list-style: none; display: flex; align-items: flex-start; gap: var(--space-3);
-  padding: var(--space-3) var(--space-4); cursor: pointer; }
-.refine-panel > summary::-webkit-details-marker { display: none; }
-.refine-panel > summary > .icon { width: 1.3em; height: 1.3em; color: var(--accent-1); flex: none; margin-top: 2px; }
-.refine-sub { display: block; color: var(--text-muted); font-size: var(--fs-small); font-weight: 400; }
-.refine-panel form { padding: 0 var(--space-4) var(--space-4); }
+/* Refine lives on the trail: the dashed "+ New version" node opens this panel
+   directly underneath it. */
+.version-new { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 var(--space-3) 0 4px;
+  border: 0; border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 2px rgba(86, 208, 187, 0.55);
+  color: var(--accent-1); font-size: var(--fs-small); font-weight: 700; white-space: nowrap; cursor: pointer; }
+.version-new .version-n { background: transparent; border: 2px dashed var(--accent-1); color: var(--accent-1); border-radius: 14px 14px 14px 4px; }
+.version-new .version-n .icon { width: 1.05em; height: 1.05em; }
+.version-new[aria-expanded="true"] { background: var(--accent-1); color: var(--on-accent); box-shadow: none; }
+.version-new[aria-expanded="true"] .version-n { border: 0; background: var(--on-accent); color: var(--accent-1); }
+.version-new:active { border-radius: 999px; }
+.refine-panel { margin: 0 0 var(--space-5); padding: var(--space-4); background: var(--surface);
+  border-radius: var(--petal-lg); box-shadow: inset 0 0 0 2px var(--accent-1); }
+.refine-panel[hidden] { display: none; }
+.refine-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+.refine-head h2 { margin: 0; font-size: var(--fs-h2); }
+.refine-sub { display: block; color: var(--text-muted); font-size: var(--fs-small); margin: 2px 0 0; }
+.refine-panel .btn-row { margin-top: var(--space-3); }
+.refine-hint { display: flex; gap: var(--space-2); align-items: flex-start; margin: var(--space-4) 0 0;
+  padding-top: var(--space-3); border-top: 1px solid var(--divider); color: var(--text-muted); font-size: var(--fs-small); }
+.refine-hint .source-dot { margin: 1px 0 0; width: 16px; height: 16px; }
 .servings-refine { border: none; background: none; padding: 0; margin-left: 4px; color: var(--accent-1);
   font: inherit; text-decoration: underline; cursor: pointer; }
 .servings-refine[hidden] { display: none; }
@@ -1284,12 +1347,12 @@ a.version-step:hover, a.version-step:focus-visible { border-color: var(--accent-
 @media (prefers-reduced-motion: reduce) { .thinking-dots span { animation: none; opacity: 0.7; } }
 .note-failed { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); color: var(--text-muted); }
 .note-form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.ask-chip .source-dot { margin: 0 2px 0 0; }
+.ask-chip .source-dot { margin: 0; width: 16px; height: 16px; }
 .ask-chip[disabled] { opacity: 0.45; cursor: default; }
 
 /* @kitchen composer (0.27.1): the submit carries the mode — a plus for a
    note, the pinwheel once it's a question; the switch chip hides itself. */
-.note-submit .source-dot { display: none; margin: 0; }
+.note-submit .source-dot { display: none; margin: 0; width: 16px; height: 16px; }
 .note-form.is-asking .note-submit .source-dot { display: inline-block; }
 .note-form.is-asking .note-submit .icon { display: none; }
 .ask-chip[hidden] { display: none; }
@@ -1301,3 +1364,170 @@ a.version-step:hover, a.version-step:focus-visible { border-color: var(--accent-
   box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
 .brand-mark--hero { display: block; width: clamp(56px, 16vw, 76px); height: auto; margin: 0 auto var(--space-3); }
 @media print { .brand-mark { box-shadow: none; } }
+
+/* ================================================== Petals (0.28) ======== */
+/* Rule of thumb: buttons and chips are plain petals; beads (a filled petal
+   holding an icon) only *mark* things — notices, tiles, nav, group headers. */
+
+/* --- home tiles: a bead in the destination colour, label underneath --- */
+.home-tiles { display: grid; gap: var(--space-3); grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.home-tiles .home-link {
+  flex-direction: column; align-items: flex-start; justify-content: space-between; gap: var(--space-3);
+  min-height: 108px; padding: var(--space-3); margin: 0; line-height: 1.2;
+  border-radius: var(--petal-lg); transition: border-radius 0.18s ease, background 0.15s ease;
+}
+.home-tiles .home-link:active { border-radius: var(--petal-flip-lg); }
+.home-tiles .home-link + .home-link { margin-top: 0; }
+.tile-bead { display: grid; place-items: center; width: 46px; height: 46px;
+  border-radius: 23px 23px 23px 7px; background: var(--kbg, var(--k)); color: var(--on-accent); }
+.tile-bead .icon { width: 1.7em; height: 1.7em; }
+@media (min-width: 620px) { .home-tiles .home-link { min-height: 120px; padding: var(--space-4); } }
+
+/* --- topbar overflow menu (a <details>: works without JS; base.html closes it on outside tap) --- */
+.overflow { position: relative; flex: none; }
+.overflow > summary { list-style: none; border-radius: 50%; }
+.overflow > summary::-webkit-details-marker { display: none; }
+.overflow[open] > summary { background: var(--surface-2); }
+.overflow-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; min-width: 240px;
+  display: flex; flex-direction: column; gap: 2px; padding: var(--space-2);
+  background: var(--surface-2); border-radius: var(--petal-lg); box-shadow: var(--shadow-2);
+}
+.overflow-menu form { margin: 0; }
+.menu-item {
+  display: flex; align-items: center; gap: var(--space-3); width: 100%;
+  min-height: 46px; padding: 0 var(--space-3) 0 var(--space-1); border: 0; border-radius: var(--petal);
+  background: transparent; color: var(--text); font: inherit; font-weight: 600; text-align: left;
+  text-decoration: none; cursor: pointer;
+}
+.menu-item:hover { background: rgba(255, 255, 255, 0.07); text-decoration: none; filter: none; }
+.menu-item .icon { box-sizing: content-box; width: 1.15rem; height: 1.15rem; padding: 0.45rem;
+  border-radius: var(--petal-sm); background: var(--k); color: var(--on-accent); }
+.menu-sep { height: 1px; margin: var(--space-1) var(--space-3); background: var(--divider); }
+.menu-item--warn { --k: var(--warning); }
+
+/* --- recipe page: serves + favourite on one line --- */
+.recipe-meta-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  flex-wrap: wrap; margin: var(--space-3) 0 var(--space-2); }
+.recipe-meta-row .recipe-serves { margin: 0; }
+.recipe-meta-row form { margin: 0; }
+.fav-toggle { --k: var(--accent-4); }
+.fav-toggle.is-on { background: color-mix(in srgb, var(--accent-4) 22%, var(--surface)); }
+.cook-else { margin-top: var(--space-5); }
+
+/* --- the "are you sure?" step before a new version --- */
+dialog.confirm {
+  width: min(420px, calc(100vw - 2rem)); padding: var(--space-5) var(--space-4) var(--space-4);
+  border: 0; border-radius: 26px 26px 26px 8px; background: var(--surface); color: var(--text);
+  box-shadow: var(--shadow-2);
+}
+dialog.confirm::backdrop { background: rgba(20, 4, 32, 0.74); }
+.confirm-head { display: flex; align-items: center; gap: var(--space-3); }
+.confirm-head h2 { margin: 0; font-size: 1.3rem; }
+.confirm-bead { flex: none; width: 36px; height: 36px; border-radius: 18px 18px 18px 6px; background: var(--pinwheel); }
+.confirm-quote { margin: var(--space-4) 0 0; padding: var(--space-3) var(--space-4); border-radius: var(--petal-sm);
+  background: var(--grape); font-weight: 600; overflow-wrap: anywhere; }
+.confirm p { margin: var(--space-3) 0 0; }
+.confirm .btn-row { margin-top: var(--space-4); }
+
+/* --- recipe rows (Recipes, Favourites): one line of title, one of meta --- */
+.recipe-row .row-title { flex-wrap: nowrap; }
+.recipe-row .row-meta { display: flex; align-items: center; gap: 5px; margin-top: 1px;
+  white-space: nowrap; overflow: hidden; font-size: 0.8rem; }
+.recipe-row .row-meta > * { flex: none; }
+.recipe-row .row-meta .sep { opacity: 0.5; }
+.meta-i { display: inline-flex; align-items: center; gap: 2px; }
+.meta-i .icon { width: 1.1em; height: 1.1em; }
+.row-ind { flex: none; display: inline-flex; align-items: center; gap: var(--space-2); color: var(--text-muted); }
+.row-ind .icon { width: 1.15em; height: 1.15em; }
+.recipe-list > .recipe-row:hover { background: var(--surface-2); }
+.pick-tag { display: inline-flex; align-items: center; padding: 0 8px; border-radius: 10px 10px 10px 3px;
+  background: color-mix(in srgb, var(--accent-3) 20%, var(--surface)); color: var(--accent-3);
+  font-weight: 800; font-size: 0.75rem; line-height: 1.6; }
+.pick-tag:hover { text-decoration: none; filter: brightness(1.1); }
+.pair-line { display: flex; align-items: center; gap: var(--space-2); min-width: 0; margin-top: 3px; font-weight: 600; }
+.pair-line a { color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pair-n { flex: none; width: 1.1em; color: var(--text-muted); font-size: 0.75rem; font-weight: 800; }
+.pair-line .row-ind { margin-left: auto; }
+.home-tiles--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 720px) { .home-tiles--2 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* ============================================ wizard layout (0.28.1) ===== */
+/* Every step: dots at the top, the step's content, and a dock of Back +
+   Continue pinned bottom-right just above the bottom bar. The step fills the
+   screen, so on short steps the dock sits there anyway; on long ones (step 1)
+   it floats while you scroll. Right-aligned so it never covers the labels. */
+.wizard-step {
+  display: flex; flex-direction: column;
+  min-height: calc(100dvh - var(--topbar-h) - var(--bottomnav-h) - 2 * var(--space-5));
+}
+.wizard-step .steps { margin-bottom: var(--space-4); }
+.wizard-form { flex: 1; display: flex; flex-direction: column; }
+.wizard-step--center .wizard-body { margin-block: auto; padding-block: var(--space-4); }
+.wizard-dock {
+  position: sticky; z-index: 20; bottom: calc(var(--bottomnav-h) + var(--space-4));
+  display: flex; justify-content: flex-end; gap: var(--space-2);
+  margin-top: auto; padding-top: var(--space-5); pointer-events: none;
+}
+.wizard-dock > * { pointer-events: auto; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.42); }
+.wizard-dock .btn--primary { padding: 0 1.1rem 0 1.3rem; }
+@media (min-width: 880px) {
+  .wizard-step { min-height: calc(100dvh - var(--topbar-h) - var(--space-5) - var(--space-6)); }
+  .wizard-dock { bottom: var(--space-4); }
+}
+
+/* --- review: the brief as one row of chips, full breakdown on tap --- */
+.brief-panel { margin: 0 0 var(--space-5); }
+.brief-panel > summary { list-style: none; display: flex; align-items: flex-start; gap: var(--space-2); cursor: pointer; }
+.brief-panel > summary::-webkit-details-marker { display: none; }
+.brief-chips { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
+.brief-chip { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 0.7rem;
+  border-radius: 15px; background: var(--surface); font-size: var(--fs-small); font-weight: 600; }
+.brief-chip .icon { width: 1.05em; height: 1.05em; color: var(--k); }
+.brief-chip--allergy { background: color-mix(in srgb, var(--accent-4) 20%, var(--surface)); color: #ffd0de; }
+.brief-chip--allergy .icon { color: var(--accent-4); }
+.brief-more { flex: none; display: inline-flex; align-items: center; min-height: 30px;
+  color: var(--accent-1); font-size: var(--fs-small); font-weight: 700; }
+.brief-more::after { content: ""; width: 6px; height: 6px; margin-left: 7px; border: solid currentColor;
+  border-width: 0 2px 2px 0; transform: rotate(45deg) translateY(-2px); transition: transform 0.15s ease; }
+.brief-panel[open] .brief-more::after { transform: rotate(-135deg) translateY(-1px); }
+.brief-panel .brief { margin-top: var(--space-3); }
+.brief-panel .help { margin: var(--space-2) 0 0; }
+
+/* --- review: saved recipes that fit, in their own coloured band --- */
+.sugg-band {
+  margin: 0 calc(var(--space-4) * -1) var(--space-5); padding: var(--space-4) 0 var(--space-3);
+  background-color: color-mix(in srgb, var(--accent-3) 15%, var(--grape));
+  background-image: var(--polka); background-size: 120px 120px;
+}
+@media (min-width: 620px) { .sugg-band { margin-inline: 0; border-radius: var(--petal-lg); } }
+.sugg-band-head { display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4) var(--space-3); }
+.sugg-band-head h2 { margin: 0; font-size: var(--fs-h2); }
+.sugg-band-head p { margin: 2px 0 0; color: var(--text-muted); font-size: var(--fs-small); }
+.sugg-band .sugg-scroller { padding: 0 var(--space-4) var(--space-2); scroll-padding-inline: var(--space-4); }
+.sugg-band .sugg-card { background: var(--surface); box-shadow: var(--shadow-2); }
+.sugg-band .sugg-card:hover { background: var(--surface-2); }
+
+/* --- review: "Nothing take your fancy?" — the special request folds away --- */
+.fancy { margin: 0 0 var(--space-4); background: var(--surface); border-radius: var(--petal-lg); }
+.fancy > summary { list-style: none; display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3); cursor: pointer; }
+.fancy > summary::-webkit-details-marker { display: none; }
+.fancy > summary::after { content: ""; flex: none; width: 7px; height: 7px; margin: 0 var(--space-1) 4px auto;
+  border: solid var(--accent-1); border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform 0.15s ease; }
+.fancy[open] > summary::after { transform: rotate(-135deg); margin-bottom: 0; }
+.fancy-text { display: flex; flex-direction: column; }
+.fancy-text span { color: var(--text-muted); font-size: var(--fs-small); }
+.fancy .special-request { margin: 0; padding: 0 var(--space-4) var(--space-4); }
+
+/* overflow menu: items are full-width buttons/links; keep their contents left */
+.menu-item { justify-content: flex-start; }
+
+/* --- recipe rows: the cook is a small tinted initial inside the meta line --- */
+.cook-i { flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px;
+  border-radius: 9px 9px 9px 3px; font-size: 0.66rem; font-weight: 800; text-transform: uppercase;
+  --c: var(--accent-1); color: var(--c); background: color-mix(in srgb, var(--c) 22%, var(--surface-2)); }
+.cook-i--2 { --c: var(--accent-4); }
+.cook-i--3 { --c: var(--accent-3); }
+.cook-i--4 { --c: var(--accent-2); }
+.cook-i--none { --c: var(--text-muted); }

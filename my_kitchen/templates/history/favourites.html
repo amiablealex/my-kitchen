@@ -2,6 +2,7 @@
 {% from "_icons.html" import icon %}
 {% block title %}Favourites — My Kitchen{% endblock %}
 {% block page_title %}Favourites{% endblock %}
+{% from "history/_rows.html" import row_meta %}
 
 {% macro fav_row(r, noted_ids, facets) %}
   {% set f = facets[r.id] %}
@@ -10,14 +11,13 @@
       data-cook="{{ f.cook }}" data-source="{{ f.source }}">
     <div class="row-main">
       <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a></div>
-      <div class="row-meta">
-        {{ r.created_at | localdt }} ·
-        {% if r.generation %}cooked by {{ r.generation.created_by.name if r.generation.created_by else "unknown" }}
-        {% else %}created by {{ r.author.name if r.author else "unknown" }}{% endif %}
-      </div>
+      {% if r.generation %}{{ row_meta(r.created_at, r.cuisine, r.time_band, r.servings, r.generation.created_by) }}
+      {% else %}{{ row_meta(r.created_at, r.cuisine, r.time_band, r.servings, r.author, "Created by") }}{% endif %}
     </div>
-    {% if r.id in noted_ids %}<span class="row-note" title="Has notes">{{ icon('comment') }}</span>{% endif %}
-    <span class="row-star" aria-label="Favourite">{{ icon('star_fill') }}</span>
+    <span class="row-ind">
+      {% if r.id in noted_ids %}<span class="row-note" title="Has notes">{{ icon('comment') }}</span>{% endif %}
+      <span class="row-star" aria-label="Favourite">{{ icon('star_fill') }}</span>
+    </span>
   </li>
 {% endmacro %}
 

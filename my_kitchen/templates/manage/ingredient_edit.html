@@ -17,7 +17,7 @@
     </label>
     <label><input type="checkbox" name="is_staple" {% if ing.is_staple %}checked{% endif %}> Staple (assumed always available)</label>
     <div class="form-actions">
-      <a class="btn btn--secondary" href="{{ url_for('manage.ingredients') }}">Cancel</a>
+      <a class="btn btn--ghost" href="{{ url_for('manage.ingredients') }}">Cancel</a>
       <button type="submit" class="btn btn--primary">Save</button>
     </div>
   </form>

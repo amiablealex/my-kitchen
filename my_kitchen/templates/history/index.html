@@ -2,17 +2,14 @@
 {% from "_icons.html" import icon %}
 {% block title %}Recipes — My Kitchen{% endblock %}
 {% block page_title %}Recipes{% endblock %}
-{% macro archive_btn(key, value) -%}
-  <button type="button" class="row-archive" data-archive-key="{{ key }}" data-archive-id="{{ value }}"
-          aria-label="Archive" title="Archive">{{ icon('archive') }}</button>
-{%- endmacro %}
+{% from "history/_rows.html" import cook_av, row_ind, row_meta %}
 {% block content %}
 
   <h1>Recipes</h1>
   <p class="rf-head-actions">
     <a class="btn btn--primary btn--sm" href="{{ url_for('wizard.recipe_new') }}">{{ icon('add') }} Create a recipe</a>
-    <a class="back-link" href="{{ url_for('history.favourites') }}">{{ icon('star') }} Favourites</a>
-    <a class="back-link" href="{{ url_for('history.archived') }}">{{ icon('archive') }} Archive</a>
+    <a class="btn btn--secondary btn--sm k-favourites" href="{{ url_for('history.favourites') }}">{{ icon('star') }} Favourites</a>
+    <a class="btn btn--ghost btn--sm" href="{{ url_for('history.archived') }}">{{ icon('archive') }} Archive</a>
   </p>
 
   <div class="recipe-toolbar">
@@ -31,8 +28,7 @@
     <div class="empty">{{ icon('menu_book') }}<p>Nothing here yet.</p>
       <a class="btn btn--primary" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Lets cook</a></div>
   {% else %}
-    <div id="recipe-bank" data-archive-url="{{ url_for('history.row_archive') }}"
-         data-restore-url="{{ url_for('history.row_restore') }}">
+    <div id="recipe-bank">
     {# Bucket the merged rows by source. AI rows lack kind=='user'. #}
     {% set ns = namespace(ai=[], hand=[]) %}
     {% for row in rows %}
@@ -52,33 +48,29 @@
                   data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
                   data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
                 <div class="row-main">
-                  <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a>{% if versions.get(row.chosen.id, 1) > 1 %}<span class="version-badge" title="Refined {{ versions[row.chosen.id] - 1 }} time{{ 's' if versions[row.chosen.id] > 2 else '' }}">v{{ versions[row.chosen.id] }}</span>{% endif %}</div>
-                  <div class="row-meta">{{ row.gen.created_at | localdt }} · {% if row.chosen.cuisine %}{{ row.chosen.cuisine }}, {% endif %}{{ row.gen.time_band }}, serves {{ row.gen.servings }} · cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }}</div>
+                  <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a></div>
+                  {{ row_meta(row.gen.created_at, row.chosen.cuisine, row.gen.time_band, row.gen.servings, row.gen.created_by) }}
                 </div>
-                {% if row.chosen.id in noted_ids %}<span class="row-note" title="Has notes">{{ icon('comment') }}</span>{% endif %}
-                {% if row.chosen.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}
-                {{ archive_btn('generation_id', row.gen.id) }}
+                {{ row_ind(row.chosen.id, noted_ids, fav_ids, versions.get(row.chosen.id, 1)) }}
               </li>
             {% elif row.status == "unchosen" %}
               <li class="recipe-row" data-title="{{ row.f_title }}"
                   data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
                   data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
                 <div class="row-main">
-                  <div class="row-title">
-                    {% for r in row.recipes %}<a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{% if r.id in noted_ids %}<span class="row-note" title="Has notes">{{ icon('comment') }}</span>{% endif %}{% if r.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}{% if not loop.last %}<span class="muted">·</span>{% endif %}{% endfor %}
-                  </div>
-                  <div class="row-meta">none chosen · {{ row.gen.created_at | localdt }} · cooked by {{ row.gen.created_by.name if row.gen.created_by else "unknown" }} · <a href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">choose one</a></div>
+                  <div class="row-meta"><a class="pick-tag" href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">Pick one</a>{{ cook_av(row.gen.created_by, "Cooked by") }}<span>{{ row.gen.created_at | shortdate }}</span></div>
+                  {% for r in row.recipes %}
+                    <div class="pair-line"><span class="pair-n">{{ loop.index }}</span><a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{{ row_ind(r.id, noted_ids, fav_ids, 1) }}</div>
+                  {% endfor %}
                 </div>
-                {{ archive_btn('generation_id', row.gen.id) }}
               </li>
             {% else %}
               <li class="recipe-row" data-title="generation failed"
                   data-cuisine="" data-meal="" data-cook="{{ row.f_cook }}" data-source="">
                 <div class="row-main">
                   <div class="row-title"><span class="muted">Generation failed</span></div>
-                  <div class="row-meta">{{ row.gen.created_at | localdt }}{% if row.gen.error %} · {{ row.gen.error }}{% endif %}</div>
+                  <div class="row-meta">{{ cook_av(row.gen.created_by, "Started by") }}<span>{{ row.gen.created_at | shortdate }}</span>{% if row.gen.error %}<span class="sep">·</span><span>{{ row.gen.error }}</span>{% endif %}</div>
                 </div>
-                {{ archive_btn('generation_id', row.gen.id) }}
               </li>
             {% endif %}
           {% endfor %}
@@ -99,11 +91,9 @@
                 data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
               <div class="row-main">
                 <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.recipe.id) }}">{{ row.recipe.title }}</a></div>
-                <div class="row-meta">{{ row.recipe.created_at | localdt }} · created by {{ row.recipe.author.name if row.recipe.author else "unknown" }}</div>
+                {{ row_meta(row.recipe.created_at, row.recipe.cuisine, row.recipe.time_band, row.recipe.servings, row.recipe.author, "Created by") }}
               </div>
-              {% if row.recipe.id in noted_ids %}<span class="row-note" title="Has notes">{{ icon('comment') }}</span>{% endif %}
-              {% if row.recipe.id in fav_ids %}<span class="row-star">{{ icon('star_fill') }}</span>{% endif %}
-              {{ archive_btn('recipe_id', row.recipe.id) }}
+              {{ row_ind(row.recipe.id, noted_ids, fav_ids, 1) }}
             </li>
           {% endfor %}
         </ul>
@@ -118,6 +108,4 @@
 {% block scripts %}
   <script type="application/json" id="facet-options">{{ facet_options | tojson }}</script>
   <script src="{{ url_for('static', filename='recipe_facets.js') }}"></script>
-  <script src="{{ url_for('static', filename='toast.js') }}"></script>
-  <script src="{{ url_for('static', filename='recipe_archive.js') }}"></script>
 {% endblock %}

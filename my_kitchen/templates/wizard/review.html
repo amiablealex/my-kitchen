@@ -3,91 +3,118 @@
 {% from "_source.html" import source_dot %}
 {% block title %}Cook — Review{% endblock %}
 {% block page_title %}Lets Cook{% endblock %}
+{% from "_components.html" import step_dots %}
 {% block content %}
-  <h1>Ready to cook?</h1>
+<div class="wizard-step">
+  {{ step_dots(5) }}
+  <form class="wizard-form" method="post" action="{{ url_for('wizard.generate') }}" id="generate-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="wizard-body">
+    <h1>Ready to cook?</h1>
 
-  {# ---- Suggestions: saved recipes cookable right now that fit the brief. ---- #}
-  {% if suggestions %}
-    <section class="section suggestions">
-      <h2 class="card-title">Make something from your bank</h2>
-      <p class="lead">Saved recipes you can cook right now with what’s in stock.</p>
-      <div class="sugg-scroller">
-        {% for r in suggestions %}
-          <a class="sugg-card" href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">
-            <span class="sugg-card-top">
-              {{ source_dot(r.source) }}
-              <span class="sugg-card-title">{{ r.title }}</span>
-            </span>
-            {% if r.meal_type or r.cuisine or r.time_band %}
-              <span class="sugg-card-tags">
-                {% if r.meal_type %}<span class="tag-pill tag-pill--meal">{{ r.meal_type }}</span>{% endif %}
-                {% if r.cuisine %}<span class="tag-pill tag-pill--cuisine">{{ r.cuisine }}</span>{% endif %}
-                {% if r.time_band %}<span class="badge badge--muted">{{ "Quick" if r.time_band == "quick" else "Relaxed" }}</span>{% endif %}
-              </span>
-            {% endif %}
-            <span class="sugg-card-serves muted">Serves {{ r.servings }}</span>
-          </a>
-        {% endfor %}
+    {# ---- The brief, as one line of chips; the full breakdown on tap. ---- #}
+    <details class="brief-panel">
+      <summary>
+        <span class="brief-chips">
+          <span class="brief-chip k-stock">{{ icon('shelves') }}
+            {%- if selected -%}
+              {{ selected[0].name }}{% if selected | length > 1 %} +{{ selected | length - 1 }}{% endif %}
+            {%- else -%}Staples{%- endif -%}
+          </span>
+          <span class="brief-chip">{{ meal_type }}</span>
+          {% if cuisine_label %}<span class="brief-chip">{{ cuisine_label }}</span>{% endif %}
+          <span class="brief-chip">{{ icon('schedule') }}{{ time_label.split(' (')[0] }}</span>
+          <span class="brief-chip">{{ icon('person') }}{{ servings }}</span>
+          {% if allergies %}<span class="brief-chip brief-chip--allergy">{{ icon('block') }}{{ allergies | join(', ') }}</span>{% endif %}
+        </span>
+        <span class="brief-more">Full brief</span>
+      </summary>
+      <div class="card brief">
+        <div class="brief-row">
+          <span class="brief-label">Use up</span>
+          <span class="brief-val">
+            {% if selected %}
+              {% for ing in selected %}{{ ing.name }}{% if ing.note %} <span class="muted">({{ ing.note }})</span>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+            {% else %}<span class="muted">Nothing chosen — leaning on staples &amp; suggested extras</span>{% endif %}
+          </span>
+        </div>
+        <div class="brief-row">
+          <span class="brief-label">Cooking for</span>
+          <span class="brief-val">
+            {% for u in cooking_for_users %}{{ u.name }}{% if not loop.last %}, {% endif %}{% endfor %}{% if guest_count %}{% if cooking_for_users %}, {% endif %}{{ guest_count }} guest{{ "s" if guest_count != 1 else "" }}{% endif %}
+            <span class="muted">· serves {{ servings }}</span>
+          </span>
+        </div>
+        {# Three rows in precedence order, labelled from TAG_TYPE_HINTS so the
+           wizard, Manage and the prompt all use the same words. #}
+        {% if allergies %}
+          <div class="brief-row"><span class="brief-label">{{ tag_hints.allergy.group }}</span>
+            <span class="brief-val">{{ allergies | join(', ') }} <span class="muted">· never used</span></span></div>
+        {% endif %}
+        {% if avoid %}
+          <div class="brief-row"><span class="brief-label">{{ tag_hints.avoid.group }}</span>
+            <span class="brief-val">{{ avoid | join(', ') }} <span class="muted">· left out</span></span></div>
+        {% endif %}
+        {% if preferences %}
+          <div class="brief-row"><span class="brief-label">{{ tag_hints.preference.group }}</span>
+            <span class="brief-val">{{ preferences | join(', ') }} <span class="muted">· steered towards</span></span></div>
+        {% endif %}
+        <div class="brief-row"><span class="brief-label">Meal</span><span class="brief-val">{{ meal_type }}</span></div>
+        {% if cuisine_label %}
+          <div class="brief-row"><span class="brief-label">Cuisine</span><span class="brief-val">{{ cuisine_label }}</span></div>
+        {% endif %}
+        <div class="brief-row"><span class="brief-label">Time</span><span class="brief-val">{{ time_label }}</span></div>
       </div>
-    </section>
-  {% endif %}
+      <p class="help">Use the back arrow to change anything.</p>
+    </details>
 
-  {# ---- Generate path. A compact brief recap sits above the button. ---- #}
-  <section class="section">
+    {# ---- Saved recipes that fit and are cookable now: their own coloured band. ---- #}
     {% if suggestions %}
-      <h2 class="card-title">Nothing take your fancy?</h2>
-      <p class="lead">Generate a new recipe from this brief — go back to change anything.</p>
-    {% else %}
-      <p class="lead">Nothing in your bank matches yet — let’s make something. Here’s the brief; go back to change anything.</p>
+      <section class="sugg-band k-recipes" aria-labelledby="sugg-title">
+        <div class="sugg-band-head">
+          <span class="tile-bead">{{ icon('menu_book') }}</span>
+          <div>
+            <h2 id="sugg-title">Already in your recipes</h2>
+            <p>{{ suggestions | length }} you can cook right now with what's in stock.</p>
+          </div>
+        </div>
+        <div class="sugg-scroller">
+          {% for r in suggestions %}
+            <a class="sugg-card" href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">
+              <span class="sugg-card-top">
+                {{ source_dot(r.source) }}
+                <span class="sugg-card-title">{{ r.title }}</span>
+              </span>
+              {% if r.meal_type or r.cuisine or r.time_band %}
+                <span class="sugg-card-tags">
+                  {% if r.meal_type %}<span class="tag-pill tag-pill--meal">{{ r.meal_type }}</span>{% endif %}
+                  {% if r.cuisine %}<span class="tag-pill tag-pill--cuisine">{{ r.cuisine }}</span>{% endif %}
+                  {% if r.time_band %}<span class="badge badge--muted">{{ "Quick" if r.time_band == "quick" else "Relaxed" }}</span>{% endif %}
+                </span>
+              {% endif %}
+              <span class="sugg-card-serves muted">Serves {{ r.servings }}</span>
+            </a>
+          {% endfor %}
+        </div>
+      </section>
     {% endif %}
 
-    <div class="card brief">
-      <div class="brief-row">
-        <span class="brief-label">Use up</span>
-        <span class="brief-val">
-          {% if selected %}
-            {% for ing in selected %}{{ ing.name }}{% if ing.note %} <span class="muted">({{ ing.note }})</span>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
-          {% else %}<span class="muted">Nothing chosen — leaning on staples &amp; suggested extras</span>{% endif %}
+    {# ---- Something new. With suggestions on screen this folds away behind
+         "Nothing take your fancy?"; without them it's simply open. Generating
+         itself is always the dock's button. ---- #}
+    <details class="fancy"{% if not suggestions or special_request %} open{% endif %}>
+      <summary>
+        <span class="confirm-bead" aria-hidden="true"></span>
+        <span class="fancy-text">
+          <strong>{% if suggestions %}Nothing take your fancy?{% else %}Anything in mind?{% endif %}</strong>
+          <span>{% if suggestions %}Make something new — add a request if you like.{% else %}Optional. Leave it blank to let the kitchen decide.{% endif %}</span>
         </span>
-      </div>
-      <div class="brief-row">
-        <span class="brief-label">Cooking for</span>
-        <span class="brief-val">
-          {% for u in cooking_for_users %}{{ u.name }}{% if not loop.last %}, {% endif %}{% endfor %}{% if guest_count %}{% if cooking_for_users %}, {% endif %}{{ guest_count }} guest{{ "s" if guest_count != 1 else "" }}{% endif %}
-          <span class="muted">· serves {{ servings }}</span>
-        </span>
-      </div>
-      {# Three rows in precedence order, labelled from TAG_TYPE_HINTS so the
-         wizard, Manage and the prompt all use the same words. The trailing note
-         states what each type actually does, since that's the thing people were
-         guessing at. #}
-      {% if allergies %}
-        <div class="brief-row"><span class="brief-label">{{ tag_hints.allergy.group }}</span>
-          <span class="brief-val">{{ allergies | join(', ') }} <span class="muted">· never used</span></span></div>
-      {% endif %}
-      {% if avoid %}
-        <div class="brief-row"><span class="brief-label">{{ tag_hints.avoid.group }}</span>
-          <span class="brief-val">{{ avoid | join(', ') }} <span class="muted">· left out</span></span></div>
-      {% endif %}
-      {% if preferences %}
-        <div class="brief-row"><span class="brief-label">{{ tag_hints.preference.group }}</span>
-          <span class="brief-val">{{ preferences | join(', ') }} <span class="muted">· steered towards</span></span></div>
-      {% endif %}
-      <div class="brief-row"><span class="brief-label">Meal</span><span class="brief-val">{{ meal_type }}</span></div>
-      {% if cuisine_label %}
-        <div class="brief-row"><span class="brief-label">Cuisine</span><span class="brief-val">{{ cuisine_label }}</span></div>
-      {% endif %}
-      <div class="brief-row"><span class="brief-label">Time</span><span class="brief-val">{{ time_label }}</span></div>
-    </div>
-
-    <form method="post" action="{{ url_for('wizard.generate') }}" id="generate-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
+      </summary>
       {# Special request (Phase 25): a free-text steer that rides along with the
          brief. Optional; chips add common steers on tap. #}
       <div class="special-request">
         <label class="special-request-label" for="special-request">Anything in mind? <span class="muted">(optional)</span></label>
-        <p class="special-request-hint">A dish, a mood or a style — it steers both recipes. Leave it blank to let the kitchen decide.</p>
+        <p class="special-request-hint">A dish, a mood or a style — it steers both recipes.</p>
         <textarea id="special-request" name="special_request" rows="2"
                   maxlength="{{ special_request_max }}"
                   placeholder="{{ special_request_placeholder }}">{{ special_request }}</textarea>
@@ -97,19 +124,21 @@
           {% endfor %}
         </div>
       </div>
+    </details>
 
-      {% if limits.generations_left == 0 %}
-        <p class="generate-limit">{{ icon('info') }} You've reached today's limit for new recipes — it resets at midnight. Your saved recipes are still here.</p>
-      {% elif limits.generations_left <= 3 %}
-        <p class="generate-limit generate-limit--low">{{ limits.generations_left }} new recipe generation{{ "s" if limits.generations_left != 1 else "" }} left today.</p>
-      {% endif %}
+    {% if limits.generations_left == 0 %}
+      <p class="generate-limit">{{ icon('info') }} You've reached today's limit for new recipes — it resets at midnight. Your saved recipes are still here.</p>
+    {% elif limits.generations_left <= 3 %}
+      <p class="generate-limit generate-limit--low">{{ limits.generations_left }} new recipe generation{{ "s" if limits.generations_left != 1 else "" }} left today.</p>
+    {% endif %}
+    </div>
 
-      <div class="btn-row">
-        <a class="btn btn--secondary" href="{{ url_for('wizard.step_cooking_for') }}">{{ icon('arrow_back') }} Back</a>
-        <button type="submit" class="btn btn--primary" id="generate-btn"{% if limits.generations_left == 0 %} disabled{% endif %}>{{ icon('cooking') }} Generate recipes</button>
-      </div>
-    </form>
-  </section>
+    <div class="wizard-dock">
+      <a class="btn btn--secondary btn--square" href="{{ url_for('wizard.step_cooking_for') }}" aria-label="Back">{{ icon('arrow_back') }}</a>
+      <button type="submit" class="btn btn--primary" id="generate-btn"{% if limits.generations_left == 0 %} disabled{% endif %}><span>{% if suggestions %}Make something new{% else %}Generate recipes{% endif %}</span>{{ icon('cooking') }}</button>
+    </div>
+  </form>
+</div>
 {% endblock %}
 
 {% block scripts %}

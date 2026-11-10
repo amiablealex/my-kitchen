@@ -8,10 +8,10 @@
      and your equipment. (Stock in/out and notes live on the
      <a href="{{ url_for('stock.index') }}">Stock</a> page.)</p>
 
-  <div class="card-grid">
-    <a class="card home-link" href="{{ url_for('manage.ingredients') }}">{{ icon('restaurant_menu') }}<span>Ingredients</span></a>
-    <a class="card home-link" href="{{ url_for('manage.categories') }}">{{ icon('tune') }}<span>Categories</span></a>
-    <a class="card home-link" href="{{ url_for('manage.equipment') }}">{{ icon('kitchen') }}<span>Equipment</span></a>
-    <a class="card home-link" href="{{ url_for('manage.dietary_tags') }}">{{ icon('info') }}<span>Dietary tags</span></a>
+  <div class="home-tiles home-tiles--2 k-manage">
+    <a class="card home-link" href="{{ url_for('manage.ingredients') }}"><span class="tile-bead">{{ icon('restaurant_menu') }}</span><span>Ingredients</span></a>
+    <a class="card home-link" href="{{ url_for('manage.categories') }}"><span class="tile-bead">{{ icon('tune') }}</span><span>Categories</span></a>
+    <a class="card home-link" href="{{ url_for('manage.equipment') }}"><span class="tile-bead">{{ icon('kitchen') }}</span><span>Equipment</span></a>
+    <a class="card home-link" href="{{ url_for('manage.dietary_tags') }}"><span class="tile-bead">{{ icon('info') }}</span><span>Dietary tags</span></a>
   </div>
 {% endblock %}

@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.28.1
+- **The cook wizard keeps its buttons in one place.** Back and Continue now
+  sit together at the bottom right of every step, just above the bottom bar,
+  and stay there while you scroll a long ingredient list. On *How much time?*
+  and *Who's eating?* the choices sit in the middle of the screen.
+- **A clearer "Ready to cook?" page.** Your brief is one row of chips (tap
+  *Full brief* for the detail). Saved recipes you can cook right now get
+  their own coloured section, and the request box folds away under *Nothing
+  take your fancy?* The button at the bottom always makes something new.
+- **Quieter recipe lists.** The cook's initial is now a small tag at the start
+  of each row's details, so titles get the full width.
+- Fixed: the ⋯ menu's items now line up.
+
+## 0.28.0 — Petals: a new look throughout
+**A design language of its own.** Buttons, chips and cards now share one
+shape: rounded, with a single sharp corner that flips when you tap it. The
+outline buttons and the coloured stripes down the left of cards, notices and
+menus are gone. Where something needs marking, a small coloured "bead" holds
+its icon instead.
+
+- **Each place has its colour.** Stock is lime, Recipes orange, Favourites
+  pink and Cook the pinwheel, on the home tiles, in the menu and in the
+  bottom bar.
+- **Wizard choices are chips.** Picking one fills it in the step's colour
+  with a tick. Back and Continue are now a small arrow and one wide button.
+- **A tidier recipe page.** Favourite sits next to the servings. Print or
+  share, Edit recipe and Archive have moved into the ⋯ menu at the top
+  right. Edit tags and Edit links are quieter text buttons.
+- **New versions start from the trail.** Tap *+ New version* at the end of
+  the version trail to refine a recipe. Before anything is sent there's now
+  a check: it shows your change, explains that the current version is kept,
+  and points you to @kitchen if you only meant to ask a question. The same
+  check applies to *Rewrite the method for this many*.
+- **Shorter recipe rows.** One line for the title, one for the date, cuisine,
+  time and servings. Who cooked it is a coloured initial, and a pair you
+  haven't chosen between yet is one *Pick one* row. Archiving from the list
+  has gone; archive from the recipe's ⋯ menu instead.
+- **Slightly smaller headings and buttons**, so more fits on a phone screen.
+  Body text and tap targets are unchanged.
+
 ## 0.27.2 — A new look: the pinwheel
 - The four-colour pinwheel is now My Kitchen's logo. It appears in the browser
   tab, on the home-screen app icon (with a version cut for Android's adaptive

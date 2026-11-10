@@ -20,16 +20,14 @@
   function isQuestion() {
     return box.value.trim().toLowerCase().indexOf(mention.toLowerCase()) === 0;
   }
-  // Two modes, one visible action each: a note ("Add note" + the chip to
-  // switch), or a question (a primary "Ask @kitchen", chip hidden). Deleting
-  // the mention from the box switches straight back.
+  // Two modes, one primary action each: a note ("Add note" + the chip to
+  // switch), or a question ("Ask @kitchen" with the pinwheel, chip hidden).
+  // Deleting the mention from the box switches straight back.
   var form = box.form;
   function sync() {
     var q = isQuestion();
     label.textContent = q ? submit.dataset.askLabel : submit.dataset.noteLabel;
     form.classList.toggle("is-asking", q);
-    submit.classList.toggle("btn--primary", q);
-    submit.classList.toggle("btn--secondary", !q);
     if (chip) chip.hidden = q;
   }
   box.addEventListener("input", sync);

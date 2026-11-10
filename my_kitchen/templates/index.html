@@ -9,9 +9,9 @@
     <a class="btn btn--cta" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Lets Cook</a>
   </section>
 
-  <div class="card-grid">
-    <a class="card home-link" href="{{ url_for('stock.index') }}">{{ icon('shelves') }}<span>Update stock</span></a>
-    <a class="card home-link" href="{{ url_for('history.index') }}">{{ icon('menu_book') }}<span>Recipes</span></a>
-    <a class="card home-link" href="{{ url_for('history.favourites') }}">{{ icon('star') }}<span>Favourites</span></a>
+  <div class="home-tiles">
+    <a class="card home-link k-stock" href="{{ url_for('stock.index') }}"><span class="tile-bead">{{ icon('shelves') }}</span><span>Update stock</span></a>
+    <a class="card home-link k-recipes" href="{{ url_for('history.index') }}"><span class="tile-bead">{{ icon('menu_book') }}</span><span>Recipes</span></a>
+    <a class="card home-link k-favourites" href="{{ url_for('history.favourites') }}"><span class="tile-bead">{{ icon('star') }}</span><span>Favourites</span></a>
   </div>
 {% endblock %}

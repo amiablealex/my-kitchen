@@ -4,7 +4,11 @@
 {% block title %}Cook — Choose ingredients{% endblock %}
 {% block page_title %}Lets Cook{% endblock %}
 {% block content %}
+<div class="wizard-step">
   {{ step_dots(1) }}
+  <form class="wizard-form" method="post" action="{{ url_for('wizard.step_ingredients') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="wizard-body">
   <h1>Choose ingredients to use up</h1>
   <p class="lead">Pick the in-stock items to build the meal around. Staples are always
      assumed available — but you can pick those too if you want the meal built around
@@ -12,13 +16,11 @@
 
   {# Persistent hand-off to stock maintenance, round-tripping back to this step. #}
   <p>
-    <a class="btn btn--secondary btn--sm" href="{{ url_for('stock.index', return_to=url_for('wizard.step_ingredients')) }}">
+    <a class="btn btn--secondary btn--sm k-stock" href="{{ url_for('stock.index', return_to=url_for('wizard.step_ingredients')) }}">
       {{ icon('shelves') }} Stock not right? Update
     </a>
   </p>
 
-  <form method="post" action="{{ url_for('wizard.step_ingredients') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if any_in_stock %}
       {# Lanes render in the fixed section order (protein, carb, veg, other), so
          index maps cleanly onto the stock section colours. #}
@@ -87,11 +89,12 @@
       </details>
     {% endif %}
 
-    <p>
-      <button type="submit" class="btn {% if any_in_stock %}btn--primary{% else %}btn--secondary{% endif %}">
-        {% if any_in_stock %}Continue{% else %}Continue without choosing{% endif %} {{ icon('arrow_forward') }}
+    </div>
+    <div class="wizard-dock">
+      <button type="submit" class="btn btn--primary">
+        <span>{% if any_in_stock %}Continue{% else %}Continue without choosing{% endif %}</span>{{ icon('arrow_forward') }}
       </button>
-    </p>
-
+    </div>
   </form>
+</div>
 {% endblock %}

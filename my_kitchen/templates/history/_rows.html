@@ -1,0 +1,32 @@
+{# Shared pieces of the compact recipe rows (Recipes + Favourites), 0.28.
+   One line of title, one line of meta. Who cooked it is a small tinted initial
+   that leads the meta line (0.28.1), so the title keeps the full width. #}
+{% from "_icons.html" import icon %}
+
+{% macro cook_av(user, verb="Cooked by") -%}
+  {% if user %}
+    <span class="cook-i cook-i--{{ (user.id - 1) % 4 + 1 }}" title="{{ verb }} {{ user.name }}" aria-label="{{ verb }} {{ user.name }}">{{ user.name[:1] }}</span>
+  {% else %}
+    <span class="cook-i cook-i--none" title="{{ verb }} someone unknown" aria-label="{{ verb }} someone unknown">?</span>
+  {% endif %}
+{%- endmacro %}
+
+{% macro row_meta(when, cuisine=None, time_band=None, servings=None, who=None, verb="Cooked by") -%}
+  <div class="row-meta">
+    {{ cook_av(who, verb) }}
+    <span>{{ when | shortdate }}</span>
+    {% if cuisine %}<span class="sep">·</span><span>{{ cuisine }}</span>{% endif %}
+    {% if time_band %}<span class="sep">·</span><span class="meta-i">{{ icon('schedule') }}{{ time_band }}</span>{% endif %}
+    {% if servings %}<span class="sep">·</span><span class="meta-i" aria-label="serves {{ servings }}">{{ icon('person') }}{{ servings }}</span>{% endif %}
+  </div>
+{%- endmacro %}
+
+{% macro row_ind(recipe_id, noted_ids, fav_ids, version=1) -%}
+  {% if version > 1 or recipe_id in noted_ids or recipe_id in fav_ids %}
+    <span class="row-ind">
+      {% if version > 1 %}<span class="version-badge" title="Refined {{ version - 1 }} time{{ 's' if version > 2 else '' }}">v{{ version }}</span>{% endif %}
+      {% if recipe_id in noted_ids %}<span class="row-note" title="Has notes">{{ icon('comment') }}</span>{% endif %}
+      {% if recipe_id in fav_ids %}<span class="row-star" title="Favourite">{{ icon('star_fill') }}</span>{% endif %}
+    </span>
+  {% endif %}
+{%- endmacro %}

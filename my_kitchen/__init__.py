@@ -1,4 +1,4 @@
-from datetime import timezone
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from flask import Flask, request, redirect, url_for, flash, jsonify
@@ -78,6 +78,23 @@ def create_app(config_class=Config):
         except Exception:
             tz = timezone.utc
         return value.astimezone(tz).strftime(fmt)
+
+    # Compact date for list rows: "9 Nov" this year, "9 Nov 2025" otherwise.
+    @app.template_filter("shortdate")
+    def shortdate(value):
+        if value is None:
+            return ""
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        try:
+            tz = ZoneInfo(app.config.get("APP_TIMEZONE", "Europe/London"))
+        except Exception:
+            tz = timezone.utc
+        local = value.astimezone(tz)
+        out = f"{local.day} {local.strftime('%b')}"
+        if local.year != datetime.now(tz).year:
+            out += f" {local.year}"
+        return out
 
     # Auth first so its before_app_request gate registers up front.
     from .auth.routes import auth_bp
