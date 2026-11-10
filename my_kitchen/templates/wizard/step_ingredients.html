@@ -50,7 +50,7 @@
           {% if items %}
             <div class="options options--chips">
               {% for ing in items %}
-                <label class="option">
+                <label class="option" title="{{ ing.name }}{% if ing.note %} · {{ ing.note }}{% endif %}">
                   <input type="checkbox" name="ingredient_ids" value="{{ ing.id }}"
                          {% if ing.id in selected %}checked{% endif %}>
                   <span>{{ ing.name }}</span>
@@ -84,7 +84,7 @@
               <h3 class="staple-group-name">{{ group_name }}</h3>
               <div class="options options--chips">
                 {% for ing in items %}
-                  <label class="option">
+                  <label class="option" title="{{ ing.name }}{% if ing.note %} · {{ ing.note }}{% endif %}">
                     <input type="checkbox" name="ingredient_ids" value="{{ ing.id }}"
                            {% if ing.id in selected %}checked{% endif %}>
                     <span>{{ ing.name }}</span>

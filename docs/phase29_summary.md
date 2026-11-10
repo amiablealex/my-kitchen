@@ -219,3 +219,31 @@ toolbar's height higher than the true bottom when the bar is hidden; that's
 the trade.
 
 `sw.js` cache → v12.
+
+
+## 0.29.7–0.29.8 — the real cause of the bottom-bar bug
+0.29.6's dvh theory was wrong. The diagnostic overlay (`static/vpdebug.js`, opt-in
+with `?vp=1`, shipped in 0.29.7) showed it on prod: `innerW 426` on a 411px
+phone, so `innerH 813` against a visible 784. Some content was wider than the
+screen, and Chrome widened the layout viewport to fit it at scale 1. That
+scales the layout height by 426/411, so everything fixed to the bottom landed
+~29px below the visible edge. Dev was fine because its stock had no offending
+chip.
+
+The offender: a wizard chip with a long name AND a note. The name span
+couldn't shrink (flex `min-width: auto`), so the chip outgrew the row.
+Reproduced in Playwright (scrollWidth 468 at 411).
+
+Fix: `.options--chips .option { max-width: 100%; min-width: 0 }`. The name
+truncates with an ellipsis, and the note is `flex: 0 1 auto; max-width: 11rem`.
+Use rem here, not %: a percentage there is cyclic in a shrink-to-fit chip and
+truncates notes that would fit. Wizard chips carry a `title` with the full
+name and note. Same cap for `.link-chip` and `.stock-add`. Backstop:
+`.app-body { overflow-x: clip }`. It's clip, not hidden, so it creates no
+scroll container and the sticky dock keeps working.
+
+Lesson: on Chrome Android, "fixed bottom bar sits too low on one page" means
+check `innerWidth` against the device width before anything else.
+
+`svh` from 0.29.6 stays (harmless, steadier). `vpdebug.js` stays, opt-in.
+`sw.js` cache → v13.

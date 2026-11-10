@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.29.8
+- **Fix: the bottom bar slipping behind Chrome's address bar on Lets Cook.**
+  The cause was an ingredient with a long name and a note: its chip was wider
+  than the phone, so the whole page became slightly wider than the screen.
+  Chrome on Android then laid the page out about 29px taller than the
+  visible area, and the bar sank behind the address bar. Chips now fit the
+  row, and long names and notes end in "…" (long-press shows the full text).
+  The page also clips anything wider than the screen, so it can't happen
+  again from elsewhere.
+
 ## 0.29.7
 - Diagnostic: a viewport readout for chasing a Chrome-on-Android layout bug.
   It's off by default. Add `?vp=1` to any page to switch it on and `?vp=0`
