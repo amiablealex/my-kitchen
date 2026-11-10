@@ -14,44 +14,61 @@
 {% endblock %}
 {% block page_title %}Take your pick{% endblock %}
 {% block content %}
-  <h1>Two recipes — take your pick</h1>
+  <h1>Take your pick</h1>
+  <p class="lead">Two recipes from your brief.</p>
   <div class="choice-grid">
     {% for r in recipes %}
-      <div class="choice-card">
+      {# Numbered beads (1 teal, 2 pink) mark the pair; tags give something to
+         compare at a glance beyond the blurb. #}
+      <article class="choice-card {{ 'k-home' if loop.first else 'k-favourites' }}">
+        <div class="choice-top">
+          <span class="choice-n" aria-hidden="true">{{ loop.index }}</span>
+          <span class="choice-tags">
+            {% if r.cuisine %}<span class="tag-pill">{{ r.cuisine }}</span>{% endif %}
+            {% if r.time_band %}<span class="tag-pill">{{ icon('schedule') }}{{ "Quick" if r.time_band == "quick" else "Relaxed" }}</span>{% endif %}
+            {% if r.servings %}<span class="tag-pill">{{ icon('person') }}{{ r.servings }}</span>{% endif %}
+          </span>
+        </div>
         <h2>{{ r.title }}</h2>
         <p class="blurb">{{ r.blurb }}</p>
-        <form method="post" action="{{ url_for('wizard.choose', recipe_id=r.id) }}">
+        <form method="post" action="{{ url_for('wizard.choose', recipe_id=r.id) }}" class="choice-actions">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn--primary btn--block">Choose this {{ icon('arrow_forward') }}</button>
+          <button type="submit" class="btn btn--primary"><span>Cook this</span>{{ icon('arrow_forward') }}</button>
         </form>
-      </div>
+      </article>
     {% endfor %}
   </div>
 
   {# Regenerate (Phase 26): a fresh pair from the same brief, told what was
-     passed on. The request is pre-filled and editable. #}
-  <details class="retry-panel"{% if not rounds_left or not limits.generations_left %} hidden{% endif %}>
-    <summary class="btn btn--secondary">{{ icon('cooking') }} Neither — try again</summary>
-    <form method="post" action="{{ url_for('wizard.regenerate', generation_id=gen.id) }}" class="retry-form" id="retry-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <label class="special-request-label" for="retry-request">Steer the next two? <span class="muted">(optional)</span></label>
-      <p class="special-request-hint">They'll steer clear of these and go in a different direction.</p>
-      <textarea id="retry-request" name="special_request" rows="2" maxlength="{{ special_request_max }}"
-                placeholder="e.g. something lighter, or more of a one-pot">{{ gen.special_request or "" }}</textarea>
-      <div class="btn-row">
-        <button type="submit" class="btn btn--primary" id="retry-btn">{{ icon('cooking') }} Show me two more</button>
-      </div>
-      <p class="generate-limit">{{ rounds_left }} {{ "try" if rounds_left == 1 else "tries" }} left from this brief.</p>
-    </form>
-  </details>
-  {% if not rounds_left %}
+     passed on. The request is pre-filled and editable; its button sits with it. #}
+  {% if rounds_left and limits.generations_left %}
+    <details class="retry-panel">
+      <summary>
+        <span class="confirm-bead" aria-hidden="true"></span>
+        <span class="fancy-text">
+          <strong>Neither one?</strong>
+          <span>Two more ideas from the same brief · {{ rounds_left }} {{ "try" if rounds_left == 1 else "tries" }} left</span>
+        </span>
+      </summary>
+      <form method="post" action="{{ url_for('wizard.regenerate', generation_id=gen.id) }}" class="retry-form" id="retry-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="special-request-label" for="retry-request">Steer the next two? <span class="muted">(optional)</span></label>
+        <textarea id="retry-request" name="special_request" rows="2" maxlength="{{ special_request_max }}"
+                  placeholder="e.g. something lighter, or more of a one-pot">{{ gen.special_request or "" }}</textarea>
+        <p class="special-request-hint">They'll steer clear of these two and go in a different direction.</p>
+        <div class="review-actions">
+          <button type="submit" class="btn btn--primary" id="retry-btn"><span>Show me two more</span>{{ icon('cooking') }}</button>
+        </div>
+      </form>
+    </details>
+  {% elif not rounds_left %}
     <p class="generate-limit">That's all the fresh tries for this brief — <a href="{{ url_for('wizard.review') }}">change the brief</a> to open up new ideas.</p>
   {% endif %}
 
   <p class="choice-nav">
     {% if gen.parent_generation_id %}
-      <a class="back-link" href="{{ url_for('wizard.choice', generation_id=gen.parent_generation_id) }}">{{ icon('arrow_back') }} The previous two</a>
+      <a class="btn btn--ghost btn--sm" href="{{ url_for('wizard.choice', generation_id=gen.parent_generation_id) }}">{{ icon('arrow_back') }} The previous two</a>
     {% endif %}
-    <a class="back-link" href="{{ url_for('wizard.start') }}">{{ icon('arrow_back') }} Start over</a>
+    <a class="btn btn--ghost btn--sm" href="{{ url_for('wizard.start') }}">{{ icon('arrow_back') }} Start over</a>
   </p>
 {% endblock %}

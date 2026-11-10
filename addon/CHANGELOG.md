@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.29.1
+- **Take your pick, tidied.** The two recipes are numbered 1 and 2, each
+  with its cuisine, time and servings, so they're easier to compare. Each
+  has its own *Cook this* button. *Neither one?* shows how many tries are
+  left, and opens to the steer box with *Show me two more* right under it.
+- **Stock as chips.** What's in stock now wraps as chips, like choosing
+  ingredients in the wizard, so far more fits on a screen. Tap an item to
+  add or edit its note, and × when you've run out. Search results you could
+  add are dashed chips: tap one to add it. Staples show as *✓ staple*.
+
 ## 0.29.0 — @kitchen can start a new version
 **From a question to a new version in one tap.** When @kitchen's answer
 suggests a change big enough to need the recipe rewriting (making it

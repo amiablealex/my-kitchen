@@ -37,7 +37,7 @@
             <button type="button" class="stock-remove"
                     aria-label="Remove {{ ing.name }} from stock"
                     data-remove-url="{{ url_for('stock.remove', ingredient_id=ing.id) }}">
-              {{ icon('remove') }}
+              {{ icon('close') }}
             </button>
           </li>
         {% endfor %}

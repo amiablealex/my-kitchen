@@ -103,3 +103,26 @@ landed on are written up in `brand-ui-guide.md` §8 (v0.2).
   other examples. The review card drops the `.special-request-hint` line,
   which repeated the card's own heading. No static files changed, so no
   `sw.js` bump.
+
+## 0.29.1 — checkpoint 3: choice screen and stock (after Phase 29)
+Both were reviewed as screenshots of the real templates first. Stock had
+two options; the user picked **B, chips**.
+- **Choice.** h1 "Take your pick" + a one-line lead (the top-bar title is no
+  longer repeated). Each card gets a `.choice-top`: a numbered `.choice-n`
+  bead (`k-home` teal for 1, `k-favourites` pink for 2) and `tag-pill`s for
+  cuisine, time band and servings. The button is now a right-aligned "Cook
+  this" (`.choice-actions`). The top-border stripes are gone. "Neither
+  one?" is a `details.retry-panel` with a pinwheel-bead summary showing tries
+  left; inside, the steer box with *Show me two more* in a
+  `.review-actions` row right under it. It stays a dropdown on purpose,
+  because choosing is the main action here. The back links are ghost buttons.
+- **Stock (B).** Same DOM, CSS-led. `.stock-list` wraps, and
+  `.stock-item` is a `--surface-2` pill. The pencil (`.stock-note-icon`) is
+  hidden and the note toggle shows only when there's a note. Tapping
+  `.stock-item-name` opens the note: the one `stock.js` addition, a click
+  branch before the toggle's. `.editing` widens the chip to the full row.
+  Remove is now ×.
+- **Catalogue results.** The whole chip is the `.stock-add` button (+, name,
+  category); the JS still keys on `.stock-add`. Shown as dashed, while
+  staples are muted chips with *✓ staple*.
+- `sw.js` cache v7.

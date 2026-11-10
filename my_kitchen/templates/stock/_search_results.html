@@ -17,15 +17,13 @@
         {% if ing.is_staple %}
           <li class="search-result search-result--muted">
             <span class="search-result-name">{{ ing.name }}</span>
-            <small>{{ ing.category.name }}</small>
             <span class="search-state search-state--ok">{{ icon('check') }} staple</span>
           </li>
         {% else %}
           <li class="search-result" data-ingredient-id="{{ ing.id }}">
-            <span class="search-result-name">{{ ing.name }}</span>
-            <small>{{ ing.category.name }}</small>
+            {# 0.29.1: the whole chip adds it — the + leads, like the request chips. #}
             <button type="button" class="stock-add" aria-label="Add {{ ing.name }} to stock"
-                    data-add-url="{{ url_for('stock.add', ingredient_id=ing.id) }}">{{ icon('add') }}</button>
+                    data-add-url="{{ url_for('stock.add', ingredient_id=ing.id) }}">{{ icon('add') }}<span class="search-result-name">{{ ing.name }}</span><small>{{ ing.category.name }}</small></button>
           </li>
         {% endif %}
       {% endfor %}

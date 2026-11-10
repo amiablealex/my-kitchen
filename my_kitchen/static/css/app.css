@@ -1524,3 +1524,60 @@ dialog.confirm::backdrop { background: rgba(20, 4, 32, 0.74); }
 
 /* "Make this version N" under a @kitchen reply (0.29) */
 .reply-refine { margin: var(--space-2) 0 0 calc(var(--space-2) * -1); }
+
+/* ============================================ choice + stock (0.29.1) ===== */
+/* --- choice: numbered beads instead of top stripes; compare at a glance --- */
+.choice-grid > .choice-card:nth-child(1), .choice-grid > .choice-card:nth-child(2) { border-top: 0; }
+.choice-card { gap: var(--space-2); padding: var(--space-4); }
+.choice-top { display: flex; align-items: center; gap: var(--space-3); }
+.choice-n { flex: none; display: grid; place-items: center; width: 34px; height: 34px;
+  border-radius: 17px 17px 17px 5px; background: var(--k); color: var(--on-accent); font-weight: 800; }
+.choice-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.choice-tags .tag-pill { gap: 4px; min-height: 28px; font-size: var(--fs-small); }
+.choice-tags .icon { width: 1em; height: 1em; color: var(--text-muted); }
+.choice-card h2 { font-size: var(--fs-h2); margin-top: var(--space-1); }
+.choice-card .blurb { margin: 0; }
+.choice-actions { display: flex; justify-content: flex-end; margin-top: var(--space-2); }
+.retry-panel { margin: 0 0 var(--space-4); background: var(--surface); border-radius: var(--petal-lg); }
+.retry-panel > summary { list-style: none; display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3); cursor: pointer; }
+.retry-panel > summary::-webkit-details-marker { display: none; }
+.retry-panel > summary::after { content: ""; flex: none; width: 7px; height: 7px; margin: 0 var(--space-1) 4px auto;
+  border: solid var(--accent-1); border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform 0.15s ease; }
+.retry-panel[open] > summary::after { transform: rotate(-135deg); margin-bottom: 0; }
+.retry-panel[open] > summary { margin-bottom: 0; }
+.retry-panel .retry-form { background: none; padding: 0 var(--space-4) var(--space-4); }
+.retry-panel textarea { background: var(--grape); }
+.retry-panel .special-request-hint { margin-top: var(--space-2); }
+.fancy-text { display: flex; flex-direction: column; }
+.fancy-text span { color: var(--text-muted); font-size: var(--fs-small); }
+.choice-nav { margin-top: var(--space-2); gap: var(--space-1); }
+
+/* --- stock: items as chips (Option B). Same DOM as the list, so stock.js is
+   unchanged apart from "tap the name to note". Editing a note widens the
+   chip to the full row. --- */
+.stock-list { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-1) var(--space-2) var(--space-2); }
+.stock-list > .stock-item + .stock-item { border-top: 0; }
+.stock-item { min-height: 40px; padding: 0 3px 0 var(--space-3); gap: 2px; max-width: 100%;
+  background: var(--surface-2); border-radius: 20px; }
+.stock-item-name { cursor: pointer; }
+.stock-note-icon { display: none; }
+.stock-note-toggle { margin-left: 2px; max-width: 11rem; min-height: 30px; padding: 0 var(--space-1); }
+.stock-note-toggle:not(.has-note) { display: none; }
+.stock-note-preview { font-size: 0.78rem; }
+.stock-item.editing { flex-basis: 100%; border-radius: var(--petal); padding: var(--space-1) 3px var(--space-1) var(--space-3); }
+.stock-item.editing .stock-note { flex: 1 1 8rem; min-height: 34px; padding: 0.3rem 0.6rem; font-size: var(--fs-small); }
+.stock-remove { width: 30px; height: 30px; }
+.stock-remove .icon { width: 1.05em; height: 1.05em; }
+/* catalogue matches: dashed "not in yet" chips; tap anywhere to add */
+.stock-catalogue .search-results { flex-direction: row; flex-wrap: wrap; gap: var(--space-2); }
+.search-result { padding: 0; background: none; }
+.search-result .stock-add {
+  width: auto; height: auto; min-height: 40px; padding: 0 var(--space-3) 0 var(--space-2); gap: 6px;
+  border-radius: 20px; background: transparent; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.2);
+  color: var(--text); font-weight: 600; }
+.search-result .stock-add:hover { box-shadow: inset 0 0 0 2px var(--accent-1); filter: none; }
+.search-result .stock-add .icon { width: 1.1em; height: 1.1em; color: var(--accent-1); }
+.search-result .stock-add small { color: var(--text-muted); font-weight: 400; }
+.search-result--muted { min-height: 40px; padding: 0 var(--space-3); border-radius: 20px; background: var(--surface); gap: 6px; }
+.search-result--muted .search-state { font-size: 0.78rem; }

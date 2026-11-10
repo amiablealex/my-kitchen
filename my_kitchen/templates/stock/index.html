@@ -8,7 +8,7 @@
     {# Shown when reached mid-wizard via ?return_to=… so the user can hop back. #}
     <p><a class="back-link" href="{{ return_to }}">{{ icon('arrow_back') }} Back to choosing ingredients</a></p>
   {% endif %}
-  <p class="lead">What you've got in. Edit a note, or remove anything you've run out of.</p>
+  <p class="lead">What you've got in. Tap an item to add a note; × when you've run out.</p>
 
   {% include "stock/_editor.html" %}
 {% endblock %}

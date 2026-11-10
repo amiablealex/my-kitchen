@@ -72,6 +72,14 @@ document.addEventListener("blur", function (event) {
 document.addEventListener("click", function (event) {
   const target = event.target;
 
+  // 0.29.1: tapping the item's name opens its note too (the pencil is gone).
+  const nameTap = target.closest(".stock-item-name");
+  if (nameTap) {
+    const row = nameTap.closest(".stock-item");
+    if (row && !row.classList.contains("editing")) startEditNote(row);
+    return;
+  }
+
   const noteToggle = target.closest(".stock-note-toggle");
   if (noteToggle) {
     const row = noteToggle.closest(".stock-item");
