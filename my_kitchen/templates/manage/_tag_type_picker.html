@@ -7,7 +7,7 @@
   <span class="field-label">Type</span>
   <div class="options">
     {% for key, label in types %}
-      <label class="option option--stacked">
+      <label class="option option--stacked type-pick--{{ key }}">
         <input type="radio" name="type" value="{{ key }}" required
                {% if key == current %}checked{% endif %}>
         <span class="opt-body">

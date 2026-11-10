@@ -317,11 +317,12 @@
               {{ person_mark(c.author) }}<span class="note-author">{{ c.author.name if c.author else "unknown" }}</span>
               <span class="note-when">{{ c.created_at | localdt }}</span>
               {% if c.author and c.author.id == current_user.id %}
-                {# Author-only. The confirm() is a courtesy; without JS the form
+                {# Author-only. The confirm dialog is a courtesy; without JS the form
                    still posts, and the server check is what actually guards. #}
                 <form method="post" class="note-delete"
                       action="{{ url_for('wizard.recipe_comment_delete', recipe_id=recipe.id, comment_id=c.id) }}"
-                      onsubmit="return confirm('{{ 'Delete this question and its answer?' if c.is_question else 'Delete this note?' }}');">
+                      data-confirm-title="{{ 'Delete this question?' if c.is_question else 'Delete this note?' }}"
+                      data-confirm="{{ 'Its answer goes too.' if c.is_question else '' }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="note-delete-btn" aria-label="Delete this note">{{ icon('delete') }}</button>
                 </form>

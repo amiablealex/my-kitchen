@@ -159,3 +159,35 @@ groups. Household left the nav; `users.*` highlights Manage. URLs unchanged.
 Household rows are whole-row links with a tag summary (`_tag_summary`).
 
 `sw.js` cache → v9.
+
+
+## 0.29.4 — the Manage lists pass
+**Lists.** `manage/_bits.html` holds the shared pieces: `link_chip`,
+`link_row` (caller supplies the meta), `toggle_chip`, `section_chips` and
+`danger_form`. Ingredients (both tabs plus retired) and Equipment render
+`ul.chip-list`; Categories and Dietary tags render `link_row`s. A tag's meta
+is the active people who have it (`person_mark` + names), or "Nobody yet, so it won't reach a
+recipe". `manage_ingredients.js` filters `[data-title]` instead of rows.
+
+**Edit pages** share one shape: back link, `edit-head` (name + status line),
+`.form`, docked Save. ⋯ holds Retire/Reactivate and Delete (ingredients),
+Delete (equipment, tags, and categories with no ingredients). Category
+section and tag type are coloured option chips (`sec-pick--*`,
+`type-pick--*`). New-tag assignees are chips picked in each person's colour
+(`option--person`). The category add form no longer asks for an order; it
+takes the next one, and the order can be changed on the category's page.
+
+**Removed:** `manage.ingredient_toggle_staple` and `manage.equipment_toggle`
+(the row buttons they served are gone), and `.staple-pin`.
+
+**confirm.js** (loaded by `base.html`): submit-capture on `form[data-confirm]`
+builds one `dialog.confirm.confirm--warn`, then `form.submit()` on OK. Falls
+back to `window.confirm` without `<dialog>`. Every inline
+`onsubmit="return confirm(…)"` in the app is gone (note delete, retire user, manage
+deletes).
+
+Note for next time: when cutting a route out of `manage/routes.py`, cut to the
+end of its function, not to the next `@route`. Helper functions sit between
+sections.
+
+`sw.js` cache → v10.

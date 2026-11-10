@@ -1,27 +1,8 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "manage/_bits.html" import link_chip, toggle_chip %}
 {% block title %}Manage ingredients — My Kitchen{% endblock %}
 {% block page_title %}Ingredients{% endblock %}
-
-{% macro ing_row(ing, is_staple) %}
-  <li class="recipe-row" data-title="{{ ing.name|lower }}">
-    <div class="row-main"><div class="row-title">{{ ing.name }}</div></div>
-    <div class="row-actions">
-      <form method="post" action="{{ url_for('manage.ingredient_toggle_staple', ingredient_id=ing.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn--sm btn--icon btn--secondary staple-pin{% if is_staple %} is-on{% endif %}"
-                aria-label="{{ 'Remove ' + ing.name + ' from staples' if is_staple else 'Make ' + ing.name + ' a staple' }}">{{ icon('push_pin') }}</button>
-      </form>
-      <a class="btn btn--sm btn--icon btn--secondary" aria-label="Edit {{ ing.name }}"
-         href="{{ url_for('manage.ingredient_edit', ingredient_id=ing.id) }}">{{ icon('edit') }}</a>
-      <form method="post" action="{{ url_for('manage.ingredient_delete', ingredient_id=ing.id) }}"
-            onsubmit="return confirm('Permanently delete \u201c{{ ing.name }}\u201d? This cannot be undone. (Retire instead to keep it in history.)');">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn--sm btn--icon btn--danger" aria-label="Delete {{ ing.name }}">{{ icon('delete') }}</button>
-      </form>
-    </div>
-  </li>
-{% endmacro %}
 
 {% macro cat_tables(items, is_staple) %}
   {% for c in categories %}
@@ -32,7 +13,7 @@
           <h2 class="recipe-group-name">{{ c.name }}</h2>
           <span class="recipe-group-count">{{ cat_items|length }}</span>
         </header>
-        <ul class="recipe-list">{% for ing in cat_items %}{{ ing_row(ing, is_staple) }}{% endfor %}</ul>
+        <ul class="chip-list">{% for ing in cat_items %}{{ link_chip(url_for('manage.ingredient_edit', ingredient_id=ing.id), ing.name) }}{% endfor %}</ul>
       </section>
     {% endif %}
   {% endfor %}
@@ -58,7 +39,7 @@
           {% for c in categories %}<option value="{{ c.id }}">{{ c.name }} ({{ c.section }})</option>{% endfor %}
         </select>
       </label>
-      <label><input type="checkbox" name="is_staple" id="add-is-staple"> Staple (assumed always available)</label>
+      {{ toggle_chip('is_staple', 'Staple', 'assumed always available', id='add-is-staple') }}
       <div class="form-actions"><button type="submit" class="btn btn--primary">{{ icon('add') }} Add</button></div>
     </form>
   </details>
@@ -78,22 +59,22 @@
   {% endif %}
 
   <div class="tab-panel" data-panel="standard">
-    <p class="help">Pin {{ icon('push_pin') }} an ingredient to make it a <strong>staple</strong> — assumed always in stock, so you never tick it in and out.</p>
+    <p class="help">Tap an ingredient to rename it, move it, make it a <strong>staple</strong> (assumed always in stock, so you never tick it in and out) or retire it.</p>
     {% if standard %}
       {{ cat_tables(standard, false) }}
       <p class="recipe-nomatch" hidden><em>No ingredients match your filter.</em></p>
     {% else %}
-      <p class="muted">No standard ingredients — add one above, or unpin a staple.</p>
+      <p class="muted">No standard ingredients. Add one above, or move a staple back.</p>
     {% endif %}
   </div>
 
   <div class="tab-panel" data-panel="staples" hidden>
-    <p class="help">Staples are assumed <strong>always available</strong> and used freely by recipes, so they’re kept out of your in/out stock list. Unpin one to move it back to standard stock — it’s <strong>not</strong> deleted.</p>
+    <p class="help">Staples are assumed <strong>always available</strong> and used freely by recipes, so they’re kept out of your in/out stock list. Tap one to move it back to standard stock.</p>
     {% if staples %}
       {{ cat_tables(staples, true) }}
       <p class="recipe-nomatch" hidden><em>No staples match your filter.</em></p>
     {% else %}
-      <p class="muted">No staples yet. On the Standard tab, pin an ingredient (oil, salt, common spices…) to make it a staple.</p>
+      <p class="muted">No staples yet. Tap an ingredient on the Standard tab (oil, salt, common spices…) to make it one.</p>
     {% endif %}
   </div>
 
@@ -101,23 +82,8 @@
     <details class="section">
       <summary>Retired ({{ retired|length }})</summary>
       <section class="recipe-group recipe-group--plain" data-no-filter style="margin-top:var(--space-3)">
-        <ul class="recipe-list">
-          {% for ing in retired %}
-            <li class="recipe-row">
-              <div class="row-main"><div class="row-title">{{ ing.name }} <span class="muted">· {{ ing.category.name }}{% if ing.is_staple %} · staple{% endif %}</span></div></div>
-              <div class="row-actions">
-                <form method="post" action="{{ url_for('manage.ingredient_activate', ingredient_id=ing.id) }}">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="btn btn--sm btn--icon btn--secondary" aria-label="Reactivate {{ ing.name }}">{{ icon('check') }}</button>
-                </form>
-                <form method="post" action="{{ url_for('manage.ingredient_delete', ingredient_id=ing.id) }}"
-                      onsubmit="return confirm('Permanently delete \u201c{{ ing.name }}\u201d? This cannot be undone.');">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="btn btn--sm btn--icon btn--danger" aria-label="Delete {{ ing.name }}">{{ icon('delete') }}</button>
-                </form>
-              </div>
-            </li>
-          {% endfor %}
+        <ul class="chip-list">
+          {% for ing in retired %}{{ link_chip(url_for('manage.ingredient_edit', ingredient_id=ing.id), ing.name, ing.category.name ~ (' · staple' if ing.is_staple else ''), off=True) }}{% endfor %}
         </ul>
       </section>
     </details>

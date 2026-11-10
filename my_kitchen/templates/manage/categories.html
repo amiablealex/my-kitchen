@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "manage/_bits.html" import link_row, section_chips %}
 {% block title %}Manage categories — My Kitchen{% endblock %}
 {% block page_title %}Categories{% endblock %}
 {% block content %}
@@ -14,14 +15,9 @@
     <form class="form" method="post" action="{{ url_for('manage.category_add') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Name <input type="text" name="name" required></label>
-      <label>Section
-        <select name="section" required>
-          {% for key, label in sections %}
-            <option value="{{ key }}">{{ label }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <label>Order <input type="number" name="display_order" value="{{ next_order }}" style="width:7em"></label>
+      <span class="field-label">Section</span>
+      {{ section_chips(sections) }}
+      <input type="hidden" name="display_order" value="{{ next_order }}">
       <div class="form-actions">
         <button type="submit" class="btn btn--primary">{{ icon('add') }} Add</button>
       </div>
@@ -36,23 +32,7 @@
       </header>
       <ul class="recipe-list">
         {% for c in categories %}
-          <li class="recipe-row">
-            <div class="row-main">
-              <div class="row-title"><span class="sec-dot sec-dot--{{ c.section }}"></span>{{ c.name }}</div>
-              <div class="row-meta">{{ c.section }} · order {{ c.display_order }} · {{ counts[c.id] }} ingredient{{ "s" if counts[c.id] != 1 else "" }}</div>
-            </div>
-            <div class="row-actions">
-              <a class="btn btn--sm btn--icon btn--secondary" aria-label="Edit {{ c.name }}"
-                 href="{{ url_for('manage.category_edit', category_id=c.id) }}">{{ icon('edit') }}</a>
-              {% if counts[c.id] == 0 %}
-                <form method="post" action="{{ url_for('manage.category_delete', category_id=c.id) }}"
-                      onsubmit="return confirm('Delete category \u201c{{ c.name }}\u201d?');">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="btn btn--sm btn--icon btn--danger" aria-label="Delete {{ c.name }}">{{ icon('delete') }}</button>
-                </form>
-              {% endif %}
-            </div>
-          </li>
+          {% call link_row(url_for('manage.category_edit', category_id=c.id), c.name) %}<span class="sec-dot sec-dot--{{ c.section }}"></span>{{ c.section | capitalize }}<span class="sep">·</span>{{ counts[c.id] }} ingredient{{ "s" if counts[c.id] != 1 else "" }}{% endcall %}
         {% endfor %}
       </ul>
     </section>

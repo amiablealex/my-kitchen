@@ -1,10 +1,36 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
-{% block title %}Edit {{ ing.name }} — My Kitchen{% endblock %}
-{% block page_title %}Edit ingredient{% endblock %}
+{% from "manage/_bits.html" import toggle_chip, danger_form %}
+{% block title %}{{ ing.name }} — My Kitchen{% endblock %}
+{% block page_title %}Ingredients{% endblock %}
+{% block topbar_actions %}
+  <details class="overflow">
+    <summary class="icon-btn" aria-label="More actions">{{ icon('more') }}</summary>
+    <div class="overflow-menu">
+      {% if ing.is_active %}
+        {{ danger_form(url_for('manage.ingredient_retire', ingredient_id=ing.id), 'Retire', 'archive', none, none, warn=False) }}
+      {% else %}
+        {{ danger_form(url_for('manage.ingredient_activate', ingredient_id=ing.id), 'Reactivate', 'check', none, none, warn=False) }}
+      {% endif %}
+      <div class="menu-sep"></div>
+      {{ danger_form(url_for('manage.ingredient_delete', ingredient_id=ing.id), 'Delete permanently', 'delete',
+                     'Delete ' ~ ing.name ~ '?',
+                     'This removes it from your catalogue for good. Retire it instead to hide it but keep it in your history.') }}
+    </div>
+  </details>
+{% endblock %}
 {% block content %}
   <a class="back-link" href="{{ url_for('manage.ingredients') }}">{{ icon('arrow_back') }} Ingredients</a>
-  <h1>Edit ingredient</h1>
+  <header class="edit-head">
+    <h1>{{ ing.name }}</h1>
+    <p class="edit-meta">
+      {%- if not ing.is_active %}Retired, so it's hidden from stock and the wizard
+      {%- elif ing.is_staple %}Staple, assumed always available
+      {%- elif ing.in_stock %}In stock
+      {%- else %}Not in stock{% endif %}
+    </p>
+  </header>
+
   <form class="form" method="post" action="{{ url_for('manage.ingredient_edit', ingredient_id=ing.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Name <input type="text" name="name" value="{{ ing.name }}" required></label>
@@ -15,32 +41,13 @@
         {% endfor %}
       </select>
     </label>
-    <label><input type="checkbox" name="is_staple" {% if ing.is_staple %}checked{% endif %}> Staple (assumed always available)</label>
-    <div class="form-actions">
-      <a class="btn btn--ghost" href="{{ url_for('manage.ingredients') }}">Cancel</a>
-      <button type="submit" class="btn btn--primary">Save</button>
+    <div class="edit-field">
+      {{ toggle_chip('is_staple', 'Staple', 'assumed always available', checked=ing.is_staple) }}
+      <p class="help">Staples never appear in your stock list; recipes use them freely.
+         In stock and notes are on the <a href="{{ url_for('stock.index') }}">Stock</a> page.</p>
+    </div>
+    <div class="wizard-dock">
+      <button type="submit" class="btn btn--primary"><span>Save</span>{{ icon('check') }}</button>
     </div>
   </form>
-
-  <p class="help">In stock and notes are managed on the <a href="{{ url_for('stock.index') }}">Stock</a> page.</p>
-
-  <section class="section edit-danger">
-    {% if ing.is_active %}
-      <h2>Retire</h2>
-      <p class="help">Retiring hides "{{ ing.name }}" from the stock list and the cook wizard but
-         keeps it in your history — it's not deleted, and you can reactivate it any time.</p>
-      <form method="post" action="{{ url_for('manage.ingredient_retire', ingredient_id=ing.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn--secondary">{{ icon('archive') }} Retire ingredient</button>
-      </form>
-    {% else %}
-      <h2>Retired</h2>
-      <p class="help">This ingredient is retired — hidden from stock and the wizard, but kept in history.</p>
-      <form method="post" action="{{ url_for('manage.ingredient_activate', ingredient_id=ing.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn--secondary">{{ icon('check') }} Reactivate ingredient</button>
-      </form>
-    {% endif %}
-  </section>
-
 {% endblock %}

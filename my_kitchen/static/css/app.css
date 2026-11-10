@@ -1012,7 +1012,6 @@ p.recipe-intro { display: block; padding: var(--space-4); }
 .tab-panel[hidden] { display: none; }
 
 /* staple pin toggle: lime when active (pinned) */
-.staple-pin.is-on { color: var(--accent-2); border-color: var(--accent-2); }
 .help .icon { width: 1.1em; height: 1.1em; vertical-align: -2px; }
 
 /* manage tables still carry action clusters: let those wrap under the name */
@@ -1691,3 +1690,51 @@ dialog.confirm::backdrop { background: rgba(20, 4, 32, 0.74); }
 .content .manage-list, .content .person-list { padding-left: 0; }
 .content .manage-list { margin-bottom: 0; }
 .nav-foot .who { display: flex; align-items: center; gap: 6px; }
+
+/* ======================================================= Manage lists (0.29.4)
+   No buttons on list rows. Plain names are chips; things with something to
+   say are rows. Either opens the item's page, where destructive actions sit
+   behind ⋯ and confirm through the app's dialog. */
+.content .chip-list { list-style: none; display: flex; flex-wrap: wrap; gap: var(--space-2);
+  margin: 0; padding: var(--space-1) var(--space-2) var(--space-2); }
+.chip-list > li[hidden] { display: none; }
+.link-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 var(--space-3);
+  background: var(--surface-2); border-radius: 20px; color: var(--text); font-weight: 600; text-decoration: none;
+  transition: border-radius 0.18s ease, background 0.15s ease; }
+.link-chip:hover { background: color-mix(in srgb, var(--group, var(--accent-1)) 24%, var(--surface-2)); text-decoration: none; }
+.link-chip:active { border-radius: var(--petal-flip-sm); }
+.link-chip small { color: var(--text-muted); font-weight: 400; font-size: 0.75rem; font-style: italic; }
+.link-chip.is-off { background: transparent; box-shadow: inset 0 0 0 2px var(--divider); color: var(--text-muted); }
+
+.recipe-list > .recipe-row.row-link-li { padding: 0; }
+.row-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3);
+  min-height: 58px; padding: var(--space-2) var(--space-3); color: var(--text); text-decoration: none; }
+.row-link:hover { text-decoration: none; }
+.row-link .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.row-link .row-title { font-weight: 700; }
+.row-link .row-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; color: var(--text-muted); font-size: var(--fs-small); }
+.row-link .row-meta .sep { opacity: 0.5; }
+.row-link .row-meta .cook-i + .cook-i { margin-left: -6px; box-shadow: 0 0 0 2px var(--surface); }
+.row-go { flex: none; width: 1.1em; height: 1.1em; color: var(--text-muted); }
+.recipe-row.is-off .row-link .row-title { color: var(--text-muted); }
+
+.edit-head { margin: var(--space-2) 0 var(--space-5); }
+.edit-head h1 { margin: 0; }
+.edit-meta { margin: 2px 0 0; color: var(--text-muted); font-size: var(--fs-small); display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+.edit-meta .sep { opacity: 0.5; }
+.edit-field { margin: 0 0 var(--space-4); }
+.edit-field .options { margin-bottom: var(--space-1); }
+.input-short { max-width: 8rem; }
+.form label > input.input-short { width: 8rem; }
+
+.sec-pick--protein { --pick: var(--accent-4); }  .sec-pick--carb { --pick: var(--accent-3); }
+.sec-pick--veg { --pick: var(--accent-2); }  .sec-pick--other { --pick: var(--accent-1); }
+.type-pick--allergy { --pick: var(--accent-4); }  .type-pick--avoid { --pick: var(--accent-3); }
+.type-pick--preference { --pick: var(--accent-2); }
+.option--person { --pick: var(--u); }
+.form .section-chips, .manage-add .options--chips { margin-bottom: var(--space-3); }
+
+/* the shared "are you sure?" (confirm.js): a pink bead for destructive asks */
+.confirm--warn .confirm-bead { background: var(--accent-4); }
+.confirm-body[hidden] { display: none; }
+.manage-add .option:not(:has(input:checked)) { background: var(--surface-2); }

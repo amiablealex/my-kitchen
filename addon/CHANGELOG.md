@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.29.4
+- **Manage lists without buttons.** Ingredients and Equipment are chips,
+  grouped as before. Categories and Dietary tags are rows that say something
+  useful: a category's section and how many ingredients it has, and the
+  people who have each tag (their colours and names). Tap anything to open it.
+- **One page per item.** Each opens on its own page with a single *Save*.
+  Retire, Reactivate and Delete are in the ⋯ menu. A category with
+  ingredients in it has no Delete, and its page says why.
+- **Chips for choices.** Staple, Available, a category's section (in its lane
+  colour), a tag's type (in its group colour), and who a new tag applies to
+  (in each person's colour). These were checkboxes and drop-downs.
+- **The app asks before deleting.** Deleting or retiring anything (including
+  notes, people and catalogue items) now opens the app's own dialog instead of
+  the browser's pop-up.
+- The staple pin and the equipment on/off button have gone from the lists.
+  Both are a tap away on the item's page.
+
 ## 0.29.3
 - **Household lives in Manage.** Manage is now two short lists, Kitchen
   (ingredients, categories, equipment) and People (household, dietary

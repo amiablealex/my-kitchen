@@ -1,6 +1,6 @@
 // Manage → Ingredients: Standard / Staples tabs + a filter scoped to the active
-// tab. Tab choice persists in sessionStorage so a pin/unpin (which reloads the
-// page) keeps you on the tab you were working in, with no server round-trip.
+// tab. Tab choice persists in sessionStorage so coming back from an ingredient's
+// page keeps you on the tab you were working in, with no server round-trip.
 (function () {
   var KEY = "mk-ingredients-tab";
   var tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
@@ -17,7 +17,7 @@
     var any = false;
     panel.querySelectorAll(".recipe-group:not([data-no-filter])").forEach(function (g) {
       var gv = false;
-      g.querySelectorAll(".recipe-row").forEach(function (r) {
+      g.querySelectorAll("[data-title]").forEach(function (r) {
         var m = !q || (r.dataset.title || "").indexOf(q) !== -1;
         r.hidden = !m; if (m) gv = true;
       });

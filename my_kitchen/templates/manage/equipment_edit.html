@@ -1,17 +1,32 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
-{% block title %}Edit {{ item.name }} — My Kitchen{% endblock %}
-{% block page_title %}Edit equipment{% endblock %}
+{% from "manage/_bits.html" import toggle_chip, danger_form %}
+{% block title %}{{ item.name }} — My Kitchen{% endblock %}
+{% block page_title %}Equipment{% endblock %}
+{% block topbar_actions %}
+  <details class="overflow">
+    <summary class="icon-btn" aria-label="More actions">{{ icon('more') }}</summary>
+    <div class="overflow-menu">
+      {{ danger_form(url_for('manage.equipment_delete', equipment_id=item.id), 'Delete', 'delete',
+                     'Delete ' ~ item.name ~ '?', 'If it is only broken or lent out, mark it unavailable instead.') }}
+    </div>
+  </details>
+{% endblock %}
 {% block content %}
   <a class="back-link" href="{{ url_for('manage.equipment') }}">{{ icon('arrow_back') }} Equipment</a>
-  <h1>Edit equipment</h1>
+  <header class="edit-head">
+    <h1>{{ item.name }}</h1>
+    <p class="edit-meta">{{ "Available" if item.is_available else "Unavailable, so recipes won't count on it" }}</p>
+  </header>
   <form class="form" method="post" action="{{ url_for('manage.equipment_edit', equipment_id=item.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Name <input type="text" name="name" value="{{ item.name }}" required></label>
-    <label><input type="checkbox" name="is_available" {% if item.is_available %}checked{% endif %}> Available</label>
-    <div class="form-actions">
-      <a class="btn btn--ghost" href="{{ url_for('manage.equipment') }}">Cancel</a>
-      <button type="submit" class="btn btn--primary">Save</button>
+    <div class="edit-field">
+      {{ toggle_chip('is_available', 'Available', checked=item.is_available) }}
+      <p class="help">Untick it while it's broken or lent out.</p>
+    </div>
+    <div class="wizard-dock">
+      <button type="submit" class="btn btn--primary"><span>Save</span>{{ icon('check') }}</button>
     </div>
   </form>
 {% endblock %}

@@ -1,0 +1,52 @@
+{# Shared pieces for the Manage lists and edit pages (0.29.4).
+   Lists carry no buttons: a plain name is a chip, a thing with something to
+   say is a row, and either opens its edit page. Destructive actions live
+   behind ⋯ on that page and confirm through the app's dialog (confirm.js). #}
+{% from "_icons.html" import icon %}
+
+{% macro link_chip(href, name, meta=None, off=False) -%}
+  <li data-title="{{ name|lower }}"><a class="link-chip{% if off %} is-off{% endif %}" href="{{ href }}">{{ name }}{% if meta %}<small>{{ meta }}</small>{% endif %}</a></li>
+{%- endmacro %}
+
+{# Row with a title and a meta line; the caller supplies the meta. #}
+{% macro link_row(href, title, data_title=None, off=False) -%}
+  <li class="recipe-row row-link-li{% if off %} is-off{% endif %}" data-title="{{ (data_title or title)|lower }}">
+    <a class="row-link" href="{{ href }}">
+      <span class="row-main">
+        <span class="row-title">{{ title }}</span>
+        <span class="row-meta">{{ caller() }}</span>
+      </span>
+      {{ icon('arrow_forward', 'row-go') }}
+    </a>
+  </li>
+{%- endmacro %}
+
+{# A single on/off choice as a chip, with the same picked morph as everywhere. #}
+{% macro toggle_chip(name, label, meta=None, checked=False, id=None) -%}
+  <div class="options options--chips">
+    <label class="option">
+      <input type="checkbox" name="{{ name }}"{% if id %} id="{{ id }}"{% endif %}{% if checked %} checked{% endif %}>
+      <span>{{ label }}</span>{% if meta %}<span class="opt-meta">{{ meta }}</span>{% endif %}
+    </label>
+  </div>
+{%- endmacro %}
+
+{# The four sections as radio chips, each picked in its lane colour. #}
+{% macro section_chips(sections, current=None) -%}
+  <div class="options options--chips section-chips">
+    {% for key, label in sections %}
+      <label class="option sec-pick--{{ key }}">
+        <input type="radio" name="section" value="{{ key }}" required{% if key == current %} checked{% endif %}>
+        <span>{{ label }}</span>
+      </label>
+    {% endfor %}
+  </div>
+{%- endmacro %}
+
+{# ⋯ menu holding one or more destructive forms. #}
+{% macro danger_form(action, label, ic, title, body, ok="Delete", warn=True) -%}
+  <form method="post" action="{{ action }}"{% if body is not none %} data-confirm="{{ body }}" data-confirm-title="{{ title }}" data-confirm-ok="{{ ok }}"{% endif %}>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="menu-item{% if warn %} menu-item--warn{% endif %}">{{ icon(ic) }}<span>{{ label }}</span></button>
+  </form>
+{%- endmacro %}

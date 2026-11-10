@@ -1,26 +1,40 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
-{% block title %}Edit {{ cat.name }} — My Kitchen{% endblock %}
-{% block page_title %}Edit category{% endblock %}
+{% from "manage/_bits.html" import section_chips, danger_form %}
+{% block title %}{{ cat.name }} — My Kitchen{% endblock %}
+{% block page_title %}Categories{% endblock %}
+{% block topbar_actions %}
+  {% if ingredient_count == 0 %}
+    <details class="overflow">
+      <summary class="icon-btn" aria-label="More actions">{{ icon('more') }}</summary>
+      <div class="overflow-menu">
+        {{ danger_form(url_for('manage.category_delete', category_id=cat.id), 'Delete category', 'delete',
+                       'Delete ' ~ cat.name ~ '?', 'It has no ingredients, so nothing else changes.') }}
+      </div>
+    </details>
+  {% endif %}
+{% endblock %}
 {% block content %}
   <a class="back-link" href="{{ url_for('manage.categories') }}">{{ icon('arrow_back') }} Categories</a>
-  <h1>Edit category</h1>
+  <header class="edit-head">
+    <h1>{{ cat.name }}</h1>
+    <p class="edit-meta">{{ ingredient_count }} ingredient{{ "s" if ingredient_count != 1 else "" }}</p>
+  </header>
   <form class="form" method="post" action="{{ url_for('manage.category_edit', category_id=cat.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Name <input type="text" name="name" value="{{ cat.name }}" required></label>
-    <label>Section
-      <select name="section" required>
-        {% for key, label in sections %}
-          <option value="{{ key }}" {% if key == cat.section %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>Order <input type="number" name="display_order" value="{{ cat.display_order }}" style="width:7em"></label>
-    <div class="form-actions">
-      <a class="btn btn--ghost" href="{{ url_for('manage.categories') }}">Cancel</a>
-      <button type="submit" class="btn btn--primary">Save</button>
+    <div class="edit-field">
+      <span class="field-label">Section</span>
+      {{ section_chips(sections, cat.section) }}
+      <p class="help">The lane its ingredients appear in when you cook. Changing it moves them all.</p>
+    </div>
+    <label>Order <input type="number" name="display_order" value="{{ cat.display_order }}" class="input-short" style="width:8rem"></label>
+    <p class="help">Lower numbers come first, here and on the Stock page.</p>
+    {% if ingredient_count %}
+      <p class="help">To delete this category, first move its ingredients to another one.</p>
+    {% endif %}
+    <div class="wizard-dock">
+      <button type="submit" class="btn btn--primary"><span>Save</span>{{ icon('check') }}</button>
     </div>
   </form>
-  <p class="help">Changing the section moves this category's ingredients into a
-     different cook-wizard lane.</p>
 {% endblock %}

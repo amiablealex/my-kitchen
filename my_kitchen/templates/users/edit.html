@@ -11,7 +11,8 @@
       <div class="overflow-menu">
         {% if user.is_active %}
           <form method="post" action="{{ url_for('users.retire', user_id=user.id) }}"
-                onsubmit="return confirm('Retire “{{ user.name }}”? They won’t be able to log in until reactivated. Their history is kept.');">
+                data-confirm-title="Retire {{ user.name }}?" data-confirm-ok="Retire"
+                data-confirm="They won't be able to log in until reactivated. Their recipes and notes are kept.">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="menu-item menu-item--warn">{{ icon('archive') }}<span>Retire {{ user.name }}</span></button>
           </form>

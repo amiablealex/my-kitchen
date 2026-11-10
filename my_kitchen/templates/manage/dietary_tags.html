@@ -1,26 +1,11 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
 {% from "manage/_tag_type_picker.html" import tag_type_picker %}
+{% from "manage/_bits.html" import link_row %}
+{% from "_person.html" import person_mark %}
 {% block title %}Manage dietary tags — My Kitchen{% endblock %}
 {% block page_title %}Dietary tags{% endblock %}
 
-{% macro tag_row(t, counts) %}
-  <li class="recipe-row">
-    <div class="row-main">
-      <div class="row-title">{{ t.name }}</div>
-      <div class="row-meta">{{ counts[t.id] }} user{{ "s" if counts[t.id] != 1 else "" }}</div>
-    </div>
-    <div class="row-actions">
-      <a class="btn btn--sm btn--icon btn--secondary" aria-label="Edit {{ t.name }}"
-         href="{{ url_for('manage.dietary_tag_edit', tag_id=t.id) }}">{{ icon('edit') }}</a>
-      <form method="post" action="{{ url_for('manage.dietary_tag_delete', tag_id=t.id) }}"
-            onsubmit="return confirm('Delete \u201c{{ t.name }}\u201d?{% if counts[t.id] %} It\u2019s assigned to {{ counts[t.id] }} user(s) \u2014 they\u2019ll be unassigned.{% endif %}');">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn--sm btn--icon btn--danger" aria-label="Delete {{ t.name }}">{{ icon('delete') }}</button>
-      </form>
-    </div>
-  </li>
-{% endmacro %}
 
 {% block content %}
   <a class="back-link" href="{{ url_for('manage.index') }}">{{ icon('arrow_back') }} Manage</a>
@@ -43,9 +28,9 @@
          assignment still lives on the Household page, per person. #}
       {% if users %}
         <span class="field-label">Who does this apply to?</span>
-        <div class="options">
+        <div class="options options--chips">
           {% for u in users %}
-            <label class="option">
+            <label class="option u-{{ u.colour_key }} option--person">
               <input type="checkbox" name="user_ids" value="{{ u.id }}">
               <span>{{ u.name }}</span>
             </label>
@@ -76,7 +61,15 @@
             <span class="recipe-group-count">{{ tags | length }}</span>
           </header>
           <p class="group-help">{{ hints[key].help }}</p>
-          <ul class="recipe-list">{% for t in tags %}{{ tag_row(t, counts) }}{% endfor %}</ul>
+          <ul class="recipe-list">
+            {% for t in tags %}
+              {% call link_row(url_for('manage.dietary_tag_edit', tag_id=t.id), t.name) %}
+                {%- set people = t.users | selectattr('is_active') | list -%}
+                {%- if people %}{% for u in people %}{{ person_mark(u, u.name) }}{% endfor %}<span>{{ people | map(attribute='name') | join(', ') }}</span>
+                {%- else %}<span>Nobody yet, so it won't reach a recipe</span>{% endif -%}
+              {% endcall %}
+            {% endfor %}
+          </ul>
         </section>
       {% endif %}
     {% endfor %}

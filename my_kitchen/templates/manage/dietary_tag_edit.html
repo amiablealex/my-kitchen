@@ -1,22 +1,41 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
 {% from "manage/_tag_type_picker.html" import tag_type_picker %}
-{% block title %}Edit {{ tag.name }} — My Kitchen{% endblock %}
-{% block page_title %}Edit dietary tag{% endblock %}
+{% from "manage/_bits.html" import danger_form %}
+{% from "_person.html" import person_mark %}
+{% block title %}{{ tag.name }} — My Kitchen{% endblock %}
+{% block page_title %}Dietary tags{% endblock %}
+{% block topbar_actions %}
+  <details class="overflow">
+    <summary class="icon-btn" aria-label="More actions">{{ icon('more') }}</summary>
+    <div class="overflow-menu">
+      {{ danger_form(url_for('manage.dietary_tag_delete', tag_id=tag.id), 'Delete tag', 'delete',
+                     'Delete ' ~ tag.name ~ '?',
+                     ('It is assigned to ' ~ user_count ~ (' person' if user_count == 1 else ' people') ~ ', who will lose it.') if user_count else 'Nobody has it, so nothing else changes.') }}
+    </div>
+  </details>
+{% endblock %}
 {% block content %}
   <a class="back-link" href="{{ url_for('manage.dietary_tags') }}">{{ icon('arrow_back') }} Dietary tags</a>
-  <h1>Edit dietary tag</h1>
+  <header class="edit-head">
+    <h1>{{ tag.name }}</h1>
+    <p class="edit-meta tag-people">
+      {% set people = tag.users | selectattr('is_active') | list %}
+      {% if people %}{% for u in people %}{{ person_mark(u, u.name) }}{% endfor %}<span>{{ people | map(attribute='name') | join(', ') }}</span>
+      {% else %}Nobody yet{% endif %}
+      <span class="sep">·</span><a href="{{ url_for('users.index') }}">change on Household</a>
+    </p>
+  </header>
   <form class="form" method="post" action="{{ url_for('manage.dietary_tag_edit', tag_id=tag.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Name <input type="text" name="name" value="{{ tag.name }}" required></label>
-    <p class="help">Name the food itself — “Pesto”, not “no pesto”.</p>
-    {{ tag_type_picker(types, hints, current=tag.type) }}
-    <div class="form-actions">
-      <a class="btn btn--ghost" href="{{ url_for('manage.dietary_tags') }}">Cancel</a>
-      <button type="submit" class="btn btn--primary">Save</button>
+    <p class="help">Name the food itself: “Pesto”, not “no pesto”.</p>
+    <div class="edit-field">
+      {{ tag_type_picker(types, hints, current=tag.type) }}
+      <p class="help">The type decides how recipes treat it, so changing it changes what gets cooked.</p>
+    </div>
+    <div class="wizard-dock">
+      <button type="submit" class="btn btn--primary"><span>Save</span>{{ icon('check') }}</button>
     </div>
   </form>
-  <p class="help">Currently assigned to {{ user_count }} user{{ "s" if user_count != 1 else "" }}.
-     The type decides how the recipe generator treats it, so changing it changes what
-     gets cooked.</p>
 {% endblock %}
