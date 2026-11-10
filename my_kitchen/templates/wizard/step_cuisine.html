@@ -4,7 +4,7 @@
 {% block title %}Cook — Meal type & cuisine{% endblock %}
 {% block page_title %}Lets Cook{% endblock %}
 {% block content %}
-<div class="wizard-step">
+<div class="wizard-step wizard-step--center">
   {{ step_dots(2) }}
   <form class="wizard-form" method="post" action="{{ url_for('wizard.step_cuisine') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -23,7 +23,7 @@
       {% endfor %}
     </div>
 
-    <div id="cuisine-block">
+    <div id="cuisine-block" class="wizard-group">
       <h2 class="card-title">Cuisine</h2>
       <div class="options options--chips">
         {% for c in cuisines %}

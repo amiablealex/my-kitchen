@@ -26,8 +26,8 @@
           <span class="brief-chip">{{ icon('schedule') }}{{ time_label.split(' (')[0] }}</span>
           <span class="brief-chip">{{ icon('person') }}{{ servings }}</span>
           {% if allergies %}<span class="brief-chip brief-chip--allergy">{{ icon('block') }}{{ allergies | join(', ') }}</span>{% endif %}
+          <span class="brief-more">Full brief</span>
         </span>
-        <span class="brief-more">Full brief</span>
       </summary>
       <div class="card brief">
         <div class="brief-row">
@@ -68,10 +68,11 @@
       <p class="help">Use the back arrow to change anything.</p>
     </details>
 
-    {# ---- Saved recipes that fit and are cookable now: their own coloured band. ---- #}
+    {# ---- Saved recipes that fit and are cookable now. Marked by the orange
+         Recipes bead; no band — the two beads are what separate the paths. ---- #}
     {% if suggestions %}
-      <section class="sugg-band k-recipes" aria-labelledby="sugg-title">
-        <div class="sugg-band-head">
+      <section class="review-section k-recipes" aria-labelledby="sugg-title">
+        <div class="review-head">
           <span class="tile-bead">{{ icon('menu_book') }}</span>
           <div>
             <h2 id="sugg-title">Already in your recipes</h2>
@@ -99,22 +100,21 @@
       </section>
     {% endif %}
 
-    {# ---- Something new. With suggestions on screen this folds away behind
-         "Nothing take your fancy?"; without them it's simply open. Generating
-         itself is always the dock's button. ---- #}
-    <details class="fancy"{% if not suggestions or special_request %} open{% endif %}>
-      <summary>
+    {# ---- Something new: the request and the button that sends it live in
+         one card, so "what do I want" and "go" are the same place. ---- #}
+    <section class="review-section review-new" aria-labelledby="new-title">
+      <div class="review-head">
         <span class="confirm-bead" aria-hidden="true"></span>
-        <span class="fancy-text">
-          <strong>{% if suggestions %}Nothing take your fancy?{% else %}Anything in mind?{% endif %}</strong>
-          <span>{% if suggestions %}Make something new — add a request if you like.{% else %}Optional. Leave it blank to let the kitchen decide.{% endif %}</span>
-        </span>
-      </summary>
+        <div>
+          <h2 id="new-title">{% if suggestions %}Nothing take your fancy?{% else %}Make something new{% endif %}</h2>
+          <p>{% if suggestions %}Make something new from this brief.{% else %}Two fresh recipes from this brief.{% endif %}</p>
+        </div>
+      </div>
       {# Special request (Phase 25): a free-text steer that rides along with the
          brief. Optional; chips add common steers on tap. #}
       <div class="special-request">
         <label class="special-request-label" for="special-request">Anything in mind? <span class="muted">(optional)</span></label>
-        <p class="special-request-hint">A dish, a mood or a style — it steers both recipes.</p>
+        <p class="special-request-hint">A dish, a mood or a style. Leave it blank to let the kitchen decide.</p>
         <textarea id="special-request" name="special_request" rows="2"
                   maxlength="{{ special_request_max }}"
                   placeholder="{{ special_request_placeholder }}">{{ special_request }}</textarea>
@@ -124,18 +124,18 @@
           {% endfor %}
         </div>
       </div>
-    </details>
-
-    {% if limits.generations_left == 0 %}
-      <p class="generate-limit">{{ icon('info') }} You've reached today's limit for new recipes — it resets at midnight. Your saved recipes are still here.</p>
-    {% elif limits.generations_left <= 3 %}
-      <p class="generate-limit generate-limit--low">{{ limits.generations_left }} new recipe generation{{ "s" if limits.generations_left != 1 else "" }} left today.</p>
-    {% endif %}
-    </div>
-
-    <div class="wizard-dock">
-      <a class="btn btn--secondary btn--square" href="{{ url_for('wizard.step_cooking_for') }}" aria-label="Back">{{ icon('arrow_back') }}</a>
-      <button type="submit" class="btn btn--primary" id="generate-btn"{% if limits.generations_left == 0 %} disabled{% endif %}><span>{% if suggestions %}Make something new{% else %}Generate recipes{% endif %}</span>{{ icon('cooking') }}</button>
+      {% if limits.generations_left == 0 %}
+        <p class="generate-limit">{{ icon('info') }} You've reached today's limit for new recipes — it resets at midnight. Your saved recipes are still here.</p>
+      {% elif limits.generations_left <= 3 %}
+        <p class="generate-limit generate-limit--low">{{ limits.generations_left }} new recipe generation{{ "s" if limits.generations_left != 1 else "" }} left today.</p>
+      {% endif %}
+      {# Same pair as every step's dock, but in the card rather than floating:
+         on this page the button belongs with the request it sends. #}
+      <div class="review-actions">
+        <a class="btn btn--secondary btn--square" href="{{ url_for('wizard.step_cooking_for') }}" aria-label="Back">{{ icon('arrow_back') }}</a>
+        <button type="submit" class="btn btn--primary" id="generate-btn"{% if limits.generations_left == 0 %} disabled{% endif %}><span>Generate recipes</span>{{ icon('cooking') }}</button>
+      </div>
+    </section>
     </div>
   </form>
 </div>

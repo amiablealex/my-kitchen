@@ -1464,6 +1464,9 @@ dialog.confirm::backdrop { background: rgba(20, 4, 32, 0.74); }
 .wizard-step .steps { margin-bottom: var(--space-4); }
 .wizard-form { flex: 1; display: flex; flex-direction: column; }
 .wizard-step--center .wizard-body { margin-block: auto; padding-block: var(--space-4); }
+/* a second question on the same step (cuisine under meal type) gets breathing room */
+.wizard-group { margin-top: var(--space-6); }
+.wizard-body .options--chips { margin-bottom: 0; }
 .wizard-dock {
   position: sticky; z-index: 20; bottom: calc(var(--bottomnav-h) + var(--space-4));
   display: flex; justify-content: flex-end; gap: var(--space-2);
@@ -1494,31 +1497,18 @@ dialog.confirm::backdrop { background: rgba(20, 4, 32, 0.74); }
 .brief-panel .brief { margin-top: var(--space-3); }
 .brief-panel .help { margin: var(--space-2) 0 0; }
 
-/* --- review: saved recipes that fit, in their own coloured band --- */
-.sugg-band {
-  margin: 0 calc(var(--space-4) * -1) var(--space-5); padding: var(--space-4) 0 var(--space-3);
-  background-color: color-mix(in srgb, var(--accent-3) 15%, var(--grape));
-  background-image: var(--polka); background-size: 120px 120px;
-}
-@media (min-width: 620px) { .sugg-band { margin-inline: 0; border-radius: var(--petal-lg); } }
-.sugg-band-head { display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4) var(--space-3); }
-.sugg-band-head h2 { margin: 0; font-size: var(--fs-h2); }
-.sugg-band-head p { margin: 2px 0 0; color: var(--text-muted); font-size: var(--fs-small); }
-.sugg-band .sugg-scroller { padding: 0 var(--space-4) var(--space-2); scroll-padding-inline: var(--space-4); }
-.sugg-band .sugg-card { background: var(--surface); box-shadow: var(--shadow-2); }
-.sugg-band .sugg-card:hover { background: var(--surface-2); }
-
-/* --- review: "Nothing take your fancy?" — the special request folds away --- */
-.fancy { margin: 0 0 var(--space-4); background: var(--surface); border-radius: var(--petal-lg); }
-.fancy > summary { list-style: none; display: flex; align-items: center; gap: var(--space-3);
-  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3); cursor: pointer; }
-.fancy > summary::-webkit-details-marker { display: none; }
-.fancy > summary::after { content: ""; flex: none; width: 7px; height: 7px; margin: 0 var(--space-1) 4px auto;
-  border: solid var(--accent-1); border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform 0.15s ease; }
-.fancy[open] > summary::after { transform: rotate(-135deg); margin-bottom: 0; }
-.fancy-text { display: flex; flex-direction: column; }
-.fancy-text span { color: var(--text-muted); font-size: var(--fs-small); }
-.fancy .special-request { margin: 0; padding: 0 var(--space-4) var(--space-4); }
+/* --- review: two paths, each headed by its bead — saved (orange) and new (pinwheel) --- */
+.review-section { margin: 0 0 var(--space-5); }
+.review-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+.review-head h2 { margin: 0; font-size: var(--fs-h2); }
+.review-head p { margin: 2px 0 0; color: var(--text-muted); font-size: var(--fs-small); }
+.review-head .confirm-bead { width: 46px; height: 46px; border-radius: 23px 23px 23px 7px; }
+.review-section .sugg-scroller { margin-inline: calc(var(--space-4) * -1); padding-inline: var(--space-4); scroll-padding-inline: var(--space-4); }
+.review-new { background: var(--surface); border-radius: var(--petal-lg); padding: var(--space-4); }
+.review-new .special-request { margin: 0; }
+.review-new .special-request textarea { background: var(--grape); }
+.review-new .request-chip { background: var(--surface-2); }
+.review-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-4); }
 
 /* overflow menu: items are full-width buttons/links; keep their contents left */
 .menu-item { justify-content: flex-start; }

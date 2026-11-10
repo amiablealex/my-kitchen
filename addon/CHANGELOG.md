@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.28.2
+- **"Ready to cook?" reworked.** Your saved recipes that fit come first, under
+  *Already in your recipes*. Below them, one *Make something new* card holds
+  the request box and the *Generate recipes* button together, so what you
+  ask for and the button that sends it are in the same place. The coloured
+  band and the fold-away request box are gone.
+- *What are you making?* is now centred like the steps after it, with more
+  space between meal type and cuisine.
+
 ## 0.28.1
 - **The cook wizard keeps its buttons in one place.** Back and Continue now
   sit together at the bottom right of every step, just above the bottom bar,

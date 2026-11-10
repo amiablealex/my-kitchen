@@ -82,3 +82,17 @@ landed on are written up in `brand-ui-guide.md` §8 (v0.2).
   `center` from the bare-button base, which pushed the Archive button's
   contents in.
 - `sw.js` cache bumped to v4.
+
+## 0.28.2 — review page, take two
+- The review page has no dock. `.wizard-dock` is replaced on this page by
+  `.review-actions` inside the *Make something new* card (`.review-new`), so
+  Generate sits with the request it sends. It's the same Back + primary pair,
+  right-aligned, just not floating.
+- Two `.review-section`s, each headed by its bead (`.review-head`): *Already in
+  your recipes* (orange tile bead, only with suggestions) and the new card
+  (pinwheel `.confirm-bead`; the heading reads "Nothing take your fancy?" when
+  suggestions exist). `.sugg-band` and `details.fancy` are removed.
+- "Full brief" moved inside the chip row so it wraps with the chips.
+- Cuisine step: now `.wizard-step--center`. `#cuisine-block` gets
+  `.wizard-group` (`margin-top: space-6`).
+- `sw.js` cache v5.
