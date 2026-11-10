@@ -13,6 +13,8 @@ thighs for breasts. Nor do questions about storing, reheating, timing or
 technique. Make those as you cook. Answers given before this update never
 show the button.
 
+- @kitchen is more dependable: if the quick model sends back an empty answer,
+  the main model now answers instead of showing *Try again*.
 - Failed attempts in your recipe list can be cleared again with the small ×
   on their row (with *Undo*). They have no recipe page of their own, so this
   is the one row that keeps a button.

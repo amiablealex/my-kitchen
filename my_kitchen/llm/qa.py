@@ -43,7 +43,8 @@ How to answer:
 Flagging a bigger change:
 - The app can turn your suggestion into a new, rewritten version of the recipe. Only flag it when your answer proposes a MAJOR change: one that alters the dish enough that the ingredients list and method would really need rewriting. Examples: making it vegetarian or vegan, a different cooking method or appliance (slow cooker, air fryer, oven instead of hob), turning it into a different kind of dish (a pasta bake, a soup, a traybake), swapping the main ingredient for one that cooks quite differently, or adding a whole new component.
 - Do NOT flag like-for-like swaps or small tweaks the cook can simply make as they go: lemon for lime, dried herbs for fresh, chicken thighs for breasts, one cheese or oil for another, a bit more or less of something, a garnish. Never flag questions about storage, freezing, reheating, timings, doneness, technique or serving.
-- To flag, end your answer with one final line on its own, exactly: CHANGE: <a short instruction for the rewrite, under 15 words, e.g. "Make it vegetarian, using chickpeas instead of the chicken">
+- To flag it, finish your answer as normal, then add one last line that starts with CHANGE: followed by a short instruction for the rewrite, under 15 words. For example:
+CHANGE: Make it vegetarian, using chickpeas instead of the chicken
 - If it isn't a major change, don't write a CHANGE line at all. When in doubt, don't flag."""
 
 
@@ -144,6 +145,40 @@ def qa_models(cfg):
     return [qa_model] if qa_model == main_model else [qa_model, main_model]
 
 
+def ask(cfg, prompt):
+    """One @kitchen call with fallback. Returns a dict: text (None if every
+    attempt failed), model ("provider:model" that answered), fallback (True if
+    it wasn't the first model), usage (summed over attempts — failed calls
+    still cost tokens), error (the last failure, for logging).
+
+    A ProviderError OR an empty reply moves on to the next model. Gemini can
+    finish with MALFORMED_RESPONSE and return no text without raising, which
+    otherwise looked like a dead answer."""
+    out = {"text": None, "model": None, "fallback": False,
+           "usage": {"input": 0, "output": 0}, "error": None}
+    for i, model in enumerate(qa_models(cfg)):
+        try:
+            provider = get_provider(cfg, model=model, max_tokens=QA_MAX_TOKENS,
+                                    temperature=QA_TEMPERATURE)
+            try:
+                text = provider.generate(QA_SYSTEM_PROMPT, prompt,
+                                         json_mode=False, thinking="low")
+            finally:
+                usage = getattr(provider, "last_usage", None) or {}
+                out["usage"]["input"] += int(usage.get("input") or 0)
+                out["usage"]["output"] += int(usage.get("output") or 0)
+        except ProviderError as e:
+            out["error"] = f"{model}: {e}"
+            continue
+        if not (text or "").strip():
+            reason = getattr(provider, "last_finish_reason", None)
+            out["error"] = f"{model}: empty reply (finish reason {reason})"
+            continue
+        out.update(text=text, model=f"{provider.name}:{provider.model}", fallback=i > 0)
+        break
+    return out
+
+
 def answer_question(app, comment_id, viewing_servings=None):
     """Background job: answer one question and write it onto its row. Runs in
     its own app context and session, like generation, and always leaves the row
@@ -159,29 +194,17 @@ def answer_question(app, comment_id, viewing_servings=None):
                        and q.id != c.id and q.created_at <= c.created_at][-HISTORY_TURNS:]
             prompt = build_qa_prompt(recipe, c.body, viewing_servings, earlier)
 
-            cfg = app.config
-            attempts = qa_models(cfg)
-
-            text, last_error = None, None
-            for model in attempts:
-                try:
-                    provider = get_provider(cfg, model=model, max_tokens=QA_MAX_TOKENS,
-                                            temperature=QA_TEMPERATURE)
-                    try:
-                        text = provider.generate(QA_SYSTEM_PROMPT, prompt,
-                                                 json_mode=False, thinking="low")
-                    finally:
-                        usage = getattr(provider, "last_usage", None) or {}
-                        if usage:
-                            c.input_tokens = (c.input_tokens or 0) + int(usage.get("input") or 0)
-                            c.output_tokens = (c.output_tokens or 0) + int(usage.get("output") or 0)
-                    c.model = f"{provider.name}:{provider.model}"
-                    break
-                except ProviderError as e:
-                    # A refused Lite model (renamed, not enabled on the key) falls
-                    # back to the main model once, so questions keep working.
-                    last_error = e
-                    continue
+            # A refused or empty Lite answer falls back to the main model once,
+            # so questions keep working (see ask()).
+            res = ask(app.config, prompt)
+            c.input_tokens = (c.input_tokens or 0) + res["usage"]["input"]
+            c.output_tokens = (c.output_tokens or 0) + res["usage"]["output"]
+            if res["model"]:
+                c.model = res["model"]
+            text, last_error = res["text"], res["error"]
+            if res["fallback"]:
+                app.logger.info("@kitchen comment %s answered by fallback after: %s",
+                                comment_id, last_error)
 
             body, change = split_change(text)
             answer = _clean_answer(body)

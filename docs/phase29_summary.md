@@ -62,6 +62,26 @@ Undo toast reading "Cleared.". Recipe rows stay action-free.
 `recipe_archive.js` and `toast.js` are back on the Recipes page, and
 `row_restore` serves Undo.
 
+## First real eval run (Pi, Gemini Lite): 7/10, all judgement correct
+The three ERRORs (vegetarian, traybake, pasta) were empty replies with
+finish reason `MALFORMED_RESPONSE`. The SDK raises nothing and `resp.text` is
+None, so the old fallback (exceptions only) never ran. In the app those
+questions would have shown *Try again*. They were all should-flag cases.
+
+Fixes:
+- **`ask(cfg, prompt)`** in `qa.py` is the one call path for the job and the
+  eval. An empty reply counts as a failed attempt, so the main model gets its
+  turn. Usage is summed across attempts. It returns `fallback`, and the job
+  logs when the fallback answered.
+- **The prompt's flag instruction** is now plain text with a literal
+  example line, instead of an `CHANGE: <…>` placeholder containing angle
+  brackets and nested quotes. That template was the likeliest trigger for
+  the malformed output, though it isn't proven.
+- **The eval** prints `(answered by fallback …)` with the reason, and counts
+  fallbacks in its summary. A pass that needed the fallback is still a pass
+  for judgement, but a run with many fallbacks means the Lite model is
+  struggling.
+
 ## Verified (dev, mock)
 - `flask db upgrade` from empty runs to `e29a4b7c1d63`, and `flask db check`
   reports no drift.

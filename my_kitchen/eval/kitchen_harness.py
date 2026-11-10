@@ -12,9 +12,7 @@ is written. Each case is one QA-model call (about ten per run). The mock
 provider only checks the plumbing (it flags by keyword), not the judgement.
 """
 from ..models import Recipe
-from ..llm.providers import ProviderError, get_provider
-from ..llm.qa import (QA_MAX_TOKENS, QA_SYSTEM_PROMPT, QA_TEMPERATURE,
-                      _clean_answer, build_qa_prompt, qa_models, split_change)
+from ..llm.qa import _clean_answer, ask, build_qa_prompt, qa_models, split_change
 
 # (question, should_flag). Major = would need a rewritten recipe.
 CASES = [
@@ -69,31 +67,26 @@ def run_kitchen_eval(cfg, provider_name=None, only=None, echo=print):
     models = qa_models(cfg)
     echo(f"eval-kitchen: {len(cases)} case(s), provider={cfg.get('LLM_PROVIDER') or 'mock'}, model={models[0]}")
     echo("")
-    passed = 0
+    passed, fallbacks = 0, 0
     for question, want in cases:
-        prompt = build_qa_prompt(recipe, question)
-        text, err = None, None
-        for model in models:
-            try:
-                p = get_provider(cfg, model=model, max_tokens=QA_MAX_TOKENS, temperature=QA_TEMPERATURE)
-                text = p.generate(QA_SYSTEM_PROMPT, prompt, json_mode=False, thinking="low")
-                break
-            except ProviderError as e:
-                err = e
-        if text is None:
-            echo(f"ERROR  {question}\n       {err}")
+        res = ask(cfg, build_qa_prompt(recipe, question))
+        if res["text"] is None:
+            echo(f"ERROR  {question}\n       {res['error']}")
             continue
-        body, change = split_change(text)
+        body, change = split_change(res["text"])
         got = change is not None
         ok = got == want
         passed += ok
         mark = "PASS" if ok else "FAIL"
         want_s = "flag" if want else "no flag"
         echo(f"{mark}   [{want_s:>7}]  {question}")
+        if res["fallback"]:
+            fallbacks += 1
+            echo(f"         (answered by fallback {res['model']} after: {res['error']})")
         if change:
             echo(f"         CHANGE: {change}")
         if not ok:
             echo("         answer: " + _clean_answer(body).replace("\n", " ")[:220])
     echo("")
-    echo(f"{passed}/{len(cases)} passed")
+    echo(f"{passed}/{len(cases)} passed" + (f", {fallbacks} via fallback" if fallbacks else ""))
     return passed == len(cases)
