@@ -340,6 +340,14 @@
                 </div>
                 {% if c.answer_status == 'done' %}
                   <p class="note-body">{{ c.answer }}</p>
+                  {# Phase 29: only when the answer proposed a major change (the
+                     model's CHANGE line), and only where a new version can be
+                     made. Pre-fills the refine panel; the confirmation still applies. #}
+                  {% if c.suggested_change and can_refine %}
+                    <button type="button" class="btn btn--ghost btn--sm reply-refine"
+                            data-refine-change="{{ c.suggested_change }}"
+                            title="{{ c.suggested_change }}">{{ icon('add') }} Make this version {{ next_v }}</button>
+                  {% endif %}
                 {% elif c.answer_status == 'pending' and not stale %}
                   <p class="note-thinking" data-pending>Thinking<span class="thinking-dots" aria-hidden="true"><span></span><span></span><span></span></span></p>
                 {% else %}

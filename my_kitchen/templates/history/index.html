@@ -28,7 +28,8 @@
     <div class="empty">{{ icon('menu_book') }}<p>Nothing here yet.</p>
       <a class="btn btn--primary" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Lets cook</a></div>
   {% else %}
-    <div id="recipe-bank">
+    <div id="recipe-bank" data-archive-url="{{ url_for('history.row_archive') }}"
+         data-restore-url="{{ url_for('history.row_restore') }}">
     {# Bucket the merged rows by source. AI rows lack kind=='user'. #}
     {% set ns = namespace(ai=[], hand=[]) %}
     {% for row in rows %}
@@ -71,6 +72,10 @@
                   <div class="row-title"><span class="muted">Generation failed</span></div>
                   <div class="row-meta">{{ cook_av(row.gen.created_by, "Started by") }}<span>{{ row.gen.created_at | shortdate }}</span>{% if row.gen.error %}<span class="sep">·</span><span>{{ row.gen.error }}</span>{% endif %}</div>
                 </div>
+                {# A failed attempt has no recipe page (so no ⋯ menu): this is
+                   the one row with an action — clear it, with Undo. #}
+                <button type="button" class="row-archive" data-archive-key="generation_id" data-archive-id="{{ row.gen.id }}"
+                        aria-label="Clear this failed attempt" title="Clear">{{ icon('close') }}</button>
               </li>
             {% endif %}
           {% endfor %}
@@ -108,4 +113,6 @@
 {% block scripts %}
   <script type="application/json" id="facet-options">{{ facet_options | tojson }}</script>
   <script src="{{ url_for('static', filename='recipe_facets.js') }}"></script>
+  <script src="{{ url_for('static', filename='toast.js') }}"></script>
+  <script src="{{ url_for('static', filename='recipe_archive.js') }}"></script>
 {% endblock %}

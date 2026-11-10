@@ -1521,3 +1521,6 @@ dialog.confirm::backdrop { background: rgba(20, 4, 32, 0.74); }
 .cook-i--3 { --c: var(--accent-3); }
 .cook-i--4 { --c: var(--accent-2); }
 .cook-i--none { --c: var(--text-muted); }
+
+/* "Make this version N" under a @kitchen reply (0.29) */
+.reply-refine { margin: var(--space-2) 0 0 calc(var(--space-2) * -1); }

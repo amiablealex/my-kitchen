@@ -49,6 +49,11 @@ class MockProvider:
         if not json_mode:  # Phase 27: a plain-text @kitchen answer
             out = ("Good question! (This is the mock provider.) Keep the heat at a "
                    "steady medium and trust your eyes and nose over the timer.")
+            # Phase 29: a major-change question gets a CHANGE line, so the
+            # "Make this version N" button can be tried in dev.
+            q = user_prompt.rsplit("<<<", 1)[-1].lower()
+            if any(k in q for k in ("vegetarian", "vegan", "slow cooker", "air fryer", "turn this into", "pasta")):
+                out += "\nCHANGE: " + q.split(">>>")[0].strip().rstrip("?").capitalize()
             self.last_usage = {"input": (len(system_prompt) + len(user_prompt)) // 4,
                                "output": len(out) // 4}
             return out

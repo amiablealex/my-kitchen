@@ -7,7 +7,8 @@
 // - The submit button disables once confirmed (the server's one-running-job-
 //   per-user guard is the real backstop).
 // - window.mkRefine lets the servings scaler pre-fill "Make this for N people"
-//   and open the panel; the same confirmation still applies.
+//   and open the panel; the same confirmation still applies. @kitchen replies
+//   that propose a major change use it too (Phase 29).
 (function () {
   var panel = document.getElementById("refine");
   var box = document.getElementById("refine-instruction");
@@ -83,4 +84,10 @@
     box.value = text;
     setOpen(true, true);
   };
+
+  // Phase 29: "Make this version N" under a @kitchen reply that proposed a
+  // major change. Same path as the servings rewrite: pre-fill, open, confirm.
+  document.querySelectorAll("[data-refine-change]").forEach(function (b) {
+    b.addEventListener("click", function () { window.mkRefine(b.dataset.refineChange); });
+  });
 })();

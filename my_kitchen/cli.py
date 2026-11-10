@@ -143,6 +143,17 @@ def register_cli(app):
         run_eval(app.config, provider_name=provider_name,
                  temperature=temperature, only=only, echo=click.echo)
 
+    @app.cli.command("eval-kitchen")
+    @click.option("--provider", "provider_name", default=None,
+                  help="Override LLM_PROVIDER for this run (mock | anthropic | gemini).")
+    @click.option("--only", default=None, help="Run only cases whose question contains this text.")
+    def eval_kitchen(provider_name, only):
+        """Check @kitchen flags MAJOR changes ("Make this version N") and not
+        like-for-like swaps or storage/timing questions. ~10 QA-model calls."""
+        from .eval.kitchen_harness import run_kitchen_eval
+        ok = run_kitchen_eval(app.config, provider_name=provider_name, only=only, echo=click.echo)
+        raise SystemExit(0 if ok else 1)
+
     @app.cli.command("resolve-eval")
     @click.option("--threshold", type=float, default=None,
                   help="Override the fuzzy match threshold for this run. Defaults "

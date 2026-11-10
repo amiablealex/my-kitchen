@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.29.0 — @kitchen can start a new version
+**From a question to a new version in one tap.** When @kitchen's answer
+suggests a change big enough to need the recipe rewriting (making it
+vegetarian, cooking it in the slow cooker, turning it into a traybake), a
+*Make this version N* button appears under the reply. It opens the refine
+panel with the change already written in. Nothing is sent until you've
+confirmed it, as with any new version.
+
+Small swaps don't get the button: lemon for lime, dried herbs for fresh,
+thighs for breasts. Nor do questions about storing, reheating, timing or
+technique. Make those as you cook. Answers given before this update never
+show the button.
+
+- Failed attempts in your recipe list can be cleared again with the small ×
+  on their row (with *Undo*). They have no recipe page of their own, so this
+  is the one row that keeps a button.
+
+**For the self-hosted:** one small database migration (a new column on
+notes), applied automatically when the add-on starts. There's a new
+`flask eval-kitchen` command that checks @kitchen flags the right answers,
+using about ten cheap calls per run.
+
 ## 0.28.3
 - *Ready to cook?* fits on one phone screen: two request chips instead of
   four (they now sit on one row), and one fewer line of explanation above

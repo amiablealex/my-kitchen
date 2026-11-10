@@ -38,7 +38,13 @@ How to answer:
 - The cook may be viewing the recipe scaled to a different number of servings than it was written for; answer for the servings they're viewing.
 - You only answer questions about cooking this recipe (technique, timing, swaps, storage, reheating, scaling, serving). If the question is about anything else, say kindly in one sentence that you can only help with this recipe.
 - If you're not sure (e.g. an exact food-safety time), say so plainly and give the safe, conservative answer.
-- Never rewrite the whole recipe; if the cook wants it changed, suggest they use "Refine" on the recipe page."""
+- Never rewrite the whole recipe in your answer.
+
+Flagging a bigger change:
+- The app can turn your suggestion into a new, rewritten version of the recipe. Only flag it when your answer proposes a MAJOR change: one that alters the dish enough that the ingredients list and method would really need rewriting. Examples: making it vegetarian or vegan, a different cooking method or appliance (slow cooker, air fryer, oven instead of hob), turning it into a different kind of dish (a pasta bake, a soup, a traybake), swapping the main ingredient for one that cooks quite differently, or adding a whole new component.
+- Do NOT flag like-for-like swaps or small tweaks the cook can simply make as they go: lemon for lime, dried herbs for fresh, chicken thighs for breasts, one cheese or oil for another, a bit more or less of something, a garnish. Never flag questions about storage, freezing, reheating, timings, doneness, technique or serving.
+- To flag, end your answer with one final line on its own, exactly: CHANGE: <a short instruction for the rewrite, under 15 words, e.g. "Make it vegetarian, using chickpeas instead of the chicken">
+- If it isn't a major change, don't write a CHANGE line at all. When in doubt, don't flag."""
 
 
 def _contract(recipe):
@@ -98,12 +104,44 @@ def build_qa_prompt(recipe, question, viewing_servings=None, history=()):
     return "\n".join(lines)
 
 
+CHANGE_MAX_CHARS = 200     # the refine box's own limit is larger; this is a one-liner
+# One line only ([ \t], never \s, so an empty marker can't swallow the next
+# line); tolerates markdown bold around the label.
+_CHANGE_LINE = re.compile(r"^[ \t]*\**[ \t]*CHANGE[ \t]*\**[ \t]*:[ \t]*\**[ \t]*(.*?)[ \t]*\**[ \t]*$", re.I | re.M)
+
+
 def _clean_answer(text):
     """Plain text for a pre-wrap block: drop markdown emphasis and headings the
     model sometimes adds anyway, trim, cap."""
     s = (text or "").replace("**", "").replace("__", "")
     s = re.sub(r"^\s{0,3}#{1,6}\s*", "", s, flags=re.M)
     return s.strip()[:ANSWER_MAX_CHARS]
+
+
+def split_change(text):
+    """(answer, change). Pulls a `CHANGE: ...` line out of the model's text,
+    wherever it landed, so it never shows in the reply. The LAST such line wins;
+    an empty or garbled one just means no button. Pure, so the eval and the
+    background job share it."""
+    raw = text or ""
+    matches = list(_CHANGE_LINE.finditer(raw))
+    if not matches:
+        return raw, None
+    change = matches[-1].group(1).strip().strip('*"\u201c\u201d\' ').strip()
+    answer = _CHANGE_LINE.sub("", raw)
+    change = change[:CHANGE_MAX_CHARS]
+    if not change:
+        return answer, None
+    return answer, change[0].upper() + change[1:]
+
+
+def qa_models(cfg):
+    """The models to try, in order: the QA model, then the main model once if
+    they differ. Shared by the background job and `flask eval-kitchen`."""
+    provider_name = (cfg.get("LLM_PROVIDER") or "mock").lower()
+    main_model = cfg.get("LLM_MODEL") or None
+    qa_model = cfg.get("LLM_QA_MODEL") or DEFAULT_QA_MODELS.get(provider_name) or main_model
+    return [qa_model] if qa_model == main_model else [qa_model, main_model]
 
 
 def answer_question(app, comment_id, viewing_servings=None):
@@ -122,10 +160,7 @@ def answer_question(app, comment_id, viewing_servings=None):
             prompt = build_qa_prompt(recipe, c.body, viewing_servings, earlier)
 
             cfg = app.config
-            provider_name = (cfg.get("LLM_PROVIDER") or "mock").lower()
-            main_model = cfg.get("LLM_MODEL") or None
-            qa_model = cfg.get("LLM_QA_MODEL") or DEFAULT_QA_MODELS.get(provider_name) or main_model
-            attempts = [qa_model] if qa_model == main_model else [qa_model, main_model]
+            attempts = qa_models(cfg)
 
             text, last_error = None, None
             for model in attempts:
@@ -148,9 +183,11 @@ def answer_question(app, comment_id, viewing_servings=None):
                     last_error = e
                     continue
 
-            answer = _clean_answer(text)
+            body, change = split_change(text)
+            answer = _clean_answer(body)
             if answer:
                 c.answer = answer
+                c.suggested_change = change
                 c.answer_status = "done"
             else:
                 c.answer_status = "error"

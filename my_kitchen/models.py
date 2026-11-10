@@ -443,6 +443,10 @@ class RecipeComment(db.Model):
     answer = db.Column(db.Text, nullable=True)
     answer_status = db.Column(db.String, nullable=True)
     answered_at = db.Column(db.DateTime, nullable=True)
+    # Phase 29: when the answer proposes a change big enough to warrant a new
+    # version (not a like-for-like swap), the model's one-line instruction for
+    # it. Drives "Make this version N" under the reply; NULL means no button.
+    suggested_change = db.Column(db.Text, nullable=True)
     model = db.Column(db.String, nullable=True)
     input_tokens = db.Column(db.Integer, nullable=True)
     output_tokens = db.Column(db.Integer, nullable=True)

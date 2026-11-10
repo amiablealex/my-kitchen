@@ -1,4 +1,6 @@
 // Per-row archive on the Recipes page (Phase 24), with an Undo toast.
+// Since 0.28 only failed-generation rows carry the button (recipes archive
+// from their own page's ⋯ menu); the mechanism is unchanged.
 // Endpoint URLs come from data-* on #recipe-bank (ingress-safe — JS never builds
 // paths); POSTs carry X-CSRFToken from base.html's meta tag. Archiving removes
 // the row element; Undo restores exactly the set the server reported and puts
@@ -48,7 +50,7 @@
       list.removeChild(row);
       recount(group);
       window.showToast({
-        message: "Archived.",
+        message: "Cleared.",
         actionLabel: "Undo",
         onAction: function () {
           post(restoreUrl, touched).then(function () {
