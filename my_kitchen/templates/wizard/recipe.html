@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_person.html" import person_mark %}
 {% from "_source.html" import source_dot %}
 {% from "_ingredients.html" import scalable_line %}
 {% block title %}{{ recipe.title }} — My Kitchen{% endblock %}
@@ -313,7 +314,7 @@
         {% for c in recipe.comments %}
           <li class="note{% if c.is_question %} note--question{% endif %}" id="note-{{ c.id }}">
             <div class="note-head">
-              <span class="note-author">{{ c.author.name if c.author else "unknown" }}</span>
+              {{ person_mark(c.author) }}<span class="note-author">{{ c.author.name if c.author else "unknown" }}</span>
               <span class="note-when">{{ c.created_at | localdt }}</span>
               {% if c.author and c.author.id == current_user.id %}
                 {# Author-only. The confirm() is a courtesy; without JS the form

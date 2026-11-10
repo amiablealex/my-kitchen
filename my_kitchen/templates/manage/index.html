@@ -3,15 +3,30 @@
 {% block title %}Manage — My Kitchen{% endblock %}
 {% block page_title %}Manage{% endblock %}
 {% block content %}
-  <h1>Manage catalogue</h1>
-  <p class="lead">Set up your kitchen here: what ingredients exist, the categories they sit in,
-     and your equipment. (Stock in/out and notes live on the
-     <a href="{{ url_for('stock.index') }}">Stock</a> page.)</p>
+  <h1>Manage</h1>
+  <p class="lead">Set-up you'll rarely need to touch: what's in the catalogue, and who you cook for.
+     Day to day, what's in and out lives on <a href="{{ url_for('stock.index') }}">Stock</a>.</p>
 
-  <div class="home-tiles home-tiles--2 k-manage">
-    <a class="card home-link" href="{{ url_for('manage.ingredients') }}"><span class="tile-bead">{{ icon('restaurant_menu') }}</span><span>Ingredients</span></a>
-    <a class="card home-link" href="{{ url_for('manage.categories') }}"><span class="tile-bead">{{ icon('tune') }}</span><span>Categories</span></a>
-    <a class="card home-link" href="{{ url_for('manage.equipment') }}"><span class="tile-bead">{{ icon('kitchen') }}</span><span>Equipment</span></a>
-    <a class="card home-link" href="{{ url_for('manage.dietary_tags') }}"><span class="tile-bead">{{ icon('info') }}</span><span>Dietary tags</span></a>
-  </div>
+  {# Two groups (0.29.3): the kitchen, and the people. Dietary tags sit with
+     the people because they're assigned to them. #}
+  {% macro row(href, ic, label, detail) -%}
+    <li><a class="manage-row" href="{{ href }}"><span class="tile-bead">{{ icon(ic) }}</span><span class="manage-row-label">{{ label }}</span><span class="manage-row-detail">{{ detail }}</span>{{ icon('arrow_forward', 'manage-row-go') }}</a></li>
+  {%- endmacro %}
+
+  <section class="manage-group k-manage">
+    <h2 class="manage-group-name">Kitchen</h2>
+    <ul class="manage-list">
+      {{ row(url_for('manage.ingredients'), 'restaurant_menu', 'Ingredients', counts.ingredients) }}
+      {{ row(url_for('manage.categories'), 'tune', 'Categories', counts.categories) }}
+      {{ row(url_for('manage.equipment'), 'kitchen', 'Equipment', counts.equipment) }}
+    </ul>
+  </section>
+
+  <section class="manage-group k-manage">
+    <h2 class="manage-group-name">People</h2>
+    <ul class="manage-list">
+      {{ row(url_for('users.index'), 'group', 'Household', counts.people ~ (' person' if counts.people == 1 else ' people')) }}
+      {{ row(url_for('manage.dietary_tags'), 'info', 'Dietary tags', counts.tags) }}
+    </ul>
+  </section>
 {% endblock %}

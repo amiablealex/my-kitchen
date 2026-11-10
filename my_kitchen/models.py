@@ -143,6 +143,18 @@ recipe_favourites = db.Table(
 )
 
 
+# A person's colour (0.29.3): one of a small fixed set drawn from the app's
+# palette, shown wherever the app marks who someone is (recipe rows, notes,
+# Household). Stored as the key; NULL means "not chosen", which falls back to
+# the old id-based rotation so nobody's colour changes on upgrade.
+USER_COLOURS = [
+    ("teal", "Teal"), ("lime", "Lime"), ("sun", "Sun"), ("orange", "Orange"),
+    ("pink", "Pink"), ("lilac", "Lilac"), ("sky", "Sky"),
+]
+USER_COLOUR_KEYS = {k for k, _ in USER_COLOURS}
+_FALLBACK_COLOURS = ["teal", "pink", "orange", "lime"]   # the pre-0.29.3 rotation
+
+
 class User(db.Model, UserMixin):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
@@ -150,6 +162,13 @@ class User(db.Model, UserMixin):
     password_hash = db.Column(db.String, nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    colour = db.Column(db.String(16), nullable=True)
+
+    @property
+    def colour_key(self):
+        if self.colour in USER_COLOUR_KEYS:
+            return self.colour
+        return _FALLBACK_COLOURS[((self.id or 1) - 1) % len(_FALLBACK_COLOURS)]
 
     dietary_tags = db.relationship(
         "DietaryTag", secondary=user_dietary_tags, backref="users"

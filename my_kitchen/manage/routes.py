@@ -23,7 +23,15 @@ manage_bp = Blueprint("manage", __name__, url_prefix="/manage")
 
 @manage_bp.route("/")
 def index():
-    return render_template("manage/index.html")
+    # A count beside each entry, so the page says something before you tap.
+    counts = dict(
+        ingredients=Ingredient.query.filter_by(is_active=True).count(),
+        categories=Category.query.count(),
+        equipment=Equipment.query.count(),
+        tags=DietaryTag.query.count(),
+        people=User.query.filter_by(is_active=True).count(),
+    )
+    return render_template("manage/index.html", counts=counts)
 
 
 # ---------------------------------------------------------------- ingredients

@@ -511,7 +511,7 @@ th { color: var(--text-muted); font-weight: 600; }
 }
 .badge--allergy { background: rgba(255, 95, 145, 0.16); color: #ffd0de; }
 .badge--avoid      { background: rgba(254, 155, 70, 0.16); color: #ffe0c4; }
-.badge--preference { background: rgba(86, 208, 187, 0.16); color: #c8f3ea; }
+.badge--preference { background: rgba(177, 228, 109, 0.16); color: #e3f6c8; }
 .badge--pref    { background: rgba(86, 208, 187, 0.16); color: #c8f3ea; }
 .badge--staple  { background: rgba(177, 228, 109, 0.16); color: #e2f5c5; }
 .badge--warn    { background: rgba(254, 155, 70, 0.18); color: #ffe0c4; }
@@ -879,7 +879,7 @@ p.recipe-intro { display: block; padding: var(--space-4); }
    pink -> orange -> teal, matching the order of the constant. */
 .recipe-group--allergy    { --group: var(--danger);  --group-tint: rgba(255, 95, 145, 0.14); }
 .recipe-group--avoid      { --group: var(--warning); --group-tint: rgba(254, 155, 70, 0.14); }
-.recipe-group--preference { --group: var(--info);    --group-tint: rgba(86, 208, 187, 0.14); }
+.recipe-group--preference { --group: var(--accent-2); --group-tint: rgba(177, 228, 109, 0.14); }
 
 .group-help {
   margin: 0; padding: var(--space-2) var(--space-3);
@@ -1517,10 +1517,7 @@ dialog.confirm::backdrop { background: rgba(20, 4, 32, 0.74); }
 .cook-i { flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px;
   border-radius: 9px 9px 9px 3px; font-size: 0.66rem; font-weight: 800; text-transform: uppercase;
   --c: var(--accent-1); color: var(--c); background: color-mix(in srgb, var(--c) 22%, var(--surface-2)); }
-.cook-i--2 { --c: var(--accent-4); }
-.cook-i--3 { --c: var(--accent-3); }
-.cook-i--4 { --c: var(--accent-2); }
-.cook-i--none { --c: var(--text-muted); }
+/* the cook's colour comes from their .u-<colour> class (0.29.3), see "people" */
 
 /* "Make this version N" under a @kitchen reply (0.29) */
 .reply-refine { margin: var(--space-2) 0 0 calc(var(--space-2) * -1); }
@@ -1613,3 +1610,84 @@ dialog.confirm::backdrop { background: rgba(20, 4, 32, 0.74); }
 .wizard-catalogue .search-result { margin: 0; }
 .wizard-catalogue .stock-add { min-height: 42px; }
 .wizard-catalogue .stock-add small { font-style: italic; font-size: 0.75rem; }
+
+/* ============================================================ people (0.29.3)
+   A person's colour is a small fixed set from the palette. --u carries it;
+   .cook-i (their initial) reads it. Teal stays the action colour, so the tag
+   chips on a person's page use the Dietary tags page colours instead:
+   allergies pink, dislikes orange, diets lime. */
+.u-teal { --u: var(--accent-1); }  .u-lime { --u: var(--accent-2); }  .u-sun { --u: #FFD45C; }
+.u-orange { --u: var(--accent-3); }  .u-pink { --u: var(--accent-4); }
+.u-lilac { --u: #B99CFF; }  .u-sky { --u: #6EC1FF; }
+.cook-i { --c: var(--u, var(--accent-1)); }
+.cook-i.cook-i--none { --c: var(--text-muted); }
+.cook-i--lg { width: 40px; height: 40px; border-radius: 20px 20px 20px 7px; font-size: 1.05rem;
+  background: var(--c); color: var(--on-accent); }
+.note-head .cook-i { margin-right: -2px; }
+
+.person-head { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-2) 0 var(--space-5); }
+.person-head h1 { margin: 0; }
+.person-head .cook-i--lg { width: 52px; height: 52px; border-radius: 26px 26px 26px 8px; font-size: 1.4rem; }
+.person-meta { margin: 2px 0 0; color: var(--text-muted); font-size: var(--fs-small); }
+.person-meta .sep { opacity: 0.5; }
+.person-section { margin: 0 0 var(--space-5); }
+.person-section .field-label { margin-bottom: var(--space-3); }
+
+.swatches { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 var(--space-2); }
+.form .swatch, .swatch { position: relative; display: grid; place-items: center; width: 40px; height: 40px; margin: 0;
+  border-radius: 20px; background: var(--u); cursor: pointer; transition: border-radius 0.18s ease, box-shadow 0.15s ease; }
+.swatch input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+.swatch:has(input:focus-visible) { outline: 3px solid var(--text); outline-offset: 3px; }
+.swatch:has(input:checked) { border-radius: 20px 20px 20px 6px; box-shadow: 0 0 0 3px var(--grape), 0 0 0 5px var(--u); }
+.swatch:has(input:checked)::after { content: ""; width: 7px; height: 14px; margin-bottom: 4px;
+  border: solid var(--on-accent); border-width: 0 3px 3px 0; transform: rotate(45deg); }
+.swatch-who { font-size: 0.82rem; font-weight: 800; color: var(--on-accent); opacity: 0.72; }
+.swatch:has(input:checked) .swatch-who { display: none; }
+
+.form .option { display: flex; margin-bottom: 0; }
+.tag-lane { margin: 0 0 var(--space-4); }
+.tag-lane .lane-head { font-size: 1rem; margin-bottom: var(--space-2); }
+.tag-lane .lane-head::before { width: 16px; height: 16px; border-radius: 8px 8px 8px 3px; }
+.tag-lane--allergy { --group: var(--accent-4); --pick: var(--accent-4); }
+.tag-lane--avoid { --group: var(--accent-3); --pick: var(--accent-3); }
+.tag-lane--preference { --group: var(--accent-2); --pick: var(--accent-2); }
+.tag-lane .options--chips { gap: var(--space-2); margin: 0; }
+.tag-lane .option { min-height: 40px; padding: 0 var(--space-4); }
+.tag-lane .option:has(input:checked) { padding-left: var(--space-3); }
+
+.person-fold { background: var(--surface); border-radius: var(--petal); margin: 0 0 var(--space-4); }
+.person-fold > summary { display: flex; align-items: center; gap: var(--space-2); min-height: 48px;
+  padding: 0 var(--space-4); cursor: pointer; list-style: none; font-weight: 600; }
+.person-fold > summary::-webkit-details-marker { display: none; }
+.person-fold > summary .icon { color: var(--text-muted); width: 1.2em; height: 1.2em; }
+.person-fold-body { padding: 0 var(--space-4) var(--space-4); }
+
+.person-list { list-style: none; margin: var(--space-4) 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.person-row { display: flex; align-items: center; gap: var(--space-3); min-height: 64px; padding: var(--space-2) var(--space-4);
+  background: var(--surface); border-radius: var(--petal); color: var(--text); text-decoration: none; }
+.person-row:hover { background: var(--surface-2); text-decoration: none; }
+.person-row:active { border-radius: var(--petal-flip); }
+.person-row-main { display: flex; flex-direction: column; min-width: 0; }
+.person-row-name { font-weight: 700; }
+.person-row-meta { font-size: var(--fs-small); color: var(--text-muted); }
+.person-list--retired .person-row { background: transparent; box-shadow: inset 0 0 0 1px var(--divider); }
+.person-list--retired .cook-i--lg { opacity: 0.55; }
+.person-retired > summary { cursor: pointer; color: var(--text-muted); margin-top: var(--space-4); }
+
+/* Manage index: two grouped lists instead of four big tiles (0.29.3). */
+.manage-group { margin: 0 0 var(--space-5); }
+.manage-group-name { margin: 0 0 var(--space-2); font-size: var(--fs-small); font-family: inherit;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.manage-list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--petal-lg); overflow: hidden; }
+.manage-row { display: flex; align-items: center; gap: var(--space-3); min-height: 60px; padding: var(--space-2) var(--space-4);
+  color: var(--text); text-decoration: none; }
+.manage-list li + li .manage-row { border-top: 1px solid var(--divider); }
+.manage-row:hover { background: var(--surface-2); text-decoration: none; }
+.manage-row .tile-bead { width: 36px; height: 36px; border-radius: 18px 18px 18px 5px; }
+.manage-row .tile-bead .icon { width: 1.3em; height: 1.3em; }
+.manage-row-label { flex: 1; font-weight: 700; }
+.manage-row-detail { color: var(--text-muted); font-size: var(--fs-small); }
+.manage-row-go { color: var(--text-muted); width: 1.1em; height: 1.1em; }
+.content .manage-list, .content .person-list { padding-left: 0; }
+.content .manage-list { margin-bottom: 0; }
+.nav-foot .who { display: flex; align-items: center; gap: 6px; }

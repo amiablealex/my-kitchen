@@ -2,13 +2,10 @@
    One line of title, one line of meta. Who cooked it is a small tinted initial
    that leads the meta line (0.28.1), so the title keeps the full width. #}
 {% from "_icons.html" import icon %}
+{% from "_person.html" import person_mark %}
 
 {% macro cook_av(user, verb="Cooked by") -%}
-  {% if user %}
-    <span class="cook-i cook-i--{{ (user.id - 1) % 4 + 1 }}" title="{{ verb }} {{ user.name }}" aria-label="{{ verb }} {{ user.name }}">{{ user.name[:1] }}</span>
-  {% else %}
-    <span class="cook-i cook-i--none" title="{{ verb }} someone unknown" aria-label="{{ verb }} someone unknown">?</span>
-  {% endif %}
+  {{ person_mark(user, verb ~ " " ~ (user.name if user else "someone unknown")) }}
 {%- endmacro %}
 
 {% macro row_meta(when, cuisine=None, time_band=None, servings=None, who=None, verb="Cooked by") -%}

@@ -127,3 +127,35 @@ freely from AVAILABLE + staples, so it now reads *Anything in stock* /
 No prompt change.
 
 `sw.js` cache → v8.
+
+
+## 0.29.3 — people: Household in Manage, one page per person, colours
+**Model.** `User.colour` (String(16), nullable), migration `f41c8d2a9b70`
+(revises `e29a4b7c1d63`). `USER_COLOURS` in models; `User.colour_key` returns
+the stored key or the pre-0.29.3 rotation (`teal, pink, orange, lime` by id),
+so nothing changes on upgrade.
+
+**Mark.** `templates/_person.html` → `person_mark(user, label, size)`. Used by
+`history/_rows.html` (`cook_av` now delegates), note heads on the recipe page,
+the Household list, the person header and the side menu's *Logged in as*.
+CSS: `.u-<key>` sets `--u`; `.cook-i` reads `--c: var(--u, …)`;
+`.cook-i--lg` is the solid version. The old `.cook-i--2/3/4` classes are gone.
+
+**Person page** (`users/edit.html`). One form, posted to `users.edit`: name,
+colour (radio swatches; another person's initial marks a taken colour) and
+tags (`tags_present` guards against clearing tags for retired users, whose
+tags are read-only). The `set_tags` route is removed. The password fields sit
+in a fold inside the person form but belong to a separate empty `#pw-form` via
+`form="pw-form"`, so the dock's Save never submits them. Retire/Reactivate
+moved to the ⋯ menu.
+
+**The heavy tags** were `.form label { display: block }` beating `.option`'s
+flex, so the drawn tick became a bar. Fixed with `.form .option`.
+Diets moved from teal to lime here and on the Dietary tags page
+(`.recipe-group--preference`, `.badge--preference`).
+
+**Manage.** `manage.index` passes counts; the page is two `.manage-list`
+groups. Household left the nav; `users.*` highlights Manage. URLs unchanged.
+Household rows are whole-row links with a tag summary (`_tag_summary`).
+
+`sw.js` cache → v9.

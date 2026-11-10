@@ -18,7 +18,7 @@ from flask_login import current_user
 from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
-from ..models import User, DietaryTag, TAG_TYPE_CHOICES, TAG_TYPE_HINTS
+from ..models import User, DietaryTag, TAG_TYPE_CHOICES, TAG_TYPE_HINTS, USER_COLOURS, USER_COLOUR_KEYS
 
 users_bp = Blueprint("users", __name__, url_prefix="/users")
 
@@ -46,7 +46,21 @@ def index():
     all_users = User.query.order_by(User.name).all()
     active = [u for u in all_users if u.is_active]
     retired = [u for u in all_users if not u.is_active]
-    return render_template("users/index.html", active=active, retired=retired)
+    return render_template("users/index.html", active=active, retired=retired,
+                           summary={u.id: _tag_summary(u) for u in all_users})
+
+
+def _tag_summary(user):
+    """'1 allergy · 5 dislikes' — what the recipe brief will know about them."""
+    words = {"allergy": ("allergy", "allergies"), "avoid": ("dislike", "dislikes"),
+             "preference": ("diet", "diets")}
+    parts = []
+    for key, _ in TAG_TYPE_CHOICES:
+        n = sum(1 for t in user.dietary_tags if t.type == key)
+        if n:
+            one, many = words.get(key, (key, key))
+            parts.append(f"{n} {one if n == 1 else many}")
+    return " · ".join(parts)
 
 
 @users_bp.route("/add", methods=["POST"])
@@ -88,6 +102,10 @@ def add():
 
 @users_bp.route("/<int:user_id>/edit", methods=["GET", "POST"])
 def edit(user_id):
+    """One form for a person (0.29.3): name, colour and dietary tags, one Save.
+    Password stays its own small form (it needs the confirm pair). Retired users
+    can be renamed and recoloured, but their tags are read-only: tags only matter
+    for someone who can be cooked for."""
     user = db.session.get(User, user_id)
     if user is None:
         abort(404)
@@ -100,48 +118,39 @@ def edit(user_id):
             flash(f'"{name}" already exists.', "error")
             return redirect(url_for("users.edit", user_id=user.id))
         user.name = name
+        colour = request.form.get("colour")
+        if colour in USER_COLOUR_KEYS:
+            user.colour = colour
+        if user.is_active and request.form.get("tags_present"):
+            ids = [int(x) for x in request.form.getlist("tag_ids") if x.isdigit()]
+            user.dietary_tags = DietaryTag.query.filter(DietaryTag.id.in_(ids)).all() if ids else []
         try:
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
             flash(f'"{name}" already exists.', "error")
             return redirect(url_for("users.edit", user_id=user.id))
-        flash(f'Saved "{user.name}".', "success")
+        flash(f'Saved {user.name}.', "success")
         return redirect(url_for("users.index"))
-    # Tags grouped by type for the assignment UI (active users only — controls
-    # are hidden for retired users, who show their tags read-only).
-    # Plural group names, not the choice labels — the labels are instructional
-    # ("Allergy — never use this"), which reads oddly as a section heading here.
+    # Tags grouped by type, keyed so the template can colour each group the same
+    # way the Dietary tags page does. Plural group names ("Dislikes"), not the
+    # instructional choice labels.
     tags_by_type = [
-        (TAG_TYPE_HINTS[key]["group"], DietaryTag.query.filter_by(type=key)
-                                       .order_by(db.func.lower(DietaryTag.name)).all())
+        (key, TAG_TYPE_HINTS[key]["group"], DietaryTag.query.filter_by(type=key)
+                                            .order_by(db.func.lower(DietaryTag.name)).all())
         for key, _ in TAG_TYPE_CHOICES
     ]
     assigned_ids = {t.id for t in user.dietary_tags}
+    # Who already has each colour, so a swatch can show it's taken (allowed, but
+    # two people in one colour defeats the point).
+    taken = {}
+    for u in User.query.filter(User.id != user.id, User.is_active.is_(True)).all():
+        taken.setdefault(u.colour_key, []).append(u.name)
     return render_template(
         "users/edit.html",
         user=user, tags_by_type=tags_by_type, assigned_ids=assigned_ids,
+        colours=USER_COLOURS, taken=taken,
     )
-
-
-@users_bp.route("/<int:user_id>/tags", methods=["POST"])
-def set_tags(user_id):
-    user = db.session.get(User, user_id)
-    if user is None:
-        abort(404)
-    # Tag assignment is only meaningful for people who can be cooked for, i.e.
-    # active users. Retired users show their tags read-only (no form to submit),
-    # but guard the route too in case of a stale page.
-    if not user.is_active:
-        flash("Reactivate this user before changing their dietary tags.", "error")
-        return redirect(url_for("users.edit", user_id=user.id))
-    ids = [int(x) for x in request.form.getlist("tag_ids") if x.isdigit()]
-    user.dietary_tags = DietaryTag.query.filter(DietaryTag.id.in_(ids)).all() if ids else []
-    db.session.commit()
-    flash(f'Updated dietary tags for "{user.name}".', "success")
-    return redirect(url_for("users.edit", user_id=user.id))
-
-    return render_template("users/edit.html", user=user)
 
 
 @users_bp.route("/<int:user_id>/password", methods=["POST"])

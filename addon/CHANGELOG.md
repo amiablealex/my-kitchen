@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.29.3
+- **Household lives in Manage.** Manage is now two short lists, Kitchen
+  (ingredients, categories, equipment) and People (household, dietary
+  tags), each with a count. The side menu has one fewer entry.
+- **A person, on one page.** Name, colour and dietary tags save together
+  with one *Save*. The password is a small fold of its own. *Retire* and
+  *Reactivate* are in the ⋯ menu.
+- **Dietary tags as chips.** They had been showing as heavy full-width bars
+  (a styling bug). Now they're chips, coloured like the Dietary tags page:
+  allergies pink, dislikes orange, diets lime. Diets were teal, the same as
+  the buttons.
+- **Everyone has a colour.** Choose from seven on a person's page. It marks
+  them on the recipes they cook, the notes they write (notes now show the
+  author's initial), in Household and in the side menu. Nobody's colour
+  changes until you pick one.
+- **Household list.** Tap a person to open them. Each row shows their
+  colour and what recipes will know about them (*5 dislikes · 1 diet*), and
+  flags anyone without a password.
+- Includes a small database update (a new column), applied automatically.
+
 ## 0.29.2
 - **Choosing ingredients is shorter.** In-stock items are chips now, like
   the stock page, so most kitchens fit on one or two screens. Picking one

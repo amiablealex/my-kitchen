@@ -1,0 +1,12 @@
+{# A person's mark (0.29.3): their initial on a small petal in their colour.
+   Colour comes from User.colour_key (chosen in Household, or the old id-based
+   rotation if never chosen). size: "sm" for meta lines, "lg" for Household. #}
+{% macro person_mark(user, label=None, size="sm") -%}
+  {% if user %}
+    <span class="cook-i u-{{ user.colour_key }}{% if size == 'lg' %} cook-i--lg{% endif %}"
+          {% if label %}title="{{ label }}" aria-label="{{ label }}"{% else %}aria-hidden="true"{% endif %}>{{ user.name[:1] }}</span>
+  {% else %}
+    <span class="cook-i cook-i--none{% if size == 'lg' %} cook-i--lg{% endif %}"
+          {% if label %}title="{{ label }}" aria-label="{{ label }}"{% else %}aria-hidden="true"{% endif %}>?</span>
+  {% endif %}
+{%- endmacro %}

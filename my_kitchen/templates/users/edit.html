@@ -1,69 +1,118 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
-{% block title %}Edit {{ user.name }} — My Kitchen{% endblock %}
-{% block page_title %}Edit user{% endblock %}
+{% from "_person.html" import person_mark %}
+{% block title %}{{ user.name }} — My Kitchen{% endblock %}
+{% block page_title %}Household{% endblock %}
+{% block topbar_actions %}
+  {# Retire / reactivate are occasional, so they live behind ⋯ (0.29.3). #}
+  {% if not user.is_active or user.id != current_user.id %}
+    <details class="overflow">
+      <summary class="icon-btn" aria-label="More actions">{{ icon('more') }}</summary>
+      <div class="overflow-menu">
+        {% if user.is_active %}
+          <form method="post" action="{{ url_for('users.retire', user_id=user.id) }}"
+                onsubmit="return confirm('Retire “{{ user.name }}”? They won’t be able to log in until reactivated. Their history is kept.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="menu-item menu-item--warn">{{ icon('archive') }}<span>Retire {{ user.name }}</span></button>
+          </form>
+        {% else %}
+          <form method="post" action="{{ url_for('users.activate', user_id=user.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="menu-item">{{ icon('check') }}<span>Reactivate {{ user.name }}</span></button>
+          </form>
+        {% endif %}
+      </div>
+    </details>
+  {% endif %}
+{% endblock %}
 {% block content %}
   <a class="back-link" href="{{ url_for('users.index') }}">{{ icon('arrow_back') }} Household</a>
-  <h1>Edit user</h1>
 
-  <section class="section">
-    <h2>Name</h2>
-    <form class="form" method="post" action="{{ url_for('users.edit', user_id=user.id) }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <header class="person-head">
+    {{ person_mark(user, size="lg") }}
+    <div>
+      <h1>{{ user.name }}</h1>
+      <p class="person-meta">
+        {{ "Active" if user.is_active else "Retired" }}
+        <span class="sep">·</span>
+        {% if user.password_hash %}password set{% else %}<span class="warn-text">no password yet, so they can't log in</span>{% endif %}
+      </p>
+    </div>
+  </header>
+
+  {# The password has its own form (it needs the confirm pair); its fields sit
+     inside the person form visually and join this one via form="pw-form". #}
+  <form id="pw-form" method="post" action="{{ url_for('users.set_password', user_id=user.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  </form>
+
+  <form class="form person-form" method="post" action="{{ url_for('users.edit', user_id=user.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <section class="person-section">
       <label>Name <input type="text" name="name" value="{{ user.name }}" required></label>
-      <div class="form-actions"><button type="submit" class="btn btn--primary">Save name</button></div>
-    </form>
-    <p class="help">Renaming keeps all of this user's existing cooking history attributed
-       to them — the link is by id, not name.</p>
-  </section>
+    </section>
 
-  <section class="section">
-    <h2>Password</h2>
-    <form class="form" method="post" action="{{ url_for('users.set_password', user_id=user.id) }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <label>New password <input type="password" name="password" required></label>
-      <label>Confirm <input type="password" name="password_confirm" required></label>
-      <div class="form-actions"><button type="submit" class="btn btn--primary">Set password</button></div>
-    </form>
-  </section>
+    <section class="person-section">
+      <h2 class="field-label">Colour</h2>
+      <div class="swatches" role="radiogroup" aria-label="Colour">
+        {% for key, label in colours %}
+          {% set others = taken.get(key, []) %}
+          <label class="swatch u-{{ key }}" title="{{ label }}{% if others %} · {{ others | join(', ') }}{% endif %}">
+            <input type="radio" name="colour" value="{{ key }}" {% if user.colour_key == key %}checked{% endif %}
+                   aria-label="{{ label }}{% if others %}, also {{ others | join(', ') }}{% endif %}">
+            {% if others %}<span class="swatch-who" aria-hidden="true">{{ others[0][:1] }}</span>{% endif %}
+          </label>
+        {% endfor %}
+      </div>
+      <p class="help">Marks {{ user.name }} on recipes they cook and notes they write. A letter on a colour means someone else has it.</p>
+    </section>
 
-  <section class="section">
-    <h2>Dietary tags</h2>
-    {% set has_tags = tags_by_type | map(attribute=1) | map('length') | sum %}
-    {% if not has_tags %}
-      <p class="muted">No dietary tags exist yet. Create some on the
-         <a href="{{ url_for('manage.dietary_tags') }}">Dietary tags</a> page first.</p>
-    {% elif user.is_active %}
-      <form class="form" method="post" action="{{ url_for('users.set_tags', user_id=user.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        {% for label, tags in tags_by_type %}
+    <section class="person-section">
+      <h2 class="field-label">Dietary tags</h2>
+      {% set has_tags = tags_by_type | map(attribute=2) | map('length') | sum %}
+      {% if not has_tags %}
+        <p class="muted">No dietary tags exist yet. Create some in
+           <a href="{{ url_for('manage.dietary_tags') }}">Manage → Dietary tags</a> first.</p>
+      {% elif user.is_active %}
+        <input type="hidden" name="tags_present" value="1">
+        {% for key, label, tags in tags_by_type %}
           {% if tags %}
-            <h3>{{ label }}</h3>
-            <div class="options">
-              {% for t in tags %}
-                <label class="option">
-                  <input type="checkbox" name="tag_ids" value="{{ t.id }}"
-                         {% if t.id in assigned_ids %}checked{% endif %}>
-                  <span>{{ t.name }}</span>
-                </label>
-              {% endfor %}
+            <div class="tag-lane tag-lane--{{ key }}">
+              <h3 class="lane-head">{{ label }}</h3>
+              <div class="options options--chips">
+                {% for t in tags %}
+                  <label class="option">
+                    <input type="checkbox" name="tag_ids" value="{{ t.id }}" {% if t.id in assigned_ids %}checked{% endif %}>
+                    <span>{{ t.name }}</span>
+                  </label>
+                {% endfor %}
+              </div>
             </div>
           {% endif %}
         {% endfor %}
-        <div class="form-actions"><button type="submit" class="btn btn--primary">Save dietary tags</button></div>
-      </form>
-      <p class="help">Ticking sets this person's full list — unticking one removes it.
-         To create a new tag, go to <a href="{{ url_for('manage.dietary_tags') }}">Manage → Dietary tags</a>.</p>
-    {% else %}
-      {% if user.dietary_tags %}
-        <p>This retired user has: {{ user.dietary_tags | map(attribute='name') | join(', ') }}.</p>
+        <p class="help">To make a new tag, go to <a href="{{ url_for('manage.dietary_tags') }}">Manage → Dietary tags</a>.</p>
       {% else %}
-        <p class="muted">No dietary tags assigned.</p>
+        {% if user.dietary_tags %}
+          <p>{{ user.dietary_tags | map(attribute='name') | join(', ') }}</p>
+        {% else %}
+          <p class="muted">None.</p>
+        {% endif %}
+        <p class="help">Reactivate {{ user.name }} to change these.</p>
       {% endif %}
-      <p class="help">Reactivate this user to change their dietary tags.</p>
-    {% endif %}
-  </section>
+    </section>
 
-  <p class="help">Status: {{ "active" if user.is_active else "retired" }}.
-     {% if user.password_hash %}A password is set.{% else %}No password set yet — this user can't log in until one is.{% endif %}</p>
+    <details class="person-fold"{% if not user.password_hash %} open{% endif %}>
+      <summary>{{ icon('key') }}<span>{% if user.password_hash %}Change password{% else %}Set a password{% endif %}</span></summary>
+      <div class="person-fold-body">
+        <label>New password <input type="password" name="password" form="pw-form" required autocomplete="new-password"></label>
+        <label>Confirm <input type="password" name="password_confirm" form="pw-form" required autocomplete="new-password"></label>
+        <button type="submit" form="pw-form" class="btn btn--secondary btn--sm">Set password</button>
+      </div>
+    </details>
+
+    <div class="wizard-dock">
+      <button type="submit" class="btn btn--primary"><span>Save</span>{{ icon('check') }}</button>
+    </div>
+  </form>
 {% endblock %}

@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_person.html" import person_mark %}
 {% block title %}Household — My Kitchen{% endblock %}
 {% block page_title %}Household{% endblock %}
 {% block content %}
+  <a class="back-link" href="{{ url_for('manage.index') }}">{{ icon('arrow_back') }} Manage</a>
   <h1>Household</h1>
   <p class="lead">The people who can log in. Users are retired rather than deleted, so their
      cooking history stays intact.</p>
@@ -21,59 +23,38 @@
     </form>
   </details>
 
+  {# Each person is one tappable row: their mark, name, and what the recipe
+     brief will know about them. Edit, retire and reactivate live on their page
+     (0.29.3), so the list carries no buttons. #}
+  {% macro person_row(u) -%}
+    <li>
+      <a class="person-row" href="{{ url_for('users.edit', user_id=u.id) }}">
+        {{ person_mark(u, size="lg") }}
+        <span class="person-row-main">
+          <span class="person-row-name">{{ u.name }}{% if u.id == current_user.id %} <span class="muted">· you</span>{% endif %}</span>
+          <span class="person-row-meta">
+            {%- if not u.password_hash %}<span class="warn-text">No password</span>{% if summary[u.id] %} · {% endif %}{% endif -%}
+            {{ summary[u.id] or ('No dietary tags' if u.password_hash else '') }}
+          </span>
+        </span>
+      </a>
+    </li>
+  {%- endmacro %}
+
   {% if active %}
-    <section class="recipe-group recipe-group--plain">
-      <header class="recipe-group-head">
-        <h2 class="recipe-group-name">Active</h2>
-        <span class="recipe-group-count">{{ active|length }}</span>
-      </header>
-      <ul class="recipe-list">
-        {% for u in active %}
-          <li class="recipe-row">
-            <div class="row-main">
-              <div class="row-title">{{ u.name }}{% if u.id == current_user.id %} <span class="muted">· you</span>{% endif %}{% if not u.password_hash %} <span class="warn-text">· no password</span>{% endif %}</div>
-            </div>
-            <div class="row-actions">
-              <a class="btn btn--sm btn--icon btn--secondary" aria-label="Edit {{ u.name }}"
-                 href="{{ url_for('users.edit', user_id=u.id) }}">{{ icon('edit') }}</a>
-              {% if u.id != current_user.id %}
-                <form method="post" action="{{ url_for('users.retire', user_id=u.id) }}"
-                      onsubmit="return confirm('Retire \u201c{{ u.name }}\u201d? They won\u2019t be able to log in until reactivated.');">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="btn btn--sm btn--icon" aria-label="Retire {{ u.name }}">{{ icon('archive') }}</button>
-                </form>
-              {% endif %}
-            </div>
-          </li>
-        {% endfor %}
-      </ul>
-    </section>
+    <ul class="person-list">
+      {% for u in active %}{{ person_row(u) }}{% endfor %}
+    </ul>
   {% else %}
     <p class="muted">No active users.</p>
   {% endif %}
 
   {% if retired %}
-    <details class="section">
+    <details class="person-retired">
       <summary>Retired ({{ retired|length }})</summary>
-      <section class="recipe-group recipe-group--plain" data-no-filter style="margin-top:var(--space-3)">
-        <ul class="recipe-list">
-          {% for u in retired %}
-            <li class="recipe-row">
-              <div class="row-main">
-                <div class="row-title">{{ u.name }}{% if not u.password_hash %} <span class="warn-text">· no password</span>{% endif %}</div>
-              </div>
-              <div class="row-actions">
-                <a class="btn btn--sm btn--icon btn--secondary" aria-label="Edit {{ u.name }}"
-                   href="{{ url_for('users.edit', user_id=u.id) }}">{{ icon('edit') }}</a>
-                <form method="post" action="{{ url_for('users.activate', user_id=u.id) }}">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="btn btn--sm btn--icon btn--secondary" aria-label="Reactivate {{ u.name }}">{{ icon('check') }}</button>
-                </form>
-              </div>
-            </li>
-          {% endfor %}
-        </ul>
-      </section>
+      <ul class="person-list person-list--retired">
+        {% for u in retired %}{{ person_row(u) }}{% endfor %}
+      </ul>
     </details>
   {% endif %}
 {% endblock %}

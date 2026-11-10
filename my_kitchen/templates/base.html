@@ -17,6 +17,7 @@
   <meta name="mobile-web-app-capable" content="yes">
 </head>
 <body>
+{% from "_person.html" import person_mark %}
 {% from "_icons.html" import icon, brand_mark %}
 
 {# Active nav section derived from the endpoint — no route changes needed.
@@ -29,7 +30,7 @@
 {% elif ep == 'history.favourites' %}{% set nav_active.x = 'favourites' %}
 {% elif ep.startswith('history.') %}{% set nav_active.x = 'recipes' %}
 {% elif ep.startswith('manage.') %}{% set nav_active.x = 'manage' %}
-{% elif ep.startswith('users.') %}{% set nav_active.x = 'household' %}
+{% elif ep.startswith('users.') %}{% set nav_active.x = 'manage' %}
 {% elif ep.startswith('usage.') %}{% set nav_active.x = 'usage' %}
 {% endif %}
 
@@ -69,11 +70,10 @@
       {{ nav_item(url_for('history.index'),      'recipes',    'menu_book',  'Recipes',    nav_active.x) }}
       {{ nav_item(url_for('history.favourites'), 'favourites', 'star',       'Favourites', nav_active.x) }}
       {{ nav_item(url_for('manage.index'),       'manage',     'tune',       'Manage',     nav_active.x) }}
-      {{ nav_item(url_for('users.index'),        'household',  'group',      'Household',  nav_active.x) }}
       {{ nav_item(url_for('usage.index'),        'usage',      'bar_chart',  'Usage',      nav_active.x) }}
     </nav>
     <div class="nav-foot">
-      <span class="who">Logged in as <strong>{{ current_user.name }}</strong></span>
+      <span class="who">{{ person_mark(current_user) }} Logged in as <strong>{{ current_user.name }}</strong></span>
       <form method="post" action="{{ url_for('auth.logout') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn--secondary">Log out</button>
