@@ -57,7 +57,8 @@ SPECIAL_REQUEST_PLACEHOLDERS = [
     "e.g. fresh and light, nothing heavy",
     "e.g. a one-pot I can leave to bubble away",
 ]
-SPECIAL_REQUEST_CHIPS = ["Something spicy", "Keep it simple", "Traditional", "One pan"]
+# Two, so they sit on one row on a phone; the rotating placeholder carries the other examples.
+SPECIAL_REQUEST_CHIPS = ["Something spicy", "Keep it simple"]
 
 
 def fresh_wizard():

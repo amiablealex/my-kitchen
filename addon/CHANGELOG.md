@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.28.3
+- *Ready to cook?* fits on one phone screen: two request chips instead of
+  four (they now sit on one row), and one fewer line of explanation above
+  the request box.
+
 ## 0.28.2
 - **"Ready to cook?" reworked.** Your saved recipes that fit come first, under
   *Already in your recipes*. Below them, one *Make something new* card holds

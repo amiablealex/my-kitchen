@@ -96,3 +96,10 @@ landed on are written up in `brand-ui-guide.md` §8 (v0.2).
 - Cuisine step: now `.wizard-step--center`. `#cuisine-block` gets
   `.wizard-group` (`margin-top: space-6`).
 - `sw.js` cache v5.
+
+## 0.28.3
+- `SPECIAL_REQUEST_CHIPS` cut to two ("Something spicy", "Keep it simple"),
+  so they fit one row at phone width. The rotating placeholder still offers
+  other examples. The review card drops the `.special-request-hint` line,
+  which repeated the card's own heading. No static files changed, so no
+  `sw.js` bump.
