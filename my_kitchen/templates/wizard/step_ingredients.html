@@ -6,7 +6,7 @@
 {% block content %}
 <div class="wizard-step">
   {{ step_dots(1) }}
-  <form class="wizard-form" method="post" action="{{ url_for('wizard.step_ingredients') }}">
+  <form class="wizard-form" method="post" action="{{ url_for('wizard.step_ingredients') }}" id="ing-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="wizard-body">
   <h1>Choose ingredients to use up</h1>
@@ -14,23 +14,41 @@
      assumed available — but you can pick those too if you want the meal built around
      one (oregano and tomato, say).</p>
 
-  {# Persistent hand-off to stock maintenance, round-tripping back to this step. #}
-  <p>
-    <a class="btn btn--secondary btn--sm k-stock" href="{{ url_for('stock.index', return_to=url_for('wizard.step_ingredients')) }}">
-      {{ icon('shelves') }} Stock not right? Update
-    </a>
-  </p>
+  {# One row: a filter over the lanes AND the staples (so you needn't know which
+     an ingredient is), and the hand-off to stock maintenance. #}
+  <div class="wizard-tools">
+    <label class="wizard-search">
+      {{ icon('search') }}
+      <input type="search" id="ing-filter" placeholder="Find an ingredient" autocomplete="off"
+             aria-label="Find an ingredient">
+    </label>
+    {# A submit, not a link: saves the picks so far, then hops to /stock. #}
+    <button type="submit" name="go" value="stock" class="btn btn--secondary btn--sm k-stock" formnovalidate>
+      {{ icon('shelves') }} Edit stock
+    </button>
+  </div>
+  <p class="muted ing-nomatch" id="ing-nomatch" hidden>Nothing matches that. To add a brand-new ingredient, use Edit stock.</p>
 
-    {% if any_in_stock %}
+    {% if not any_in_stock %}
+      {# Empty pantry — the wizard's first impression; point at stock. Staples
+         stay selectable below, and search can stock things in place. #}
+      <div class="empty" id="ing-empty">
+        {{ icon('shelves') }}
+        <p>Nothing's in stock yet.</p>
+        <button type="submit" name="go" value="stock" class="btn btn--primary" formnovalidate>Update stock</button>
+        <p class="help">Or continue anyway — recipes will lean on staples and a couple of suggested extras.</p>
+      </div>
+    {% endif %}
       {# Lanes render in the fixed section order (protein, carb, veg, other), so
-         index maps cleanly onto the stock section colours. #}
+         index maps cleanly onto the stock section colours. With nothing in stock
+         they render hidden, ready for an add-from-search chip. #}
       {% set lane_keys = ['protein', 'carb', 'veg', 'other'] %}
       {% for section_label, items in lanes %}
         {% set key = lane_keys[loop.index0] if loop.index0 < 4 else 'other' %}
-        <section class="wizard-lane wizard-lane--{{ key }}">
+        <section class="wizard-lane wizard-lane--{{ key }}" data-section="{{ key }}"{% if not any_in_stock %} hidden{% endif %}>
           <h2 class="lane-head">{{ section_label }}</h2>
           {% if items %}
-            <div class="options options--grid">
+            <div class="options options--chips">
               {% for ing in items %}
                 <label class="option">
                   <input type="checkbox" name="ingredient_ids" value="{{ ing.id }}"
@@ -41,20 +59,10 @@
               {% endfor %}
             </div>
           {% else %}
-            <p class="muted">Nothing in stock in this lane.</p>
+            <p class="muted lane-empty">Nothing in stock in this lane.</p>
           {% endif %}
         </section>
       {% endfor %}
-    {% else %}
-      {# Empty pantry — the wizard's first impression; point at stock. Staples
-         stay selectable below, so this is no longer a dead end. #}
-      <div class="empty">
-        {{ icon('shelves') }}
-        <p>Nothing's in stock yet.</p>
-        <a class="btn btn--primary" href="{{ url_for('stock.index', return_to=url_for('wizard.step_ingredients')) }}">Update stock</a>
-        <p class="help">Or continue anyway — recipes will lean on staples and a couple of suggested extras.</p>
-      </div>
-    {% endif %}
 
     {# Staples drawer: collapsed by default so the common case (pick perishables
        from the lanes) costs nothing, but opened automatically when a staple is
@@ -74,7 +82,7 @@
           {% for group_name, items in staple_groups %}
             <section class="staple-group">
               <h3 class="staple-group-name">{{ group_name }}</h3>
-              <div class="options options--grid">
+              <div class="options options--chips">
                 {% for ing in items %}
                   <label class="option">
                     <input type="checkbox" name="ingredient_ids" value="{{ ing.id }}"
@@ -89,6 +97,10 @@
       </details>
     {% endif %}
 
+    {# Filled by the search: catalogue matches that aren't in stock. #}
+    <section class="wizard-catalogue" id="ing-catalogue" hidden
+             data-url="{{ url_for('wizard.ingredients_catalogue') }}"></section>
+
     </div>
     <div class="wizard-dock">
       <button type="submit" class="btn btn--primary">
@@ -97,4 +109,9 @@
     </div>
   </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='toast.js') }}"></script>
+  <script src="{{ url_for('static', filename='wizard_ingredients.js') }}"></script>
 {% endblock %}

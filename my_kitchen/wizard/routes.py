@@ -29,6 +29,7 @@ from ..usage.service import (
     generation_blocked_reason, question_blocked_reason, limits_today,
 )
 from .suggestions import suggest_recipes
+from ..stock.service import search_catalogue
 # Reuse the manage blueprint's ingredient-creation validation rather than
 # duplicating the name/category/staple handling (Phase 4a add-and-link). One-way
 # import — manage.routes doesn't import wizard, so there's no cycle.
@@ -123,6 +124,12 @@ def step_ingredients():
         ids = request.form.getlist("ingredient_ids")
         w["selected_ingredient_ids"] = [int(x) for x in ids if x.isdigit()]
         save_wizard(w)
+        # "Edit stock" is a submit button (0.29.2), so the picks made so far are
+        # saved before the hop to /stock and re-ticked on the way back. An item
+        # removed from stock meanwhile simply has no chip, so it drops out on
+        # the next submit.
+        if request.form.get("go") == "stock":
+            return redirect(url_for("stock.index", return_to=url_for("wizard.step_ingredients")))
         return redirect(url_for("wizard.step_cuisine"))
 
     # Live read of current stock on every render, so a round-trip to /stock
@@ -166,6 +173,17 @@ def step_ingredients():
         # active selection.
         staple_selected_count=sum(1 for i in staple_rows if i.id in selected),
     )
+
+
+@wizard_bp.route("/ingredients/catalogue")
+def ingredients_catalogue():
+    """Fragment for the ingredients step's search: catalogue matches that are NOT
+    in stock (active, non-staple), offered as add-to-stock chips. In-stock items
+    and staples are already on the page and filtered client-side. (0.29.2)"""
+    q = (request.args.get("q") or "").strip()
+    results = [i for i in search_catalogue(q, limit=40)
+               if not i.in_stock and not i.is_staple][:12]
+    return render_template("wizard/_catalogue.html", results=results, query=q)
 
 
 @wizard_bp.route("/cuisine", methods=["GET", "POST"])
@@ -270,6 +288,9 @@ def review():
     return render_template(
         "wizard/review.html",
         selected=selected, meal_type=meal_type,
+        # Nothing picked is the LEAST constrained brief (the prompt says "design
+        # freely from AVAILABLE + staples"), so the summary says so. (0.29.2)
+        any_in_stock=Ingredient.query.filter_by(in_stock=True, is_staple=False, is_active=True).first() is not None,
         cuisine=cuisine, cuisine_label=cuisine_label, time_label=time_label,
         servings=len(cooking_for_ids) + guests,
         cooking_for_users=cooking_for_users, guest_count=guests,

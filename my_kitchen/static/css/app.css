@@ -1581,3 +1581,35 @@ dialog.confirm::backdrop { background: rgba(20, 4, 32, 0.74); }
 .search-result .stock-add small { color: var(--text-muted); font-weight: 400; }
 .search-result--muted { min-height: 40px; padding: 0 var(--space-3); border-radius: 20px; background: var(--surface); gap: 6px; }
 .search-result--muted .search-state { font-size: 0.78rem; }
+
+/* --- wizard step 1: find-an-ingredient + chips (0.29.2) --- */
+.wizard-tools { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-4); }
+.wizard-search { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2);
+  min-height: 40px; padding: 0 var(--space-3); background: var(--surface); border-radius: var(--petal);
+  border: 1px solid transparent; }
+.wizard-search:focus-within { border-color: var(--accent-1); }
+.wizard-search .icon { width: 1.15em; height: 1.15em; color: var(--text-muted); }
+.wizard-search input { flex: 1; min-width: 0; min-height: 38px; padding: 0; border: 0; background: none;
+  box-shadow: none; outline: none; }
+.wizard-search input:focus { box-shadow: none; }
+.wizard-tools .btn { flex: none; min-height: 40px; }
+.option[hidden], .wizard-lane[hidden], .staple-group[hidden], .wizard-staples[hidden] { display: none; }
+.wizard-lane .options--chips, .staple-group .options--chips { gap: var(--space-2); }
+.wizard-lane .options--chips .option, .staple-group .options--chips .option { min-height: 42px; padding: 0 var(--space-4); }
+.wizard-lane .options--chips .option:has(input:checked), .staple-group .options--chips .option:has(input:checked) { padding-left: var(--space-3); }
+.options--chips .option .opt-meta { font-size: 0.75rem; font-style: italic; }
+.ing-nomatch { margin: 0 0 var(--space-4); }
+.wizard-search input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+/* Inside the drawer the chips sit on --surface, so lift them a step. */
+.wizard-staples .option:not(:has(input:checked)) { background: var(--surface-2); }
+/* "Not in stock" catalogue matches on the ingredients step: a hollow bead (not
+   here yet), the stock page's add chips, and a line saying what a tap does. */
+.wizard-catalogue { margin: var(--space-5) 0 0; }
+.wizard-catalogue[hidden] { display: none; }
+.lane-head--plain::before { background: transparent; box-shadow: inset 0 0 0 2px var(--text-muted); }
+.wizard-catalogue .lane-head { margin-bottom: var(--space-1); }
+.catalogue-help { margin: 0 0 var(--space-3); font-size: var(--fs-small); }
+.wizard-catalogue .search-results { flex-direction: row; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; }
+.wizard-catalogue .search-result { margin: 0; }
+.wizard-catalogue .stock-add { min-height: 42px; }
+.wizard-catalogue .stock-add small { font-style: italic; font-size: 0.75rem; }

@@ -4,13 +4,17 @@
 {% block page_title %}Stock{% endblock %}
 {% block content %}
   <h1>Stock</h1>
-  {% if return_to %}
-    {# Shown when reached mid-wizard via ?return_to=… so the user can hop back. #}
-    <p><a class="back-link" href="{{ return_to }}">{{ icon('arrow_back') }} Back to choosing ingredients</a></p>
-  {% endif %}
   <p class="lead">What you've got in. Tap an item to add a note; × when you've run out.</p>
 
   {% include "stock/_editor.html" %}
+
+  {% if return_to %}
+    {# Mid-wizard: a docked way back, so nobody reaches for the Cook tab (which
+       starts a fresh wizard). The picks were saved on the way here. (0.29.2) #}
+    <div class="wizard-dock">
+      <a class="btn btn--primary" href="{{ return_to }}"><span>Back to your picks</span>{{ icon('arrow_forward') }}</a>
+    </div>
+  {% endif %}
 {% endblock %}
 
 {% block scripts %}

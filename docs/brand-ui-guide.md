@@ -82,6 +82,7 @@ The four-quadrant **pinwheel** (teal, lime, orange, pink, clockwise from 12) bes
 - **Wizard:** four connected step dots in accents 1–4, current step emphasised. Every step is `.wizard-step` with a sticky, right-aligned **dock** (Back + Continue) just above the bottom bar; short steps centre their body. The review page puts its Generate button in the *Make something new* card, beside the request it sends.
 - **Choice screen:** numbered beads (1 teal, 2 pink) plus comparison tags; one right-aligned *Cook this* per card. *Neither one?* folds away because choosing is the main action.
 - **Stock:** items are chips (solid = in stock); catalogue matches are dashed chips (tap to add). Tap an item to note it; × removes it. This mirrors the wizard, where you pick from the same items.
+- **Wizard step 1 (0.29.2):** the same chips, picked in their lane colour. A search row (pill field + *Edit stock*) filters lanes and staples together. Catalogue matches that aren't in stock appear under a **hollow bead** (*Not in stock*, i.e. not here yet) as the stock page's add chips, with a line saying a tap stocks it household-wide. *Edit stock* is a submit, so picks survive the trip; the stock page then shows a docked *Back to your picks*.
 - **Empty states** and the **generating** state as before (polka panel, bouncing four-colour dots).
 - **States:** focus (3px teal outline, including options via `:has(input:focus-visible)`), hover (desktop), disabled (the double-submit guard).
 

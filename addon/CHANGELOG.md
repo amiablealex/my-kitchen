@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.29.2
+- **Choosing ingredients is shorter.** In-stock items are chips now, like
+  the stock page, so most kitchens fit on one or two screens. Picking one
+  looks the same as before: solid colour, a tick, a sharp corner.
+- **Find an ingredient.** A search box sits beside *Edit stock*. It filters
+  your stock and the staples together, opening the staples drawer when one
+  matches. Things you've picked stay picked while you search.
+- **Stock something without leaving.** If what you search for isn't in
+  stock, it's listed under *Not in stock*. Tap it to add it to your stock
+  (for the whole household, as on the stock page) and it appears in its
+  lane already picked, with *Undo*.
+- **Your picks survive a trip to Stock.** *Edit stock* saves what you've
+  picked first. On the stock page, *Back to your picks* takes you straight
+  back with everything still ticked, minus anything you've removed.
+- **Picking nothing reads correctly.** The review said *Staples* when
+  nothing was picked. It now says *Anything in stock*, which is what the
+  recipe brief has always meant. Only an empty pantry says *Staples only*.
+
 ## 0.29.1
 - **Take your pick, tidied.** The two recipes are numbered 1 and 2, each
   with its cuisine, time and servings, so they're easier to compare. Each

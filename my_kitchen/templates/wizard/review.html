@@ -19,7 +19,7 @@
           <span class="brief-chip k-stock">{{ icon('shelves') }}
             {%- if selected -%}
               {{ selected[0].name }}{% if selected | length > 1 %} +{{ selected | length - 1 }}{% endif %}
-            {%- else -%}Staples{%- endif -%}
+            {%- elif any_in_stock -%}Anything in stock{%- else -%}Staples only{%- endif -%}
           </span>
           <span class="brief-chip">{{ meal_type }}</span>
           {% if cuisine_label %}<span class="brief-chip">{{ cuisine_label }}</span>{% endif %}
@@ -35,7 +35,8 @@
           <span class="brief-val">
             {% if selected %}
               {% for ing in selected %}{{ ing.name }}{% if ing.note %} <span class="muted">({{ ing.note }})</span>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
-            {% else %}<span class="muted">Nothing chosen — leaning on staples &amp; suggested extras</span>{% endif %}
+            {% elif any_in_stock %}<span class="muted">Nothing chosen — free to use anything in stock</span>
+            {% else %}<span class="muted">Nothing in stock — staples and a couple of suggested extras</span>{% endif %}
           </span>
         </div>
         <div class="brief-row">

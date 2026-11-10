@@ -91,3 +91,39 @@ Fixes:
   shows one *Make this version 2* button. "lemon instead of lime" stores NULL
   and shows no button. `CHANGE:` never appears in the page.
 - Tapping the button opens the refine panel pre-filled, and Create → dialog.
+
+
+## 0.29.2 — choosing ingredients: chips, search, stock in place
+**Chips.** Both `options--grid` blocks on `step_ingredients.html` became
+`options--chips`. The selected morph is untouched (same `.option`, `--pick`,
+tick, sharp corner). Staple chips inside the drawer sit on `--surface-2` so
+they don't vanish into the drawer's `--surface`.
+
+**Search** (`static/wizard_ingredients.js`). Client-side filter over lane and
+staple chips by name (not the note). Empty lanes and staple groups hide; the
+drawer opens while a staple matches and returns to its prior state on clear.
+Hidden picked inputs still submit. Enter is swallowed: the first submit
+button in the form is *Edit stock*, so implicit submission would leave the
+page. Escape clears.
+
+**Not in stock.** `GET /cook/ingredients/catalogue?q=` renders
+`wizard/_catalogue.html`: `search_catalogue` minus in-stock and staples,
+capped at 12. A tap POSTs the existing `stock.add`, builds a picked chip in
+the lane named by `data-section` (alphabetical, *just added* meta), and
+toasts *X is now in stock* with Undo (`stock.remove`). With an empty pantry
+the lanes render hidden so an added chip has somewhere to go.
+
+**Round trip.** *Edit stock* is `<button name="go" value="stock">`. The step's
+POST saves `selected_ingredient_ids` then redirects to
+`stock.index?return_to=…`. The stock page swaps its top back link for a docked
+*Back to your picks* (the Cook tab starts a fresh wizard, so it mustn't be
+the obvious way back). Removed-from-stock picks have no chip on return and
+fall out on the next submit.
+
+**Review wording.** Nothing picked showed *Staples* / "leaning on staples &
+suggested extras". The prompt has always said MUST-USE empty means design
+freely from AVAILABLE + staples, so it now reads *Anything in stock* /
+"free to use anything in stock"; only an empty pantry says *Staples only*.
+No prompt change.
+
+`sw.js` cache → v8.

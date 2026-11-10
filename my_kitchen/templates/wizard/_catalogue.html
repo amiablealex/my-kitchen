@@ -1,0 +1,19 @@
+{% from "_icons.html" import icon %}
+{# Ingredients-step search, the "not in stock" half (wizard.ingredients_catalogue).
+   Spelled out twice, header and chip label, because tapping one changes stock
+   for the whole household, not just this meal. #}
+{% if results %}
+  <h2 class="lane-head lane-head--plain">Not in stock</h2>
+  <p class="muted catalogue-help">Tap to add it to your stock and use it here. It stays in stock until you remove it.</p>
+  <ul class="search-results">
+    {% for ing in results %}
+      <li class="search-result">
+        <button type="button" class="stock-add" data-id="{{ ing.id }}" data-name="{{ ing.name }}"
+                data-section="{{ ing.category.section }}"
+                data-add-url="{{ url_for('stock.add', ingredient_id=ing.id) }}"
+                data-remove-url="{{ url_for('stock.remove', ingredient_id=ing.id) }}"
+                aria-label="Add {{ ing.name }} to stock">{{ icon('add') }}<span class="search-result-name">{{ ing.name }}</span><small>add to stock</small></button>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
