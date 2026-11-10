@@ -62,7 +62,7 @@ The four-quadrant **pinwheel** (teal, lime, orange, pink, clockwise from 12) bes
 ## 7. Layout & navigation
 - Borrow **Music Assistant's pattern, not its stack**: a collapsible left nav drawer/rail on desktop that collapses to a **bottom nav bar** (or hamburger drawer) on mobile. (MA is a Vue SPA; we stay server-rendered Jinja — see §10.)
 - A shared **app shell**: nav + top bar (page title) + content slot, inherited by every route.
-- Mobile: bottom nav for primary destinations (Home, Lets Cook, Stock, Recipes), overflow/drawer for the rest (Manage, Household, Settings).
+- Mobile: bottom nav for primary destinations (Home, Lets Cook, Stock, Recipes), overflow/drawer for the rest (Favourites, Manage, Usage). Household lives inside Manage (0.29.3).
 - Touch targets ≥ 48px; primary actions thumb-reachable.
 
 ## 8. Components — "Petals" (0.28)
@@ -88,6 +88,7 @@ The four-quadrant **pinwheel** (teal, lime, orange, pink, clockwise from 12) bes
 - **Manage lists (0.29.4):** no buttons on list rows. A plain name is a chip (`link_chip`); a thing with something to say is a row with a meta line and an arrow (`link_row`). Either opens the item's page: `edit-head` (name + one meta line), the form, a docked Save. Destructive actions live behind ⋯ (`danger_form`). On/off and pick-one fields are option chips (`toggle_chip`, `section_chips`), picked in the colour of what they mean.
 - **Confirm:** anything destructive uses `data-confirm` / `data-confirm-title` / `data-confirm-ok` on the form; `confirm.js` shows the app's dialog with a pink bead. Never `confirm()`.
 - **Category tree (0.29.5):** sections are coloured groups; categories hang off a 2px trunk in the section colour (55% mix), with `├`-style branches and a rounded `└` on the last node, which is always the inline *Add a category*. One number per node (ingredients); the section header carries the total.
+- **Nothing wider than the screen (0.29.8):** chips cap at `max-width: 100%`; long names and notes truncate with an ellipsis, with notes limited to `11rem` (use rem here, not %), and the full text goes in `title`. `.app-body` clips sideways overflow. On Chrome for Android, a page that is even slightly wider than the screen sinks every fixed bottom element behind the address bar.
 - **Empty states** and the **generating** state as before (polka panel, bouncing four-colour dots).
 - **States:** focus (3px teal outline, including options via `:has(input:focus-visible)`), hover (desktop), disabled (the double-submit guard).
 

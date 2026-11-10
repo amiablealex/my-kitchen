@@ -245,5 +245,6 @@ scroll container and the sticky dock keeps working.
 Lesson: on Chrome Android, "fixed bottom bar sits too low on one page" means
 check `innerWidth` against the device width before anything else.
 
-`svh` from 0.29.6 stays (harmless, steadier). `vpdebug.js` stays, opt-in.
+`svh` from 0.29.6 stays (harmless, steadier). `vpdebug.js` was removed in 0.29.9;
+it's in git history (0.29.7) if a viewport bug ever needs it again.
 `sw.js` cache → v13.

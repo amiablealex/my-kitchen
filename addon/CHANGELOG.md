@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.29.9
+- Removed the viewport diagnostic from 0.29.7 now that the bottom-bar bug is
+  fixed. `?vp=1` no longer does anything.
+
 ## 0.29.8
 - **Fix: the bottom bar slipping behind Chrome's address bar on Lets Cook.**
   The cause was an ingredient with a long name and a note: its chip was wider
