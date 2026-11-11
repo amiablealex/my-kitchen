@@ -2,6 +2,16 @@
 {% from "_icons.html" import icon %}
 {% block title %}Recipes — My Kitchen{% endblock %}
 {% block page_title %}Recipes{% endblock %}
+{% block topbar_actions %}
+  {% if rows %}
+    <details class="overflow">
+      <summary class="icon-btn" aria-label="More actions">{{ icon('more') }}</summary>
+      <div class="overflow-menu">
+        <button type="button" class="menu-item" data-select-start>{{ icon('check') }}<span>Select recipes</span></button>
+      </div>
+    </details>
+  {% endif %}
+{% endblock %}
 {% from "history/_rows.html" import cook_av, row_ind, row_meta %}
 {% block content %}
 
@@ -9,7 +19,7 @@
   <p class="rf-head-actions">
     <a class="btn btn--primary btn--sm" href="{{ url_for('wizard.recipe_new') }}">{{ icon('add') }} Create a recipe</a>
     <a class="btn btn--secondary btn--sm k-favourites" href="{{ url_for('history.favourites') }}">{{ icon('star') }} Favourites</a>
-    <a class="btn btn--ghost btn--sm" href="{{ url_for('history.archived') }}">{{ icon('archive') }} Archive</a>
+    <a class="btn btn--ghost btn--sm" href="{{ url_for('history.archived') }}">{{ icon('archive') }} Archived</a>
   </p>
 
   <div class="recipe-toolbar">
@@ -40,12 +50,13 @@
       <section class="recipe-group recipe-group--ai">
         <header class="recipe-group-head">
           <h2 class="recipe-group-name">AI generated</h2>
+          <button type="button" class="group-select" data-group-select hidden>Select all</button>
           <span class="recipe-group-count">{{ ns.ai | length }}</span>
         </header>
         <ul class="recipe-list">
           {% for row in ns.ai %}
             {% if row.status == "chosen" %}
-              <li class="recipe-row" data-title="{{ row.f_title }}"
+              <li class="recipe-row" data-archive-key="generation_id" data-archive-id="{{ row.gen.id }}" data-title="{{ row.f_title }}"
                   data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
                   data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
                 <div class="row-main">
@@ -55,7 +66,7 @@
                 {{ row_ind(row.chosen.id, noted_ids, fav_ids, versions.get(row.chosen.id, 1)) }}
               </li>
             {% elif row.status == "unchosen" %}
-              <li class="recipe-row" data-title="{{ row.f_title }}"
+              <li class="recipe-row" data-archive-key="generation_id" data-archive-id="{{ row.gen.id }}" data-archive-n="{{ row.recipes|length }}" data-title="{{ row.f_title }}"
                   data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
                   data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
                 <div class="row-main">
@@ -66,7 +77,7 @@
                 </div>
               </li>
             {% else %}
-              <li class="recipe-row" data-title="generation failed"
+              <li class="recipe-row" data-archive-key="generation_id" data-archive-id="{{ row.gen.id }}" data-archive-failed data-title="generation failed"
                   data-cuisine="" data-meal="" data-cook="{{ row.f_cook }}" data-source="">
                 <div class="row-main">
                   <div class="row-title"><span class="muted">Generation failed</span></div>
@@ -87,11 +98,12 @@
       <section class="recipe-group recipe-group--hand">
         <header class="recipe-group-head">
           <h2 class="recipe-group-name">Created by hand</h2>
+          <button type="button" class="group-select" data-group-select hidden>Select all</button>
           <span class="recipe-group-count">{{ ns.hand | length }}</span>
         </header>
         <ul class="recipe-list">
           {% for row in ns.hand %}
-            <li class="recipe-row" data-title="{{ row.f_title }}"
+            <li class="recipe-row" data-archive-key="recipe_id" data-archive-id="{{ row.recipe.id }}" data-title="{{ row.f_title }}"
                  data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
                 data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
               <div class="row-main">
@@ -113,6 +125,12 @@
 {% block scripts %}
   <script type="application/json" id="facet-options">{{ facet_options | tojson }}</script>
   <script src="{{ url_for('static', filename='recipe_facets.js') }}"></script>
+  {# Select mode (0.30.1): docked bar for archiving several rows at once. #}
+  <div class="select-bar" id="select-bar" hidden>
+    <button type="button" class="icon-btn" data-select-cancel aria-label="Stop selecting">{{ icon('close') }}</button>
+    <span class="select-count" aria-live="polite"><strong>0</strong> selected</span>
+    <button type="button" class="btn btn--primary btn--sm" data-archive-selected disabled>{{ icon('archive') }} Archive</button>
+  </div>
   <script src="{{ url_for('static', filename='toast.js') }}"></script>
   <script src="{{ url_for('static', filename='recipe_archive.js') }}"></script>
 {% endblock %}

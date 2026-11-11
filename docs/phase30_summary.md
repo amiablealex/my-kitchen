@@ -61,3 +61,32 @@ The form-based `data-confirm` path is built on it.
   trail after Z.
 
 `sw.js` cache → v14.
+
+
+## 0.30.1 — archiving from the Recipes page
+**Server.** `history.row_archive` now also takes `{"rows": [{generation_id|recipe_id}, …]}`
+(the single-row shape still works). It returns `{recipe_ids, generation_ids}`,
+and `row_restore` accepts `generation_ids` alongside the old single
+`generation_id`. What a row means is unchanged (`_archive_one`): a picked pair
+archives the pick, an unpicked pair archives both, a failed attempt archives the
+generation. The lineage context is built once per request.
+
+**Rows.** Every Recipes row carries `data-archive-key` / `data-archive-id`.
+Unpicked pairs also carry `data-archive-n` (for "Archived 2 recipes."), and
+failed rows `data-archive-failed`.
+
+**`recipe_archive.js`** runs one pointer gesture per row:
+- Touch only. It locks to a swipe when `dx < -12` and `|dx| > 1.4·|dy|`, and
+  bails as a scroll if `|dy| > 12` first.
+- Holding 450ms without moving 8px enters select mode.
+- `--dx` moves the row's children; `.is-armed` shows past 40% of the width.
+- On release while armed, it slides the row out, then archives.
+- After a swipe or a hold, the following click is swallowed by a capture
+  handler, so the row's links don't navigate.
+
+Select mode copies Manage → Ingredients: per-group *Select all* (respects the
+facet filter's `hidden`), a docked bar with *Archive*, and Esc to leave. Archive
+removes the rows in place, and Undo re-inserts the same elements in reverse order.
+
+No confirm dialog, by decision: archiving is reversible.
+`sw.js` cache → v15.

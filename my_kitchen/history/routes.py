@@ -256,33 +256,54 @@ def _archive(recipes, gen=None):
         gen.archived_at = now
 
 
-@history_bp.route("/row/archive", methods=["POST"])
-def row_archive():
-    data = request.get_json(silent=True) or {}
-    touched = {"recipe_ids": [], "generation_id": None}
-    if data.get("generation_id") is not None:
-        gen = db.session.get(Generation, int(data["generation_id"]))
+def _archive_one(item, ctx):
+    """Archive what one History row shows. item is {"generation_id": n} or
+    {"recipe_id": n}. Returns (recipe_ids, generation_id_or_None) touched."""
+    if item.get("generation_id") is not None:
+        gen = db.session.get(Generation, int(item["generation_id"]))
         if gen is None:
-            abort(404)
-        row = _generation_row(gen, _lineage_context(Generation.query.all()))
+            return [], None
+        row = _generation_row(gen, ctx())
         if row is None:
-            return jsonify(touched)  # already archived — nothing to do
+            return [], None  # already archived — nothing to do
         if row["status"] == "error":
             _archive([], gen)
-            touched["generation_id"] = gen.id
-        else:
-            recs = [row["chosen"]] if row["status"] == "chosen" else row["recipes"]
-            _archive(recs)
-            touched["recipe_ids"] = [r.id for r in recs]
-    elif data.get("recipe_id") is not None:
-        recipe = db.session.get(Recipe, int(data["recipe_id"]))
-        if recipe is None:
-            abort(404)
-        if not recipe.is_archived:
-            _archive([recipe])
-            touched["recipe_ids"] = [recipe.id]
-    else:
+            return [], gen.id
+        # A picked pair archives the pick; an unpicked pair archives both.
+        recs = [row["chosen"]] if row["status"] == "chosen" else row["recipes"]
+        _archive(recs)
+        return [r.id for r in recs], None
+    if item.get("recipe_id") is not None:
+        recipe = db.session.get(Recipe, int(item["recipe_id"]))
+        if recipe is None or recipe.is_archived:
+            return [], None
+        _archive([recipe])
+        return [recipe.id], None
+    return [], None
+
+
+@history_bp.route("/row/archive", methods=["POST"])
+def row_archive():
+    """Archive one row ({"generation_id"} or {"recipe_id"}) or several
+    ({"rows": [...]}, from swipe-to-archive's select mode, 0.30.1). Returns
+    exactly what was touched, which /row/restore takes back as Undo."""
+    data = request.get_json(silent=True) or {}
+    items = data.get("rows") if isinstance(data.get("rows"), list) else [data]
+    if not items or not all(isinstance(i, dict) and (i.get("generation_id") is not None
+                                                     or i.get("recipe_id") is not None)
+                            for i in items):
         abort(400)
+    cache = {}
+    def ctx():
+        if "ctx" not in cache:
+            cache["ctx"] = _lineage_context(Generation.query.all())
+        return cache["ctx"]
+    touched = {"recipe_ids": [], "generation_ids": []}
+    for item in items:
+        rids, gid = _archive_one(item, ctx)
+        touched["recipe_ids"] += rids
+        if gid is not None:
+            touched["generation_ids"].append(gid)
     db.session.commit()
     return jsonify(touched)
 
@@ -295,10 +316,11 @@ def row_restore():
     for r in Recipe.query.filter(Recipe.id.in_(ids)).all() if ids else []:
         r.archived_at = None
         r.archived_by_user_id = None
-    if data.get("generation_id") is not None:
-        gen = db.session.get(Generation, int(data["generation_id"]))
-        if gen is not None:
-            gen.archived_at = None
+    gids = [int(g) for g in (data.get("generation_ids") or [])]
+    if data.get("generation_id") is not None:          # pre-0.30.1 shape
+        gids.append(int(data["generation_id"]))
+    for gen in Generation.query.filter(Generation.id.in_(gids)).all() if gids else []:
+        gen.archived_at = None
     db.session.commit()
     return jsonify(ok=True)
 

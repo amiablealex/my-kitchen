@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.30.1
+- **Swipe left to archive** a recipe on the Recipes page. A pink *Archive*
+  shows behind the row as it slides. Let go past about 40% of the way and it
+  archives; short of that it springs back. A *Pick one* row archives both
+  recipes. A toast offers *Undo*.
+- **Archive several at once.** Press and hold a row (or ⋯ → *Select
+  recipes*), tap more, and use *Archive* in the bar at the bottom. Each group
+  has *Select all*, which respects the filter. One *Undo* brings them all back.
+- No confirmation step: archiving is fully reversible, with *Undo* or the
+  Archived page.
+- The Recipes page's *Archive* link now reads *Archived*.
+
 ## 0.30.0
 - **Select several ingredients at once.** On Manage → Ingredients, press and
   hold an ingredient (or use ⋯ → *Select ingredients*). Taps then select
