@@ -1779,3 +1779,65 @@ dialog.confirm::backdrop { background: rgba(20, 4, 32, 0.74); }
 .options--chips .option > .opt-meta { flex: 0 1 auto; min-width: 2.5em; max-width: 11rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .link-chip, .search-result .stock-add { max-width: 100%; min-width: 0; }
 .link-chip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ================================================ select mode (0.30.0)
+   Manage → Ingredients. A picked chip fills in its section colour with the
+   same tick and sharp corner as an option. The docked bar sits above the
+   bottom nav; "Select all" appears in each header only while selecting. */
+.link-chip { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+[data-selectable] > li.is-picked > .link-chip {
+  background: var(--group, var(--accent-1)); color: var(--on-accent);
+  border-radius: 20px 20px 20px 6px; font-weight: 700; padding-left: var(--space-3); }
+[data-selectable] > li.is-picked > .link-chip::before { content: ""; width: 5px; height: 10px; margin: 0 3px 3px 1px;
+  border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+body.is-selecting [data-selectable] > li:not(.is-picked) > .link-chip { box-shadow: inset 0 0 0 1px var(--divider); }
+.group-select { margin-left: auto; padding: 4px 8px; border: 0; border-radius: var(--petal-sm); background: none;
+  color: var(--accent-1); font: inherit; font-size: var(--fs-small); font-weight: 700; cursor: pointer; }
+.group-select:hover { background: var(--surface-2); }
+.group-select[hidden] { display: none; }
+.group-select:not([hidden]) + .recipe-group-count { margin-left: 0; }
+body.is-selecting .content { padding-bottom: calc(var(--bottomnav-h) + 96px); }
+
+.select-bar { position: fixed; z-index: 40; left: 12px; right: 12px; max-width: 560px; margin: 0 auto;
+  bottom: calc(var(--bottomnav-h) + env(safe-area-inset-bottom, 0px) + 12px);
+  display: flex; align-items: center; gap: var(--space-2); padding: 6px 6px 6px 4px;
+  background: var(--surface-2); border-radius: var(--petal-lg); box-shadow: var(--shadow-2); }
+.select-bar[hidden] { display: none; }
+.select-count { flex: 1; min-width: 0; color: var(--text-muted); white-space: nowrap; }
+.select-count strong { color: var(--text); font-size: 1.05rem; }
+.overflow--up .overflow-menu { top: auto; bottom: calc(100% + 8px); }
+.menu-item[hidden] { display: none; }
+.menu-item:disabled { opacity: 0.45; cursor: default; }
+@media (min-width: 880px) { .select-bar { bottom: var(--space-4); } }
+
+dialog.sheet { width: min(480px, calc(100vw - 1.5rem)); max-height: 86svh; display: none; flex-direction: column; }
+dialog.sheet[open] { display: flex; }
+.sheet-bead { display: grid; place-items: center; background: var(--accent-1); color: var(--on-accent); }
+.sheet-bead .icon { width: 1.2em; height: 1.2em; }
+.sheet-body { overflow-y: auto; margin: var(--space-3) calc(-1 * var(--space-2)) 0; padding: 0 var(--space-2); }
+.sheet-lane { margin: var(--space-3) 0 0; }
+.sheet .option:not(:has(input:checked)) { background: var(--surface-2); }
+.sec-lane--protein { --group: var(--accent-4); } .sec-lane--carb { --group: var(--accent-3); }
+.sec-lane--veg { --group: var(--accent-2); } .sec-lane--other { --group: var(--accent-1); }
+
+/* --- category tree: reorder mode (0.30.0) --- */
+.cat-node { display: flex; align-items: center; }
+.cat-node > .cat-link { flex: 1; min-width: 0; }
+.cat-grip { display: none; flex: none; width: 44px; height: 44px; margin-left: 2px; place-items: center;
+  border: 0; border-radius: var(--petal-sm); background: none; color: var(--text-muted); cursor: grab; touch-action: none; }
+.cat-grip .icon { width: 1.35em; height: 1.35em; }
+.cat-grip:focus-visible { outline: 3px solid var(--accent-1); outline-offset: -3px; }
+.cat-section.is-reordering .cat-grip { display: grid; }
+.cat-section.is-reordering .cat-link { cursor: default; }
+.cat-section.is-reordering .cat-link:hover { background: none; }
+.cat-section.is-reordering .cat-link .row-go { display: none; }
+.cat-section.is-reordering .cat-node--add { display: none; }
+/* with the add branch hidden, the last real row takes the curved end */
+.cat-section.is-reordering .cat-node:nth-last-child(2)::before { bottom: auto; height: 25px; width: 14px;
+  border-bottom: 2px solid var(--trunk); border-bottom-left-radius: 9px; }
+.cat-section.is-reordering .cat-node:nth-last-child(2)::after { display: none; }
+.cat-section.is-reordering .cat-node { background: transparent; }
+.cat-node.is-dragging { z-index: 5; }
+.cat-node.is-dragging > .cat-link { background: var(--surface-2); box-shadow: var(--shadow-2); }
+.cat-node.is-dragging .cat-grip { cursor: grabbing; color: var(--text); }
+.cat-section.is-reordering [data-reorder] { color: var(--on-accent); background: var(--accent-1); }

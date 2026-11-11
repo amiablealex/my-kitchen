@@ -1,8 +1,18 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
-{% from "manage/_bits.html" import link_chip, toggle_chip %}
+{% from "manage/_bits.html" import link_chip, toggle_chip, category_select %}
 {% block title %}Manage ingredients — My Kitchen{% endblock %}
 {% block page_title %}Ingredients{% endblock %}
+{% block topbar_actions %}
+  {% if active %}
+    <details class="overflow">
+      <summary class="icon-btn" aria-label="More actions">{{ icon('more') }}</summary>
+      <div class="overflow-menu">
+        <button type="button" class="menu-item" data-select-start>{{ icon('check') }}<span>Select ingredients</span></button>
+      </div>
+    </details>
+  {% endif %}
+{% endblock %}
 
 {% macro cat_tables(items, is_staple) %}
   {% for c in categories %}
@@ -11,9 +21,10 @@
       <section class="recipe-group recipe-group--{{ c.section }}">
         <header class="recipe-group-head">
           <h2 class="recipe-group-name">{{ c.name }}</h2>
+          <button type="button" class="group-select" data-group-select hidden>Select all</button>
           <span class="recipe-group-count">{{ cat_items|length }}</span>
         </header>
-        <ul class="chip-list">{% for ing in cat_items %}{{ link_chip(url_for('manage.ingredient_edit', ingredient_id=ing.id), ing.name) }}{% endfor %}</ul>
+        <ul class="chip-list" data-selectable>{% for ing in cat_items %}{{ link_chip(url_for('manage.ingredient_edit', ingredient_id=ing.id), ing.name, id=ing.id) }}{% endfor %}</ul>
       </section>
     {% endif %}
   {% endfor %}
@@ -35,9 +46,7 @@
                {% if prefill_name|default('', true) %}autofocus{% endif %} required>
       </label>
       <label>Category
-        <select name="category_id" required>
-          {% for c in categories %}<option value="{{ c.id }}">{{ c.name }} ({{ c.section }})</option>{% endfor %}
-        </select>
+        {{ category_select(categories, sections) }}
       </label>
       {{ toggle_chip('is_staple', 'Staple', 'assumed always available', id='add-is-staple') }}
       <div class="form-actions"><button type="submit" class="btn btn--primary">{{ icon('add') }} Add</button></div>
@@ -59,7 +68,7 @@
   {% endif %}
 
   <div class="tab-panel" data-panel="standard">
-    <p class="help">Tap an ingredient to rename it, move it, make it a <strong>staple</strong> (assumed always in stock, so you never tick it in and out) or retire it.</p>
+    <p class="help">Tap an ingredient to rename it, move it, make it a <strong>staple</strong> (assumed always in stock, so you never tick it in and out) or retire it. Press and hold to select several.</p>
     {% if standard %}
       {{ cat_tables(standard, false) }}
       <p class="recipe-nomatch" hidden><em>No ingredients match your filter.</em></p>
@@ -91,5 +100,50 @@
 {% endblock %}
 
 {% block scripts %}
+  {# Select mode (0.30.0): the bar that replaces per-item pages when several
+     ingredients are picked, and the sheet that moves them. #}
+  <div class="select-bar" id="select-bar" hidden
+       data-bulk-url="{{ url_for('manage.ingredients_bulk') }}">
+    <button type="button" class="icon-btn" data-select-cancel aria-label="Stop selecting">{{ icon('close') }}</button>
+    <span class="select-count" aria-live="polite"><strong>0</strong> selected</span>
+    <button type="button" class="btn btn--primary btn--sm" data-move disabled>Move to…</button>
+    <details class="overflow overflow--up">
+      <summary class="icon-btn" aria-label="More for selected">{{ icon('more') }}</summary>
+      <div class="overflow-menu">
+        <button type="button" class="menu-item" data-bulk="staple">{{ icon('push_pin') }}<span>Make staples</span></button>
+        <button type="button" class="menu-item" data-bulk="standard">{{ icon('shelves') }}<span>Move to standard stock</span></button>
+        <button type="button" class="menu-item menu-item--warn" data-bulk="retire">{{ icon('archive') }}<span>Retire</span></button>
+      </div>
+    </details>
+  </div>
+
+  <dialog class="confirm sheet" id="move-sheet" aria-labelledby="move-title">
+    <div class="confirm-head"><span class="confirm-bead sheet-bead" aria-hidden="true">{{ icon('tune') }}</span>
+      <h2 id="move-title">Move to…</h2></div>
+    <div class="sheet-body">
+      {% for key, label in sections %}
+        {% set cats = categories | selectattr('section', 'equalto', key) | list %}
+        {% if cats %}
+          <div class="tag-lane sheet-lane sec-lane--{{ key }}">
+            <h3 class="lane-head">{{ label }}</h3>
+            <div class="options options--chips">
+              {% for c in cats %}
+                <label class="option sec-pick--{{ key }}">
+                  <input type="radio" name="move-target" value="{{ c.id }}" data-name="{{ c.name }}">
+                  <span>{{ c.name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn btn--primary" data-move-go disabled>Move</button>
+      <button type="button" class="btn btn--ghost" data-move-cancel>Cancel</button>
+    </div>
+  </dialog>
+
+  <script src="{{ url_for('static', filename='toast.js') }}"></script>
   <script src="{{ url_for('static', filename='manage_ingredients.js') }}"></script>
 {% endblock %}

@@ -7,7 +7,7 @@
    (HTTPS or localhost) — on a plain-HTTP LAN address this registers as a no-op,
    which is fine; the manifest still makes the app installable where supported. */
 
-const CACHE = "mykitchen-static-v13";  // v13: no sideways overflow (0.29.8)
+const CACHE = "mykitchen-static-v14";  // v14: select mode + category reorder (0.30.0)
 const ASSETS = [
   "css/app.css",
   "fonts/figtree-var.woff2",

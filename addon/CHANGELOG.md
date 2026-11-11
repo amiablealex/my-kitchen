@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.30.0
+- **Select several ingredients at once.** On Manage → Ingredients, press and
+  hold an ingredient (or use ⋯ → *Select ingredients*). Taps then select
+  instead of opening, and each category gets *Select all* (which respects the
+  filter, so "pasta" → Select all works). A bar at the bottom moves them to a
+  category, makes them staples (or standard again), or retires them. Every
+  bulk change has *Undo*.
+- **Move to…** shows your categories grouped by section, in tree order, and
+  the button says exactly what will happen ("Move 4 to Pasta").
+- **Sections stay together.** Categories are now ordered by section first
+  everywhere (Manage, Stock, Lets Cook, the recipe editor), so a new carb
+  category sits with the carbs, not at the bottom. Your existing order within
+  each section is kept.
+- **Reorder on the tree.** Manage → Categories has *Reorder* on each section:
+  drag a category by its grip (or use the arrow keys) within that section. It
+  saves as you drop. The *Order* number field is gone. To move a category to
+  another section, open it and change its section; it joins the end.
+- Category pickers group their options by section.
+- Ingredient lists sort the same way regardless of capitals ("baked beans"
+  now sits with the Bs).
+- Includes a small database update that renumbers category order within each
+  section. It runs automatically.
+
 ## 0.29.9
 - Removed the viewport diagnostic from 0.29.7 now that the bottom-bar bug is
   fixed. `?vp=1` no longer does anything.

@@ -14,19 +14,21 @@
   {% for key, label in sections %}
     {% set cats = categories | selectattr('section', 'equalto', key) | list %}
     {% set total = section_totals[key] %}
-    <section class="recipe-group recipe-group--{{ key }} cat-section">
+    <section class="recipe-group recipe-group--{{ key }} cat-section" data-section="{{ key }}">
       <header class="recipe-group-head">
         <h2 class="recipe-group-name">{{ label }}</h2>
+        {% if cats|length > 1 %}<button type="button" class="group-select" data-reorder aria-pressed="false">Reorder</button>{% endif %}
         <span class="recipe-group-count" title="{{ total }} ingredients">{{ total }}</span>
       </header>
       <ul class="cat-tree">
         {% for c in cats %}
-          <li class="cat-node">
+          <li class="cat-node" data-id="{{ c.id }}">
             <a class="cat-link" href="{{ url_for('manage.category_edit', category_id=c.id) }}">
               <span class="cat-name">{{ c.name }}</span>
               <span class="cat-count">{{ counts[c.id] }}</span>
               {{ icon('arrow_forward', 'row-go') }}
             </a>
+            <button type="button" class="cat-grip" aria-label="Move {{ c.name }}: drag, or use the up and down arrow keys" tabindex="-1">{{ icon('drag_indicator') }}</button>
           </li>
         {% endfor %}
         <li class="cat-node cat-node--add">
@@ -35,7 +37,6 @@
             <form class="cat-add-form" method="post" action="{{ url_for('manage.category_add') }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="section" value="{{ key }}">
-              <input type="hidden" name="display_order" value="{{ next_order }}">
               <input type="text" name="name" required placeholder="Name, e.g. {{ examples[key] }}" aria-label="New {{ label }} category name">
               <button type="submit" class="btn btn--primary btn--sm">{{ icon('add') }} Add</button>
             </form>
@@ -44,5 +45,11 @@
       </ul>
     </section>
   {% endfor %}
-  <p class="help">Numbers are ingredients, retired ones included. To move a category to another section, open it.</p>
+  <p class="help">Numbers are ingredients, retired ones included. Use Reorder to change the order within a section; to move a category to another section, open it.</p>
+  <div hidden id="cat-tree-config" data-reorder-url="{{ url_for('manage.categories_reorder') }}"></div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='toast.js') }}"></script>
+  <script src="{{ url_for('static', filename='category_tree.js') }}"></script>
 {% endblock %}

@@ -4,8 +4,8 @@
    behind ⋯ on that page and confirm through the app's dialog (confirm.js). #}
 {% from "_icons.html" import icon %}
 
-{% macro link_chip(href, name, meta=None, off=False) -%}
-  <li data-title="{{ name|lower }}"><a class="link-chip{% if off %} is-off{% endif %}" href="{{ href }}">{{ name }}{% if meta %}<small>{{ meta }}</small>{% endif %}</a></li>
+{% macro link_chip(href, name, meta=None, off=False, id=None) -%}
+  <li data-title="{{ name|lower }}"{% if id %} data-id="{{ id }}"{% endif %}><a class="link-chip{% if off %} is-off{% endif %}" href="{{ href }}">{{ name }}{% if meta %}<small>{{ meta }}</small>{% endif %}</a></li>
 {%- endmacro %}
 
 {# Row with a title and a meta line; the caller supplies the meta. #}
@@ -49,4 +49,18 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button type="submit" class="menu-item{% if warn %} menu-item--warn{% endif %}">{{ icon(ic) }}<span>{{ label }}</span></button>
   </form>
+{%- endmacro %}
+
+{# A category <select> grouped by section, in tree order (0.30.0). #}
+{% macro category_select(categories, sections, current=None, name="category_id") -%}
+  <select name="{{ name }}" required>
+    {% for key, label in sections %}
+      {% set cats = categories | selectattr('section', 'equalto', key) | list %}
+      {% if cats %}
+        <optgroup label="{{ label }}">
+          {% for c in cats %}<option value="{{ c.id }}"{% if c.id == current %} selected{% endif %}>{{ c.name }}</option>{% endfor %}
+        </optgroup>
+      {% endif %}
+    {% endfor %}
+  </select>
 {%- endmacro %}

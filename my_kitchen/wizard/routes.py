@@ -153,8 +153,7 @@ def step_ingredients():
         Ingredient.query
         .filter_by(is_staple=True, is_active=True)
         .join(Category, Ingredient.category_id == Category.id)
-        .order_by(Category.display_order, db.func.lower(Category.name),
-                  db.func.lower(Ingredient.name))
+        .order_by(*Category.ordering(), db.func.lower(Ingredient.name))
         .all()
     )
     staple_groups = []
@@ -560,9 +559,7 @@ def recipe(recipe_id):
             for i in Ingredient.query.filter_by(is_active=True)
                                      .order_by(db.func.lower(Ingredient.name)).all()
         ]
-        categories = Category.query.order_by(
-            Category.display_order, Category.name
-        ).all()
+        categories = Category.query.order_by(*Category.ordering()).all()
     return render_template(
         "wizard/recipe.html", recipe=recipe, favourited=favourited,
         allergy_caveat=bool(allergies),
@@ -1169,7 +1166,7 @@ def _form_context(mode, recipe=None, from_form=False):
         for i in Ingredient.query.filter_by(is_active=True)
                                  .order_by(db.func.lower(Ingredient.name)).all()
     ]
-    categories = Category.query.order_by(Category.display_order, Category.name).all()
+    categories = Category.query.order_by(*Category.ordering()).all()
     action = (url_for("wizard.recipe_edit", recipe_id=recipe.id)
               if (mode == "edit" and recipe is not None)
               else url_for("wizard.recipe_new"))

@@ -11,9 +11,7 @@ from ..models import Category, Ingredient
 
 def in_stock_groups():
     """[(category, [ingredients]) ...] for in-stock, active, non-staple items."""
-    categories = Category.query.order_by(
-        Category.display_order, Category.name
-    ).all()
+    categories = Category.query.order_by(*Category.ordering()).all()
     groups = []
     for cat in categories:
         items = sorted(

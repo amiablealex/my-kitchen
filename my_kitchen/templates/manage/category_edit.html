@@ -26,10 +26,8 @@
     <div class="edit-field">
       <span class="field-label">Section</span>
       {{ section_chips(sections, cat.section) }}
-      <p class="help">The lane its ingredients appear in when you cook. Changing it moves them all.</p>
+      <p class="help">The lane its ingredients appear in when you cook. Changing it moves them all, and the category goes to the end of its new section. Reorder within a section on the Categories page.</p>
     </div>
-    <label>Order <input type="number" name="display_order" value="{{ cat.display_order }}" class="input-short" style="width:8rem"></label>
-    <p class="help">Lower numbers come first, here and on the Stock page.</p>
     {% if ingredient_count %}
       <p class="help">To delete this category, first move its ingredients to another one.</p>
     {% endif %}

@@ -211,6 +211,16 @@ class Category(db.Model):
 
     ingredients = db.relationship("Ingredient", backref="category")
 
+    @staticmethod
+    def ordering():
+        """ORDER BY for categories everywhere (0.30.0): section first, in the
+        fixed lane order, then the household's order WITHIN the section, then
+        name. display_order is a position inside its section (1, 2, 3 …), so
+        a new carb category sits with the other carbs, not at the bottom."""
+        rank = db.case({k: i for i, (k, _) in enumerate(SECTION_CHOICES)},
+                       value=Category.section, else_=len(SECTION_CHOICES))
+        return (rank, Category.display_order, db.func.lower(Category.name))
+
 
 class Ingredient(db.Model):
     __tablename__ = "ingredients"

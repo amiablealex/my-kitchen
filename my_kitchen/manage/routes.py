@@ -8,7 +8,7 @@ list. This area manages the catalogue itself: what ingredients exist, what
 category they're in, whether they're staples, and whether they're active.
 """
 from flask import (
-    Blueprint, render_template, request, redirect, url_for, flash, abort,
+    Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify,
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -37,7 +37,7 @@ def index():
 # ---------------------------------------------------------------- ingredients
 
 def _ordered_categories():
-    return Category.query.order_by(Category.display_order, Category.name).all()
+    return Category.query.order_by(*Category.ordering()).all()
 
 
 def _name_taken(name, exclude_id=None):
@@ -63,7 +63,7 @@ def _parse_ingredient_form():
 @manage_bp.route("/ingredients")
 def ingredients():
     cats = _ordered_categories()
-    all_items = Ingredient.query.order_by(Ingredient.name).all()
+    all_items = Ingredient.query.order_by(db.func.lower(Ingredient.name)).all()
     active = [i for i in all_items if i.is_active]
     retired = [i for i in all_items if not i.is_active]
     # ?name= pre-fills the add form, for the "add a new ingredient" hand-off
@@ -71,7 +71,7 @@ def ingredients():
     prefill_name = (request.args.get("name") or "").strip()
     return render_template(
         "manage/ingredients.html",
-        categories=cats, active=active, retired=retired,
+        categories=cats, sections=SECTION_CHOICES, active=active, retired=retired,
         prefill_name=prefill_name,
     )
 
@@ -125,7 +125,72 @@ def ingredient_edit(ingredient_id):
         flash(f'Saved "{ing.name}".', "success")
         return redirect(url_for("manage.ingredients"))
     return render_template("manage/ingredient_edit.html",
-                           ing=ing, categories=_ordered_categories())
+                           ing=ing, categories=_ordered_categories(), sections=SECTION_CHOICES)
+
+
+BULK_ACTIONS = {"move", "staple", "standard", "retire", "restore"}
+
+
+@manage_bp.route("/ingredients/bulk", methods=["POST"])
+def ingredients_bulk():
+    """Several ingredients at once, from the list's select mode (0.30.0).
+    Body: {"action": "move"|"staple"|"standard"|"retire"|"restore",
+           "ids": [...], "category_id": n (move only),
+           "previous": [{"id", "category_id", "is_staple", "is_active"}] (restore only)}.
+    Returns the message for the toast plus each item's previous state, which
+    the page hands back as "restore" if you tap Undo."""
+    body = request.get_json(silent=True) or {}
+    action = body.get("action")
+    if action not in BULK_ACTIONS:
+        return jsonify(ok=False, error="Unknown action."), 400
+
+    if action == "restore":
+        prev = body.get("previous") or []
+        by_id = {int(p["id"]): p for p in prev if isinstance(p, dict) and str(p.get("id", "")).isdigit()}
+        items = Ingredient.query.filter(Ingredient.id.in_(by_id)).all() if by_id else []
+        valid_cats = {c.id for c in Category.query.all()}
+        for ing in items:
+            p = by_id[ing.id]
+            if p.get("category_id") in valid_cats:
+                ing.category_id = p["category_id"]
+            ing.is_staple = bool(p.get("is_staple"))
+            ing.is_active = bool(p.get("is_active"))
+        db.session.commit()
+        return jsonify(ok=True, message="Undone.")
+
+    try:
+        ids = [int(i) for i in body.get("ids") or []]
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error="Bad request."), 400
+    items = Ingredient.query.filter(Ingredient.id.in_(ids)).all() if ids else []
+    if not items:
+        return jsonify(ok=False, error="Nothing selected."), 400
+    previous = [{"id": i.id, "category_id": i.category_id,
+                 "is_staple": i.is_staple, "is_active": i.is_active} for i in items]
+    n = len(items)
+    noun = "ingredient" if n == 1 else "ingredients"
+
+    if action == "move":
+        cat = db.session.get(Category, body.get("category_id") or 0)
+        if cat is None:
+            return jsonify(ok=False, error="Choose a category."), 400
+        for i in items:
+            i.category_id = cat.id
+        message = f"Moved {n} {noun} to {cat.name}."
+    elif action == "staple":
+        for i in items:
+            i.is_staple = True
+        message = f"{n} {noun} made staple{'s' if n != 1 else ''}."
+    elif action == "standard":
+        for i in items:
+            i.is_staple = False
+        message = f"{n} {noun} moved back to standard stock."
+    else:  # retire
+        for i in items:
+            i.is_active = False
+        message = f"Retired {n} {noun}."
+    db.session.commit()
+    return jsonify(ok=True, message=message, previous=previous)
 
 
 @manage_bp.route("/ingredients/<int:ingredient_id>/retire", methods=["POST"])
@@ -172,8 +237,11 @@ def _category_name_taken(name, exclude_id=None):
     return q.first() is not None
 
 
-def _next_display_order():
-    highest = db.session.query(db.func.max(Category.display_order)).scalar()
+def _next_display_order(section):
+    """End of the given section. display_order is a position WITHIN a section
+    (0.30.0); the order itself is set by dragging on the category tree."""
+    highest = (db.session.query(db.func.max(Category.display_order))
+               .filter(Category.section == section).scalar())
     return (highest or 0) + 1
 
 
@@ -181,24 +249,22 @@ def _parse_category_form():
     """Pull + validate the shared add/edit fields. Returns (data, error)."""
     name = (request.form.get("name") or "").strip()
     section = (request.form.get("section") or "").strip()
-    order_raw = request.form.get("display_order", type=int)
     if not name:
         return None, "Name is required."
     if section not in SECTION_KEYS:
         return None, "Please choose a valid section."
-    display_order = order_raw if order_raw is not None else _next_display_order()
-    return {"name": name, "section": section, "display_order": display_order}, None
+    return {"name": name, "section": section}, None
 
 
 @manage_bp.route("/categories")
 def categories():
-    cats = Category.query.order_by(Category.display_order, Category.name).all()
+    cats = Category.query.order_by(*Category.ordering()).all()
     # ingredient counts (active + retired) drive the delete guard + display
     counts = {c.id: len(c.ingredients) for c in cats}
     return render_template(
         "manage/categories.html",
         categories=cats, counts=counts,
-        sections=SECTION_CHOICES, next_order=_next_display_order(),
+        sections=SECTION_CHOICES,
         section_totals={k: sum(counts[c.id] for c in cats if c.section == k) for k, _ in SECTION_CHOICES},
         examples={"protein": "Fish", "carb": "Grains", "veg": "Leaves", "other": "Baking"},
     )
@@ -213,7 +279,7 @@ def category_add():
     if _category_name_taken(data["name"]):
         flash(f'"{data["name"]}" already exists.', "error")
         return redirect(url_for("manage.categories"))
-    db.session.add(Category(**data))
+    db.session.add(Category(display_order=_next_display_order(data["section"]), **data))
     try:
         db.session.commit()
     except IntegrityError:
@@ -238,8 +304,10 @@ def category_edit(category_id):
             flash(f'"{data["name"]}" already exists.', "error")
             return redirect(url_for("manage.category_edit", category_id=cat.id))
         cat.name = data["name"]
-        cat.section = data["section"]
-        cat.display_order = data["display_order"]
+        if data["section"] != cat.section:
+            # Moving section: it joins the end of its new section.
+            cat.display_order = _next_display_order(data["section"])
+            cat.section = data["section"]
         try:
             db.session.commit()
         except IntegrityError:
@@ -252,6 +320,30 @@ def category_edit(category_id):
         "manage/category_edit.html",
         cat=cat, sections=SECTION_CHOICES, ingredient_count=len(cat.ingredients),
     )
+
+
+@manage_bp.route("/categories/reorder", methods=["POST"])
+def categories_reorder():
+    """Save one section's order from the tree's reorder mode (0.30.0).
+    Body: {"section": "carb", "ids": [3, 9, 7, 8]}. The ids must be exactly
+    that section's categories, so a stale page can't drop or steal one; they
+    are renumbered 1..n."""
+    body = request.get_json(silent=True) or {}
+    section = body.get("section")
+    ids = body.get("ids")
+    if section not in SECTION_KEYS or not isinstance(ids, list):
+        return jsonify(ok=False, error="Bad request."), 400
+    try:
+        ids = [int(i) for i in ids]
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error="Bad request."), 400
+    cats = {c.id: c for c in Category.query.filter_by(section=section).all()}
+    if sorted(ids) != sorted(cats):
+        return jsonify(ok=False, error="This section changed elsewhere. Reload and try again."), 409
+    for pos, cid in enumerate(ids, start=1):
+        cats[cid].display_order = pos
+    db.session.commit()
+    return jsonify(ok=True)
 
 
 @manage_bp.route("/categories/<int:category_id>/delete", methods=["POST"])

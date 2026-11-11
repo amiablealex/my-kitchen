@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
-{% from "manage/_bits.html" import toggle_chip, danger_form %}
+{% from "manage/_bits.html" import toggle_chip, danger_form, category_select %}
 {% block title %}{{ ing.name }} — My Kitchen{% endblock %}
 {% block page_title %}Ingredients{% endblock %}
 {% block topbar_actions %}
@@ -35,11 +35,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Name <input type="text" name="name" value="{{ ing.name }}" required></label>
     <label>Category
-      <select name="category_id" required>
-        {% for c in categories %}
-          <option value="{{ c.id }}" {% if c.id == ing.category_id %}selected{% endif %}>{{ c.name }} ({{ c.section }})</option>
-        {% endfor %}
-      </select>
+      {{ category_select(categories, sections, ing.category_id) }}
     </label>
     <div class="edit-field">
       {{ toggle_chip('is_staple', 'Staple', 'assumed always available', checked=ing.is_staple) }}

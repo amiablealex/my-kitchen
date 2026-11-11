@@ -27,7 +27,7 @@ def index():
     return render_template(
         "stock/index.html",
         groups=in_stock_groups(),
-        categories=Category.query.order_by(Category.display_order, Category.name).all(),
+        categories=Category.query.order_by(*Category.ordering()).all(),
         return_to=_safe_return(request.args.get("return_to")),
     )
 
