@@ -90,3 +90,25 @@ removes the rows in place, and Undo re-inserts the same elements in reverse orde
 
 No confirm dialog, by decision: archiving is reversible.
 `sw.js` cache → v15.
+
+
+## 0.30.2 — a calmer recipe top
+In `wizard/recipe.html`:
+- The favourite form moved into `topbar_actions` as `.fav-star`, and *Edit
+  tags* (`#tag-edit-toggle`) became a ⋯ menu item.
+- `.recipe-tags-view` is now `p.recipe-meta`. `#tag-meal-pill` and
+  `#tag-cuisine-pill` are plain `.rm-item` spans with dot separators drawn by
+  CSS between visible items. `recipe_tags.js` hides an unset one instead of
+  writing "No meal type", and closes the ⋯ menu when the editor opens.
+- The blurb lost its source bead (the dot leads the meta line). The intro is
+  `p.recipe-intro-text`. The old `.recipe-meta-row` "Serves N." line is gone.
+- The serves stepper lives in the Ingredients `.section-head`.
+- `.servings-note` is a single line: Scaled from N · the method's amounts are
+  for N · Reset. `servings.js` finds the note and reset in the section,
+  and reset has its own listener.
+- The *Rewrite the method for this many* prompt (`.servings-refine`) was
+  removed, by decision: the scaled amounts are enough.
+- *Edit links* moved to the end of the list; `recipe_links.js` swaps its
+  label to *Done editing links*.
+
+`sw.js` cache → v16.

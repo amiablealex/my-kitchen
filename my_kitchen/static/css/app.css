@@ -1325,9 +1325,6 @@ a.version-step:hover, a.version-step:focus-visible { border-color: var(--accent-
 .refine-hint { display: flex; gap: var(--space-2); align-items: flex-start; margin: var(--space-4) 0 0;
   padding-top: var(--space-3); border-top: 1px solid var(--divider); color: var(--text-muted); font-size: var(--fs-small); }
 .refine-hint .source-dot { margin: 1px 0 0; width: 16px; height: 16px; }
-.servings-refine { border: none; background: none; padding: 0; margin-left: 4px; color: var(--accent-1);
-  font: inherit; text-decoration: underline; cursor: pointer; }
-.servings-refine[hidden] { display: none; }
 
 /* --- @kitchen questions (Phase 27) --- */
 .mention { display: inline-block; padding: 0 6px; border-radius: 6px; background: var(--surface-2);
@@ -1866,3 +1863,42 @@ body.is-selecting .recipe-row.is-picked::before { border-radius: 11px 11px 11px 
   background: var(--accent-1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.2 4.2L19 7' fill='none' stroke='%232A0A40' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 15px no-repeat; }
 body.is-selecting .recipe-row .row-archive { visibility: hidden; }
 .select-bar .btn .icon { width: 1.1em; height: 1.1em; }
+
+/* ================================================== recipe top (0.30.2)
+   Fewer bubbles: favourite is a star in the top bar; tags are one plain meta
+   line (like a recipe row); the blurb and intro are text, not cards; serves
+   sits in the Ingredients heading as a quiet stepper. The ingredient link
+   pills stay the one pill-shaped thing in this part of the page. */
+.topbar-fav { margin: 0; display: inline-flex; }
+.fav-star .icon { width: 1.35em; height: 1.35em; }
+.fav-star.is-on { color: var(--accent-4); }
+.recipe-tags { margin: 0 0 var(--space-3); }
+.recipe-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; margin: 0;
+  color: var(--text-muted); font-weight: 600; }
+.recipe-meta .source-dot { width: 14px; height: 14px; margin-right: 2px; flex: none; }
+.recipe-meta .rm-item[hidden] { display: none; }
+.recipe-meta .rm-item:not([hidden]) ~ .rm-item:not([hidden])::before { content: "·"; margin-right: 6px; opacity: 0.5; }
+.recipe-meta .meta-i { display: inline-flex; align-items: center; gap: 3px; }
+.recipe-meta .meta-i .icon { width: 1em; height: 1em; }
+.recipe-blurb { color: var(--text); font-size: 1.08rem; line-height: 1.5; margin: 0 0 var(--space-3); }
+.recipe-intro-text { color: var(--text-muted); line-height: 1.65; margin: 0 0 var(--space-5); }
+.recipe-request { margin-bottom: var(--space-3); }
+
+#ingredients-section > .section-head { margin-bottom: var(--space-2); }
+#ingredients-section .servings { margin: 0; gap: var(--space-2); }
+#ingredients-section .servings-label { font-size: var(--fs-small); font-weight: 600; }
+#ingredients-section .servings-stepper { background: none; padding: 0; gap: 0; }
+#ingredients-section .servings-btn { width: 36px; height: 36px; background: none; border-radius: 18px; color: var(--accent-1); }
+#ingredients-section .servings-btn:hover:not([disabled]),
+#ingredients-section .servings-btn:focus-visible { background: var(--surface); }
+#ingredients-section .servings-btn:active:not([disabled]) { border-radius: 18px 18px 18px 6px; }
+.links-edit { margin-top: var(--space-2); }
+.links-edit[aria-pressed="true"] { color: var(--text); }
+
+/* The one-line scaling note under the Ingredients heading (0.30.2). */
+#ingredients-section .servings-note { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px;
+  margin: -2px 0 var(--space-2); color: var(--text-muted); font-size: var(--fs-small); line-height: 1.5; }
+#ingredients-section .servings-note[hidden] { display: none; }
+#ingredients-section .servings-note .sep { opacity: 0.5; }
+#ingredients-section .servings-reset { min-height: 0; padding: 0; color: var(--accent-1); font-weight: 700; text-decoration: none; }
+#ingredients-section .servings-reset:hover { text-decoration: underline; }

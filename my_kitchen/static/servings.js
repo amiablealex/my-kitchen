@@ -15,8 +15,13 @@
   var MIN = 1, MAX = Math.max(24, base * 4);
   var key = box.dataset.key;
   var out = box.querySelector(".servings-value");
-  var reset = box.querySelector(".servings-reset");
-  var note = box.querySelector(".servings-note");
+  // 0.30.2: the stepper sits in the Ingredients heading; the one-line note
+  // (with Reset at its end) sits just under it, so look in the section. The
+  // method isn't rewritten: the note says its quantities are for the original
+  // count, and the cook does the swap.
+  var scope = box.closest("section") || document;
+  var reset = scope.querySelector(".servings-reset");
+  var note = scope.querySelector(".servings-note");
   var servesEls = document.querySelectorAll(".js-serves");
   var amts = Array.prototype.slice.call(document.querySelectorAll(".ing-amt"));
 
@@ -91,26 +96,13 @@
     });
     out.textContent = n;
     servesEls.forEach(function (s) { s.textContent = n; });
-    reset.hidden = note.hidden = n === base;
-    if (refineBtn) {
-      refineBtn.hidden = n === base || !window.mkRefine;
-      refineBtn.dataset.n = n;
-    }
+    note.hidden = n === base;
     box.querySelector('[data-step="-1"]').disabled = n <= MIN;
     box.querySelector('[data-step="1"]').disabled = n >= MAX;
     try {
       if (n === base) sessionStorage.removeItem(key);
       else sessionStorage.setItem(key, String(n));
     } catch (e) { /* storage unavailable — scaling still works for this view */ }
-  }
-
-  // Phase 26: when the recipe can be refined, offer to rewrite the method for
-  // the new count — the one thing front-end scaling can't do.
-  var refineBtn = box.querySelector(".servings-refine");
-  if (refineBtn) {
-    refineBtn.addEventListener("click", function () {
-      if (window.mkRefine) window.mkRefine("Make this for " + refineBtn.dataset.n + " people");
-    });
   }
 
   var current = base;
@@ -121,14 +113,11 @@
 
   box.addEventListener("click", function (e) {
     var b = e.target.closest("[data-step]");
-    if (b) {
-      current = Math.min(MAX, Math.max(MIN, current + parseInt(b.dataset.step, 10)));
-      apply(current);
-    } else if (e.target.closest(".servings-reset")) {
-      current = base;
-      apply(current);
-    }
+    if (!b) return;
+    current = Math.min(MAX, Math.max(MIN, current + parseInt(b.dataset.step, 10)));
+    apply(current);
   });
+  reset.addEventListener("click", function () { current = base; apply(current); });
 
   box.hidden = false;
   apply(current);

@@ -49,6 +49,8 @@
   toggle.addEventListener("click", function () {
     var on = section.classList.toggle("is-editing");
     toggle.setAttribute("aria-pressed", on ? "true" : "false");
+    var label = toggle.querySelector("span");          // 0.30.2: Edit links ↔ Done
+    if (label) label.textContent = on ? "Done editing links" : "Edit links";
     if (hint) hint.hidden = !on;
     if (!on) closeEditor();
   });

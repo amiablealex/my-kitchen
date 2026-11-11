@@ -40,19 +40,19 @@
   }
   mealSel.addEventListener("change", syncCuisineVisibility);
 
-  function openPanel() { hideErr(); syncCuisineVisibility(); view.hidden = true; panel.hidden = false; }
+  function openPanel() {
+    hideErr(); syncCuisineVisibility(); view.hidden = true; panel.hidden = false;
+    var menu = toggle.closest("details.overflow");   // 0.30.2: opened from ⋯
+    if (menu) menu.open = false;
+  }
   function closePanel() { panel.hidden = true; view.hidden = false; }
   toggle.addEventListener("click", openPanel);
   cancelBtn.addEventListener("click", closePanel);
 
-  function setPill(pill, value, noneText) {
-    if (value) {
-      pill.textContent = value;
-      pill.classList.remove("tag-pill--none");
-    } else {
-      pill.textContent = noneText;
-      pill.classList.add("tag-pill--none");
-    }
+  // 0.30.2: the meta line shows only the tags that are set; an unset one hides.
+  function setPill(pill, value) {
+    pill.textContent = value || "";
+    pill.hidden = !value;
   }
 
   saveBtn.addEventListener("click", function () {
@@ -69,14 +69,9 @@
       })
       .then(function (res) {
         if (!res.ok) { showErr((res.data && res.data.message) || "Could not save tags."); return; }
-        setPill(mealPill, res.data.meal_type, "No meal type");
-        // Cuisine pill is hidden entirely when the meal type can't bear one.
-        if (res.data.cuisine_allowed) {
-          cuisinePill.hidden = false;
-          setPill(cuisinePill, res.data.cuisine, "No cuisine");
-        } else {
-          cuisinePill.hidden = true;
-        }
+        setPill(mealPill, res.data.meal_type);
+        // Cuisine hides entirely when the meal type can't bear one.
+        setPill(cuisinePill, res.data.cuisine_allowed ? res.data.cuisine : "");
         closePanel();
       })
       .catch(function () { showErr("Could not save — is the server still running?"); })

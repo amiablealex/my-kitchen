@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.30.2
+- **A calmer top to the recipe page.** Fewer bubbles between the title and
+  the ingredients:
+  - *Favourite* is a star in the top bar (pink when on).
+  - Meal type, cuisine and time are one plain line under the title
+    ("Dinner · Italian · relaxed"). Tags you haven't set don't show.
+    *Edit tags* is in the ⋯ menu.
+  - The short description reads as the opening line, and the intro as plain
+    text, with no card.
+  - *Serves* sits in the Ingredients heading as a light − 2 + stepper. The
+    separate "Serves 2." line has gone.
+  - *Edit links* sits at the end of the ingredient list and reads *Done
+    editing links* while it's on.
+- **Scaling note on one line.** After changing serves, a single line reads
+  "Scaled from 2 · the method's amounts are for 2 · Reset". The *Rewrite the
+  method for this many* prompt has gone: the scaled amounts are enough.
+
 ## 0.30.1
 - **Swipe left to archive** a recipe on the Recipes page. A pink *Archive*
   shows behind the row as it slides. Let go past about 40% of the way and it

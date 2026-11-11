@@ -6,6 +6,15 @@
 {% block title %}{{ recipe.title }} — My Kitchen{% endblock %}
 {% block page_title %}Recipe{% endblock %}
 {% block topbar_actions %}
+  {# Favourite is a star in the top bar (0.30.2): it's about you, not the
+     recipe, so it sits with the page's own controls, not among its content. #}
+  <form method="post" action="{{ url_for('wizard.toggle_favourite', recipe_id=recipe.id) }}" class="topbar-fav">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="icon-btn fav-star{% if favourited %} is-on{% endif %}" aria-pressed="{{ 'true' if favourited else 'false' }}"
+            aria-label="{{ 'Remove from favourites' if favourited else 'Add to favourites' }}" title="{{ 'Favourited' if favourited else 'Favourite' }}">
+      {{ icon('star_fill' if favourited else 'star') }}
+    </button>
+  </form>
   {# Occasional actions live behind ⋯ so the page itself stays about cooking. #}
   <details class="overflow">
     <summary class="icon-btn" aria-label="More actions">{{ icon('more') }}</summary>
@@ -13,6 +22,7 @@
       {% if recipe.source == 'user' %}
         <a class="menu-item" href="{{ url_for('wizard.recipe_edit', recipe_id=recipe.id) }}">{{ icon('edit') }}<span>Edit recipe</span></a>
       {% endif %}
+      <button type="button" class="menu-item" id="tag-edit-toggle">{{ icon('edit') }}<span>Edit tags</span></button>
       <a class="menu-item" href="{{ url_for('wizard.recipe_share', recipe_id=recipe.id) }}">{{ icon('print') }}<span>Print or share</span></a>
       {% if not recipe.is_archived %}
         <div class="menu-sep"></div>
@@ -105,33 +115,18 @@
   {% endif %}
 
   <h1 class="display recipe-title">{{ recipe.title }}</h1>
-  {% if recipe.blurb %}
-    <p class="recipe-blurb recipe-source-dot">{{ source_dot(recipe.source) }}{{ recipe.blurb }}</p>
-  {% endif %}
-  <div class="recipe-meta-row">
-    <p class="recipe-serves{% if not recipe.blurb %} recipe-source-dot{% endif %}">{% if not recipe.blurb %}{{ source_dot(recipe.source) }}{% endif %}Serves <span class="js-serves">{{ recipe.servings }}</span>.</p>
-    <form method="post" action="{{ url_for('wizard.toggle_favourite', recipe_id=recipe.id) }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      {% if favourited %}
-        <button type="submit" class="btn btn--secondary btn--sm fav-toggle is-on" aria-pressed="true">{{ icon('star_fill') }} Favourited</button>
-      {% else %}
-        <button type="submit" class="btn btn--secondary btn--sm fav-toggle" aria-pressed="false">{{ icon('star') }} Favourite</button>
-      {% endif %}
-    </form>
-  </div>
-
+  {# One quiet meta line under the title (0.30.2): where it came from, then
+     meal · cuisine · time, as plain text like a recipe row. Tags are edited
+     from ⋯ → Edit tags, which swaps this line for the editor. #}
+  {% set band = recipe.time_band or (recipe.generation.time_band if recipe.generation else None) %}
   <div class="recipe-tags" id="recipe-tags"
        data-tags-url="{{ url_for('wizard.recipe_set_tags', recipe_id=recipe.id) }}">
-    <div class="recipe-tags-view">
-      <span class="tag-pill tag-pill--meal{% if not recipe.meal_type %} tag-pill--none{% endif %}" id="tag-meal-pill">
-        {{ recipe.meal_type or "No meal type" }}
-      </span>
-      <span class="tag-pill tag-pill--cuisine{% if not recipe.cuisine %} tag-pill--none{% endif %}"
-            id="tag-cuisine-pill"{% if not cuisine_allowed %} hidden{% endif %}>
-        {{ recipe.cuisine or "No cuisine" }}
-      </span>
-      <button type="button" class="btn btn--sm btn--ghost" id="tag-edit-toggle">{{ icon('edit') }} Edit tags</button>
-    </div>
+    <p class="recipe-tags-view recipe-meta">
+      {{ source_dot(recipe.source) }}
+      <span class="rm-item" id="tag-meal-pill"{% if not recipe.meal_type %} hidden{% endif %}>{{ recipe.meal_type or "" }}</span>
+      <span class="rm-item" id="tag-cuisine-pill"{% if not (cuisine_allowed and recipe.cuisine) %} hidden{% endif %}>{{ recipe.cuisine or "" }}</span>
+      {% if band %}<span class="rm-item meta-i">{{ icon('schedule') }}{{ band }}</span>{% endif %}
+    </p>
     <div class="recipe-tags-edit" id="recipe-tags-edit" hidden>
       <label>Meal type
         <select id="tag-meal-select">
@@ -158,12 +153,16 @@
   </div>
   <script type="application/json" id="tag-cuisine-meal-types">{{ cuisine_meal_types | tojson }}</script>
 
+  {% if recipe.blurb %}
+    <p class="recipe-blurb">{{ recipe.blurb }}</p>
+  {% endif %}
+
   {% if recipe.generation and recipe.generation.special_request %}
     <p class="recipe-request">{{ icon('comment') }}<span>You asked for: <q>{{ recipe.generation.special_request }}</q></span></p>
   {% endif %}
 
   {% if recipe.intro %}
-    <div class="recipe-intro">{{ icon('restaurant_menu') }}<p style="margin:0">{{ recipe.intro }}</p></div>
+    <p class="recipe-intro-text">{{ recipe.intro }}</p>
   {% endif %}
 
   {% if allergy_caveat %}
@@ -177,30 +176,26 @@
   {% endif %}
 
   <section class="recipe-section" id="ingredients-section">
+    {# Heading and serves on one line (0.30.2); the reset and the scaling note
+       sit just under it when the count changes. servings.js finds them by
+       class within the section. #}
     <div class="section-head">
       <h2>Ingredients</h2>
-      {% if recipe.ingredients %}
-        <button type="button" class="btn btn--sm btn--ghost" id="link-edit-toggle" aria-pressed="false">
-          {{ icon('edit') }} Edit links
-        </button>
+      {% if recipe.servings and recipe.servings > 0 %}
+        <div class="servings" id="servings" data-base="{{ recipe.servings }}"
+             data-key="mk:serves:{{ recipe.id }}" hidden>
+          <span class="servings-label">Serves</span>
+          <div class="servings-stepper" role="group" aria-label="Number of servings">
+            <button type="button" class="servings-btn" data-step="-1" aria-label="Fewer servings">{{ icon('remove') }}</button>
+            <output class="servings-value" aria-live="polite">{{ recipe.servings }}</output>
+            <button type="button" class="servings-btn" data-step="1" aria-label="More servings">{{ icon('add') }}</button>
+          </div>
+        </div>
       {% endif %}
     </div>
     {% if recipe.servings and recipe.servings > 0 %}
-      {# Servings scaler (Phase 24). Front-end only: nothing is saved, and the
-         print view always uses the recipe's own count. Hidden until
-         servings.js wires it up, so without JS the page is unchanged. #}
-      <div class="servings" id="servings" data-base="{{ recipe.servings }}"
-           data-key="mk:serves:{{ recipe.id }}" hidden>
-        <span class="servings-label">Serves</span>
-        <div class="servings-stepper" role="group" aria-label="Number of servings">
-          <button type="button" class="servings-btn" data-step="-1" aria-label="Fewer servings">{{ icon('remove') }}</button>
-          <output class="servings-value" aria-live="polite">{{ recipe.servings }}</output>
-          <button type="button" class="servings-btn" data-step="1" aria-label="More servings">{{ icon('add') }}</button>
-        </div>
-        <button type="button" class="servings-reset" hidden>Reset to {{ recipe.servings }}</button>
-        <p class="servings-note" hidden>Ingredient amounts are scaled. Quantities and times in the method are still for {{ recipe.servings }}.
-          {% if can_refine %}<button type="button" class="servings-refine" hidden>Rewrite the method for this many</button>{% endif %}</p>
-      </div>
+      {# One line, only while scaled: what changed, what didn't, and the way back. #}
+      <p class="servings-note" hidden>Scaled from {{ recipe.servings }}<span class="sep">·</span>the method's amounts are for {{ recipe.servings }}<span class="sep">·</span><button type="button" class="servings-reset">Reset</button></p>
     {% endif %}
     {% if recipe.ingredients %}
       {# Structured source (keystone): render the ordered RecipeIngredient rows.
@@ -226,6 +221,9 @@
           </li>
         {% endfor %}
       </ul>
+      <button type="button" class="btn btn--sm btn--ghost links-edit" id="link-edit-toggle" aria-pressed="false">
+        {{ icon('edit') }} <span>Edit links</span>
+      </button>
 
       {# Single shared editor panel, moved inline under the row being edited. #}
       <div class="ri-editor" id="ri-editor" hidden>
@@ -419,7 +417,6 @@
 
 {% block scripts %}
   <script src="{{ url_for('static', filename='recipe_tags.js') }}"></script>
-  {# refine.js before servings.js: the scaler checks for window.mkRefine. #}
   {% if can_refine %}<script src="{{ url_for('static', filename='refine.js') }}"></script>{% endif %}
   <script src="{{ url_for('static', filename='servings.js') }}"></script>
   <script src="{{ url_for('static', filename='notes.js') }}"></script>
