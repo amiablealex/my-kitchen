@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.36.4
+- **Filters have their own button** at the end of the Recipes search box. It
+  opens the filters without the keyboard, and tapping it again closes them.
+  It turns teal while any filter is on.
+- **Tapping the search text only searches.** Filter options appear just for
+  what you type ("din" offers Dinner), so the list stays in view.
+- **Smaller filter pills**, so the panel takes up less of the screen.
+
 ## 0.36.3
 - **Search by ingredient.** Type an ingredient's name in the Recipes search
   box, say "brown sugar", and recipes that use it show alongside any with it

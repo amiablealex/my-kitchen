@@ -1,10 +1,13 @@
 // The Recipes / Favourites filter (Phase 21; reworked 0.36.2).
 //
 // One newest-first list, organised by the search box rather than by groups.
-// Tapping the box opens a panel listing every filter value that occurs, under
-// Made by / Meal / Cuisine / Cook (#facet-options, already in that order).
-// Picking one makes it a chip under the box; typing narrows the panel AND
-// filters titles. While anything is filtering, "N recipes" shows with Clear.
+// The filter button at the end of the box (0.36.4) opens a panel listing every
+// filter value that occurs, under Made by / Meal / Cuisine / Cook
+// (#facet-options, already in that order), without the keyboard; tapping it
+// again closes it. Tapping the text only types: the panel then appears just
+// for values matching what's typed. Picking one makes it a chip under the box
+// and closes the panel. While anything is filtering, "N recipes" shows with
+// Clear, and the button turns teal.
 //
 // Why pick-a-value rather than auto-detecting tags: "italian" is both a
 // cuisine and a word in recipe titles. Auto-converting would hide "Italian
@@ -31,6 +34,8 @@
   var countLine = document.getElementById("facet-count");
   var countN = document.getElementById("facet-count-n");
   var clearBtn = document.getElementById("facet-clear");
+  var toggle = document.getElementById("facet-toggle");
+  var pinned = false;   // opened with the filter button: show every value
   var nomatch = document.getElementById("recipe-nomatch");
   var rows = Array.prototype.slice.call(document.querySelectorAll(".recipe-group .recipe-row"));
   var noun = box.dataset.noun || "recipe";
@@ -113,6 +118,7 @@
       if (m) shown++;
     });
     countLine.hidden = !filtering;
+    box.classList.toggle("has-filters", chips.length > 0);
     countN.textContent = shown + " " + noun + (shown === 1 ? "" : "s") +
       (ing && shown ? (shown === 1 ? " uses " : " use ") + ing.name : "");
     if (nomatch) nomatch.hidden = !filtering || shown > 0;
@@ -147,9 +153,12 @@
   }
 
   // The panel: every value not already chipped, grouped. Typing narrows it.
+  // Unless the filter button opened it, it only shows while something typed
+  // matches a value, so plain searching keeps the list in view.
   function renderPanel() {
     var q = input.value.trim().toLowerCase();
     panel.innerHTML = "";
+    if (!pinned && !q) { closePanel(); return; }
     var any = false;
     GROUP_ORDER.forEach(function (facet) {
       var vals = OPTIONS.filter(function (o) {
@@ -181,11 +190,14 @@
     });
     panel.hidden = !any;
     box.classList.toggle("is-open", any);
+    toggle.setAttribute("aria-expanded", any ? "true" : "false");
   }
 
   function closePanel() {
+    pinned = false;
     panel.hidden = true;
     box.classList.remove("is-open");
+    toggle.setAttribute("aria-expanded", "false");
   }
 
   function addChip(o) {
@@ -195,7 +207,16 @@
     input.blur();                            // put the results in view on a phone
   }
 
-  input.addEventListener("focus", renderPanel);
+  // The button lives inside the box's <label>: stop the tap reaching the
+  // label (which would focus the field and raise the keyboard).
+  toggle.addEventListener("mousedown", function (e) { e.preventDefault(); });
+  toggle.addEventListener("click", function (e) {
+    e.preventDefault();
+    if (!panel.hidden) { closePanel(); return; }
+    pinned = true;
+    input.blur();                            // filters don't need the keyboard
+    renderPanel();
+  });
   input.addEventListener("input", function () { renderPanel(); apply(); });
   input.addEventListener("keydown", function (e) {
     if (e.key === "Enter") {
@@ -208,7 +229,8 @@
     } else if (e.key === "Backspace" && input.value === "" && chips.length) {
       // Backspace on an empty box drops the last chip, as in any token field.
       chips.pop();
-      renderChips(); apply(); renderPanel();
+      renderChips(); apply();
+      if (!panel.hidden) renderPanel();
     }
   });
   document.addEventListener("click", function (e) {

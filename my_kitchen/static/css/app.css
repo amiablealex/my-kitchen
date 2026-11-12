@@ -2065,22 +2065,33 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
 .facet-box .recipe-filter { flex: none; }
 /* No ring (0.36.3): the teal search icon says the box is live. */
 .facet-box .recipe-filter .icon { transition: color 0.15s ease; }
-.facet-box .recipe-filter:focus-within .icon { color: var(--accent-1); }
+.facet-box .recipe-filter:focus-within > .icon { color: var(--accent-1); }
+/* The filter button (0.36.4) at the end of the box: muted at rest, teal while
+   filters are on, a teal bead while the panel is open. */
+.facet-toggle { flex: none; display: grid; place-items: center; width: 34px; height: 34px; min-height: 0;
+  margin-right: -8px; padding: 0; border: 0; border-radius: var(--petal-sm); background: none;
+  color: var(--text-muted); cursor: pointer; transition: background 0.15s ease, color 0.15s ease, border-radius 0.18s ease; }
+.facet-toggle:active { border-radius: var(--petal-flip-sm); }
+.facet-toggle:focus-visible { outline: 2px solid var(--accent-1); outline-offset: 1px; }
+.facet-box .recipe-filter .facet-toggle .icon { width: 1.3em; height: 1.3em; color: inherit; }
+.facet-box.has-filters .facet-toggle { color: var(--accent-1); }
+.facet-box.is-open .facet-toggle { background: var(--accent-1); color: var(--on-accent); }
 .facet-box .recipe-filter input, .facet-box .recipe-filter input:focus,
 .facet-box .recipe-filter input:focus-visible { border: 0; box-shadow: none; outline: none; background: none; }
 .facet-box.is-open .recipe-filter { border-radius: 20px 20px 0 0; }  /* --petal is four values: spell the top two out */
-.facet-panel { padding: var(--space-1) var(--space-4) var(--space-3);
+.facet-panel { padding: 2px var(--space-4) var(--space-3);
   background: var(--surface); border-radius: 0 0 20px 6px; }
 .facet-panel[hidden] { display: none; }
 .facet-panel::before { content: ""; display: block; height: 1px; margin: 0 0 var(--space-1); background: var(--divider); }
-.facet-group-name { margin: var(--space-2) 0 6px; color: var(--text-muted); font-size: 0.75rem; font-weight: 700; }
-.facet-values { display: flex; flex-wrap: wrap; gap: 6px; }
-.facet-value { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 var(--space-3);
-  border: 0; border-radius: var(--petal-sm); background: none; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.2);
-  color: var(--text); font: inherit; font-size: var(--fs-small); font-weight: 600; cursor: pointer; }
+.facet-group-name { margin: 6px 0 4px; color: var(--text-muted); font-size: 0.75rem; font-weight: 700; }
+.facet-values { display: flex; flex-wrap: wrap; gap: 5px; }
+/* Compact pills (0.36.4): the panel shares the screen with the list. */
+.facet-value { display: inline-flex; align-items: center; gap: 5px; min-height: 26px; padding: 0 10px;
+  border: 0; border-radius: 12px 12px 12px 4px; background: none; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.2);
+  color: var(--text); font: inherit; font-size: 0.8rem; font-weight: 600; line-height: 1.2; cursor: pointer; }
 .facet-value:hover, .facet-value:focus-visible { box-shadow: inset 0 0 0 2px var(--accent-1); outline: none; }
-.facet-value:active { border-radius: var(--petal-flip-sm); }
-.facet-value .source-dot, .facet-chip .source-dot { width: 10px; height: 10px; margin: 0; }
+.facet-value:active { border-radius: 4px 12px 12px 12px; }
+.facet-value .source-dot, .facet-chip .source-dot { width: 9px; height: 9px; margin: 0; }
 
 .facet-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--space-2); }
 .facet-chips[hidden] { display: none; }

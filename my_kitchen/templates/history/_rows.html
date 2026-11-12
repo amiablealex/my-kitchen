@@ -36,14 +36,18 @@
 {%- endmacro %}
 
 {# The search box, its filter panel, the chosen filters and the count line.
-   The panel opens from the box when it's tapped; chips sit under the box and
-   above "N recipes", which only shows while filtering. #}
+   0.36.4: the filter button at the end of the box opens and closes the panel
+   (no keyboard); tapping the text only types, and the panel shows just the
+   values that match what's typed. Chips sit under the box and above
+   "N recipes", which only shows while filtering. #}
 {% macro filter_box(noun="recipe") -%}
   <div class="facet-box" id="facet-box" data-noun="{{ noun }}">
     <label class="recipe-filter">
       {{ icon('search') }}
       <input type="search" id="facet-input" autocomplete="off" aria-controls="facet-panel"
-             placeholder="Search, or pick a filter">
+             placeholder="Search {{ noun }}s">
+      <button type="button" class="facet-toggle" id="facet-toggle" aria-controls="facet-panel"
+              aria-expanded="false" aria-label="Filters" title="Filters">{{ icon('tune') }}</button>
     </label>
     <div class="facet-panel" id="facet-panel" hidden></div>
     <div class="facet-chips" id="facet-chips" hidden></div>
