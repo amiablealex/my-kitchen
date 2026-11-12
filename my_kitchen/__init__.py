@@ -80,6 +80,25 @@ def create_app(config_class=Config):
         return value.astimezone(tz).strftime(fmt)
 
     # Compact date for list rows: "9 Nov" this year, "9 Nov 2025" otherwise.
+    @app.template_filter("relday")
+    def relday(value):
+        """'today', 'yesterday', else shortdate ("3 Nov", with the year when
+        it isn't this year). For the recipe list rows (0.36.2)."""
+        if value is None:
+            return ""
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        try:
+            tz = ZoneInfo(app.config.get("APP_TIMEZONE", "Europe/London"))
+        except Exception:
+            tz = timezone.utc
+        days = (datetime.now(tz).date() - value.astimezone(tz).date()).days
+        if days == 0:
+            return "today"
+        if days == 1:
+            return "yesterday"
+        return shortdate(value)
+
     @app.template_filter("urlhost")
     def urlhost(value):
         """'https://www.bbcgoodfood.com/recipes/x' -> 'bbcgoodfood.com' (Phase 34)."""

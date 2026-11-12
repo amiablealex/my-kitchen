@@ -66,6 +66,9 @@
 
   // ---- ingredient rows -----------------------------------------------------
   var ingList = document.getElementById("rf-ing-list");
+  // Keep the unlinked count right when an optional box changes or a row goes.
+  ingList.addEventListener("change", function () { syncUnlinked(); });
+  if (window.MutationObserver) new MutationObserver(function () { syncUnlinked(); }).observe(ingList, { childList: true });
   var ingIdx = 0;
 
   // The line as the source wrote it, shown under its link when it differs
@@ -79,6 +82,7 @@
     var linked = !!row.querySelector(".rf-ing-id").value;
     note.textContent = raw;
     note.hidden = !(raw && linked && raw.toLowerCase() !== name.toLowerCase());
+    syncUnlinked();
     if (!linked && raw) {
       lbl.textContent = raw;
       lbl.classList.remove("rf-ing-chosen--empty");
@@ -86,6 +90,20 @@
     } else {
       lbl.classList.remove("rf-ing-chosen--unlinked");
     }
+  }
+
+  // "N ingredients aren't linked" on an import (0.36.2): required lines with
+  // the source's wording but no link keep the recipe out of suggestions.
+  function syncUnlinked() {
+    var note = document.getElementById("rf-unlinked-note");
+    if (!note) return;
+    var n = Array.prototype.filter.call(ingList.querySelectorAll(".rf-ing-row"), function (r) {
+      return !r.querySelector(".rf-ing-id").value && r.querySelector(".rf-ing-raw").value &&
+             !r.querySelector(".rf-ing-tobuycb").checked;
+    }).length;
+    note.hidden = n === 0;
+    document.getElementById("rf-unlinked-count").textContent =
+      n + " ingredient" + (n === 1 ? " isn't" : "s aren't") + " linked";
   }
 
   function setRowLink(row, id, name, byHand) {

@@ -12,7 +12,8 @@
     </details>
   {% endif %}
 {% endblock %}
-{% from "history/_rows.html" import cook_av, row_ind, row_meta %}
+{% from "history/_rows.html" import filter_box, row_ind, row_meta, row_title %}
+{% from "_source.html" import source_dot %}
 {% block content %}
 
   <h1>Recipes</h1>
@@ -22,49 +23,38 @@
     <a class="btn btn--ghost btn--sm" href="{{ url_for('history.archived') }}">{{ icon('archive') }} Archived</a>
   </p>
 
-  <div class="recipe-toolbar">
-    <div class="facet-box" id="facet-box">
-      <div class="facet-chips" id="facet-chips" hidden></div>
-      <label class="recipe-filter">
-        {{ icon('search') }}
-        <input type="search" id="facet-input" autocomplete="off"
-               placeholder="Filter by name, cuisine, meal type, cook…">
-      </label>
-      <ul class="facet-suggest" id="facet-suggest" hidden></ul>
-    </div>
-  </div>
-
   {% if not rows %}
     <div class="empty">{{ icon('menu_book') }}<p>Nothing here yet.</p>
       <a class="btn btn--primary" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Lets cook</a></div>
   {% else %}
+    {{ filter_box("recipe") }}
+
+    {# One list, newest first (0.36.2): every source together, each row
+       marked by its source dot. The single section keeps recipe_archive.js's
+       select-all and recount working without groups. #}
     <div id="recipe-bank" data-archive-url="{{ url_for('history.row_archive') }}"
          data-restore-url="{{ url_for('history.row_restore') }}">
-    {# Bucket the merged rows by source. Generation rows have kind 'generation';
-       recipes without one carry their source ('user' | 'imported', Phase 34). #}
-    {% set ns = namespace(ai=[], hand=[], imported=[]) %}
-    {% for row in rows %}
-      {% if row.kind == 'user' %}{% set ns.hand = ns.hand + [row] %}
-      {% elif row.kind == 'imported' %}{% set ns.imported = ns.imported + [row] %}
-      {% else %}{% set ns.ai = ns.ai + [row] %}{% endif %}
-    {% endfor %}
-
-    {% if ns.ai %}
-      <section class="recipe-group recipe-group--ai">
-        <header class="recipe-group-head">
-          <h2 class="recipe-group-name">AI generated</h2>
-          <button type="button" class="group-select" data-group-select hidden>Select all</button>
-          <span class="recipe-group-count">{{ ns.ai | length }}</span>
-        </header>
+      <section class="recipe-group recipe-group--all">
+        <div class="recipe-list-tools"><button type="button" class="group-select" data-group-select hidden>Select all</button></div>
         <ul class="recipe-list">
-          {% for row in ns.ai %}
-            {% if row.status == "chosen" %}
+          {% for row in rows %}
+            {% if row.kind in ('user', 'imported') %}
+              <li class="recipe-row" data-archive-key="recipe_id" data-archive-id="{{ row.recipe.id }}" data-title="{{ row.f_title }}"
+                  data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
+                  data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
+                <div class="row-main">
+                  {{ row_title(row.recipe) }}
+                  {{ row_meta(row.recipe.created_at, row.recipe.author, row.recipe.meal_type, row.recipe.cuisine, row.recipe.time_band) }}
+                </div>
+                {{ row_ind(row.recipe.id, noted_ids, fav_ids, 1) }}
+              </li>
+            {% elif row.status == "chosen" %}
               <li class="recipe-row" data-archive-key="generation_id" data-archive-id="{{ row.gen.id }}" data-title="{{ row.f_title }}"
                   data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
                   data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
                 <div class="row-main">
-                  <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.chosen.id) }}">{{ row.chosen.title }}</a></div>
-                  {{ row_meta(row.gen.created_at, row.chosen.cuisine, row.gen.time_band, row.gen.servings, row.gen.created_by) }}
+                  {{ row_title(row.chosen) }}
+                  {{ row_meta(row.gen.created_at, row.gen.created_by, row.chosen.meal_type, row.chosen.cuisine, row.gen.time_band) }}
                 </div>
                 {{ row_ind(row.chosen.id, noted_ids, fav_ids, versions.get(row.chosen.id, 1)) }}
               </li>
@@ -73,7 +63,7 @@
                   data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
                   data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
                 <div class="row-main">
-                  <div class="row-meta"><a class="pick-tag" href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">Pick one</a>{{ cook_av(row.gen.created_by, "Cooked by") }}<span>{{ row.gen.created_at | shortdate }}</span></div>
+                  <div class="row-meta">{{ source_dot('ai') }}<a class="pick-tag" href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">Pick one</a>{% if row.gen.created_by %}<span>{{ row.gen.created_by.name }}</span><span class="sep">·</span>{% endif %}<span>{{ row.gen.created_at | relday }}</span></div>
                   {% for r in row.recipes %}
                     <div class="pair-line"><span class="pair-n">{{ loop.index }}</span><a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{{ row_ind(r.id, noted_ids, fav_ids, 1) }}</div>
                   {% endfor %}
@@ -84,7 +74,7 @@
                   data-cuisine="" data-meal="" data-cook="{{ row.f_cook }}" data-source="">
                 <div class="row-main">
                   <div class="row-title"><span class="muted">Generation failed</span></div>
-                  <div class="row-meta">{{ cook_av(row.gen.created_by, "Started by") }}<span>{{ row.gen.created_at | shortdate }}</span>{% if row.gen.error %}<span class="sep">·</span><span>{{ row.gen.error }}</span>{% endif %}</div>
+                  <div class="row-meta">{% if row.gen.created_by %}<span>{{ row.gen.created_by.name }}</span><span class="sep">·</span>{% endif %}<span>{{ row.gen.created_at | relday }}</span>{% if row.gen.error %}<span class="sep">·</span><span>{{ row.gen.error }}</span>{% endif %}</div>
                 </div>
                 {# A failed attempt has no recipe page (so no ⋯ menu): this is
                    the one row with an action — clear it, with Undo. #}
@@ -95,54 +85,6 @@
           {% endfor %}
         </ul>
       </section>
-    {% endif %}
-
-    {% if ns.hand %}
-      <section class="recipe-group recipe-group--hand">
-        <header class="recipe-group-head">
-          <h2 class="recipe-group-name">Created by hand</h2>
-          <button type="button" class="group-select" data-group-select hidden>Select all</button>
-          <span class="recipe-group-count">{{ ns.hand | length }}</span>
-        </header>
-        <ul class="recipe-list">
-          {% for row in ns.hand %}
-            <li class="recipe-row" data-archive-key="recipe_id" data-archive-id="{{ row.recipe.id }}" data-title="{{ row.f_title }}"
-                 data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
-                data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
-              <div class="row-main">
-                <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.recipe.id) }}">{{ row.recipe.title }}</a></div>
-                {{ row_meta(row.recipe.created_at, row.recipe.cuisine, row.recipe.time_band, row.recipe.servings, row.recipe.author, "Created by") }}
-              </div>
-              {{ row_ind(row.recipe.id, noted_ids, fav_ids, 1) }}
-            </li>
-          {% endfor %}
-        </ul>
-      </section>
-    {% endif %}
-
-    {% if ns.imported %}
-      <section class="recipe-group recipe-group--imported">
-        <header class="recipe-group-head">
-          <h2 class="recipe-group-name">Imported</h2>
-          <button type="button" class="group-select" data-group-select hidden>Select all</button>
-          <span class="recipe-group-count">{{ ns.imported | length }}</span>
-        </header>
-        <ul class="recipe-list">
-          {% for row in ns.imported %}
-            <li class="recipe-row" data-archive-key="recipe_id" data-archive-id="{{ row.recipe.id }}" data-title="{{ row.f_title }}"
-                 data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
-                data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
-              <div class="row-main">
-                <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.recipe.id) }}">{{ row.recipe.title }}</a></div>
-                {{ row_meta(row.recipe.created_at, row.recipe.cuisine, row.recipe.time_band, row.recipe.servings, row.recipe.author, "Imported by") }}
-              </div>
-              {{ row_ind(row.recipe.id, noted_ids, fav_ids, 1) }}
-            </li>
-          {% endfor %}
-        </ul>
-      </section>
-    {% endif %}
-
     </div>
     <p class="recipe-nomatch" id="recipe-nomatch" hidden><em>No recipes match your filter.</em></p>
   {% endif %}

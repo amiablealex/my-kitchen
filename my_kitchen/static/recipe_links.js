@@ -172,7 +172,36 @@
       pill.classList.add("link-pill--none");
       pill.dataset.linkedId = "";
     }
+    syncUnlinkedNote();
   }
+
+  // ---- "N ingredients aren't linked" (0.36.2) ------------------------------
+  // Required (not optional-extra) lines without a link keep the recipe out of
+  // suggestions. The note counts them live and hides at zero; "Link it" turns
+  // on edit mode and opens the editor on the first one.
+  function unlinkedRows() {
+    return Array.prototype.filter.call(document.querySelectorAll(".ingredient-row"), function (r) {
+      return !r.hasAttribute("data-optional") && r.querySelector(".link-pill--none");
+    });
+  }
+  function syncUnlinkedNote() {
+    var note = document.getElementById("unlinked-note");
+    if (!note) return;
+    var n = unlinkedRows().length;
+    note.hidden = n === 0;
+    document.getElementById("unlinked-count").textContent =
+      n + " ingredient" + (n === 1 ? " isn't" : "s aren't") + " linked";
+  }
+  var fixBtn = document.getElementById("unlinked-fix");
+  if (fixBtn) fixBtn.addEventListener("click", function () {
+    var first = unlinkedRows()[0];
+    if (!first) return;
+    var toggle = document.getElementById("link-edit-toggle");
+    if (toggle && toggle.getAttribute("aria-pressed") !== "true") toggle.click();
+    var edit = first.querySelector(".ri-edit-btn");
+    if (edit) edit.click();
+    first.scrollIntoView({ block: "center", behavior: "smooth" });
+  });
 
   // Link to an existing catalogue ingredient (delegated on the results list).
   elResults.addEventListener("click", function (ev) {

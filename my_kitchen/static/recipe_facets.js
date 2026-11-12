@@ -1,62 +1,69 @@
-// Facet filter for the Recipes list (Phase 21).
+// The Recipes / Favourites filter (Phase 21; reworked 0.36.2).
 //
-// One input drives two things: a free-text match on the row title, and a
-// suggestion list of facet VALUES (cuisine / meal type / cook / source) drawn
-// from #facet-options. Tapping a suggestion turns it into a chip; untokenised
-// text stays a plain title filter.
+// One newest-first list, organised by the search box rather than by groups.
+// Tapping the box opens a panel listing every filter value that occurs, under
+// Made by / Meal / Cuisine / Cook (#facet-options, already in that order).
+// Picking one makes it a chip under the box; typing narrows the panel AND
+// filters titles. While anything is filtering, "N recipes" shows with Clear.
 //
-// Why suggestion-driven rather than auto-detecting tags: typing "italian"
-// is ambiguous — it's a cuisine tag AND a word that appears in recipe titles.
-// Auto-converting would make "Italian Wedding Soup" vanish when you typed its
-// own name. The user picks which they meant; both stay reachable.
+// Why pick-a-value rather than auto-detecting tags: "italian" is both a
+// cuisine and a word in recipe titles. Auto-converting would hide "Italian
+// wedding soup" when you typed its own name. The cook picks which they meant.
 //
 // Chip semantics: different facets AND together, same-facet chips OR together,
-// free text ANDs on top. Purely client-side — the whole bank is in the DOM, so
-// filtering is instant with no reload.
+// free text ANDs on top. Client-side: the whole list is in the DOM.
 //
-// Separate from recipe_filter.js on purpose: that one is shared with Manage →
-// Ingredients and must keep working untouched.
+// The filter is kept in sessionStorage per page, so opening a recipe and
+// coming back finds it as you left it.
 (function () {
   var box = document.getElementById("facet-box");
   if (!box) return;
 
   var input = document.getElementById("facet-input");
+  var panel = document.getElementById("facet-panel");
   var chipTray = document.getElementById("facet-chips");
-  var suggestList = document.getElementById("facet-suggest");
+  var countLine = document.getElementById("facet-count");
+  var countN = document.getElementById("facet-count-n");
+  var clearBtn = document.getElementById("facet-clear");
   var nomatch = document.getElementById("recipe-nomatch");
-  var groups = document.querySelectorAll(".recipe-group:not([data-no-filter])");
+  var rows = Array.prototype.slice.call(document.querySelectorAll(".recipe-group .recipe-row"));
+  var noun = box.dataset.noun || "recipe";
+  var STORE_KEY = "mk-facets:" + location.pathname;
 
-  // #facet-options MUST be parsed before this script runs — it's a plain IIFE,
-  // not deferred. Missing element and malformed JSON are different failures and
-  // shouldn't share a silent catch.
-  var optionsEl = document.getElementById("facet-options");
+  // #facet-options MUST be parsed before this script runs (a plain IIFE).
   var OPTIONS = [];
+  var optionsEl = document.getElementById("facet-options");
   if (!optionsEl) {
     console.error("recipe_facets: #facet-options not found — is it above this script tag?");
   } else {
-    try {
-      OPTIONS = JSON.parse(optionsEl.textContent) || [];
-    } catch (e) {
-      console.error("recipe_facets: could not parse #facet-options", e);
-    }
+    try { OPTIONS = JSON.parse(optionsEl.textContent) || []; }
+    catch (e) { console.error("recipe_facets: could not parse #facet-options", e); }
   }
 
-  var FACET_NAMES = { cuisine: "Cuisine", meal: "Meal type", cook: "Cook", source: "Source" };
+  var GROUP_NAMES = { source: "Made by", meal: "Meal", cuisine: "Cuisine", cook: "Cook" };
+  var GROUP_ORDER = ["source", "meal", "cuisine", "cook"];
   var chips = [];  // [{facet, value, label}]
 
   function hasChip(facet, value) {
     return chips.some(function (c) { return c.facet === facet && c.value === value; });
   }
 
+  function dotFor(o) {
+    if (o.facet !== "source") return null;
+    var d = document.createElement("span");
+    var kind = o.value === "user" || o.value === "imported" ? o.value : "ai";
+    d.className = "source-dot source-dot--" + kind;
+    d.setAttribute("aria-hidden", "true");
+    return d;
+  }
+
   // A row matches a facet if it carries ANY of that facet's chipped values.
-  // Fields are pipe-bounded ("|italian|indian|"), so testing "|italian|" is a
-  // whole-value match — "indian" can't half-match "west indian".
+  // Fields are pipe-bounded ("|italian|indian|"), so "|italian|" is a whole-
+  // value match: "indian" can't half-match "west indian".
   function rowMatches(row, text) {
     if (text && (row.dataset.title || "").indexOf(text) === -1) return false;
     var byFacet = {};
-    chips.forEach(function (c) {
-      (byFacet[c.facet] = byFacet[c.facet] || []).push(c.value);
-    });
+    chips.forEach(function (c) { (byFacet[c.facet] = byFacet[c.facet] || []).push(c.value); });
     for (var facet in byFacet) {
       var field = row.dataset[facet] || "";
       var ok = byFacet[facet].some(function (v) { return field.indexOf("|" + v + "|") !== -1; });
@@ -67,19 +74,18 @@
 
   function apply() {
     var text = input.value.trim().toLowerCase();
-    var any = false;
-    groups.forEach(function (g) {
-      var groupVisible = false;
-      g.querySelectorAll(".recipe-row").forEach(function (r) {
-        var m = rowMatches(r, text);
-        r.hidden = !m;
-        if (m) groupVisible = true;
-      });
-      g.hidden = !groupVisible;
-      if (groupVisible) any = true;
+    var filtering = !!text || chips.length > 0;
+    var shown = 0;
+    rows.forEach(function (r) {
+      if (!r.isConnected) return;           // archived away since load
+      var m = rowMatches(r, text);
+      r.hidden = !m;
+      if (m) shown++;
     });
-    // Only claim "no matches" when a filter is actually active.
-    if (nomatch) nomatch.hidden = any || (!text && chips.length === 0);
+    countLine.hidden = !filtering;
+    countN.textContent = shown + " " + noun + (shown === 1 ? "" : "s");
+    if (nomatch) nomatch.hidden = !filtering || shown > 0;
+    save();
   }
 
   function renderChips() {
@@ -87,72 +93,118 @@
     chips.forEach(function (c, i) {
       var chip = document.createElement("button");
       chip.type = "button";
-      chip.className = "facet-chip facet-chip--" + c.facet;
-      chip.setAttribute("aria-label", "Remove filter " + FACET_NAMES[c.facet] + ": " + c.label);
-      chip.innerHTML = '<span class="facet-chip-facet">' + FACET_NAMES[c.facet] +
-                       '</span><span class="facet-chip-value"></span><span class="facet-chip-x">\u00d7</span>';
-      chip.querySelector(".facet-chip-value").textContent = c.label;
+      chip.className = "facet-chip";
+      chip.setAttribute("aria-label", "Remove filter " + GROUP_NAMES[c.facet] + ": " + c.label);
+      var dot = dotFor(c);
+      if (dot) chip.appendChild(dot);
+      var v = document.createElement("span");
+      v.textContent = c.label;
+      chip.appendChild(v);
+      var x = document.createElement("span");
+      x.className = "facet-chip-x";
+      x.setAttribute("aria-hidden", "true");
+      x.textContent = "×";
+      chip.appendChild(x);
       chip.addEventListener("click", function () {
         chips.splice(i, 1);
-        renderChips(); apply(); renderSuggestions();
+        renderChips(); apply();
+        if (!panel.hidden) renderPanel();
       });
       chipTray.appendChild(chip);
     });
     chipTray.hidden = chips.length === 0;
   }
 
-  function renderSuggestions() {
+  // The panel: every value not already chipped, grouped. Typing narrows it.
+  function renderPanel() {
     var q = input.value.trim().toLowerCase();
-    suggestList.innerHTML = "";
-    if (!q) { suggestList.hidden = true; return; }
-    var hits = OPTIONS.filter(function (o) {
-      return !hasChip(o.facet, o.value) && o.label.toLowerCase().indexOf(q) !== -1;
-    }).slice(0, 8);
-    if (!hits.length) { suggestList.hidden = true; return; }
-    hits.forEach(function (o) {
-      var li = document.createElement("li");
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "facet-suggest-btn";
-      btn.innerHTML = '<span class="facet-suggest-facet">' + FACET_NAMES[o.facet] + '</span>';
-      var v = document.createElement("span");
-      v.className = "facet-suggest-value";
-      v.textContent = o.label;
-      btn.appendChild(v);
-      btn.addEventListener("click", function () { addChip(o); });
-      li.appendChild(btn);
-      suggestList.appendChild(li);
+    panel.innerHTML = "";
+    var any = false;
+    GROUP_ORDER.forEach(function (facet) {
+      var vals = OPTIONS.filter(function (o) {
+        return o.facet === facet && !hasChip(o.facet, o.value) &&
+               (!q || o.label.toLowerCase().indexOf(q) !== -1);
+      });
+      if (!vals.length) return;
+      any = true;
+      var group = document.createElement("div");
+      group.className = "facet-group";
+      var name = document.createElement("p");
+      name.className = "facet-group-name";
+      name.textContent = GROUP_NAMES[facet];
+      group.appendChild(name);
+      var list = document.createElement("div");
+      list.className = "facet-values";
+      vals.forEach(function (o) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "facet-value";
+        var dot = dotFor(o);
+        if (dot) b.appendChild(dot);
+        b.appendChild(document.createTextNode(o.label));
+        b.addEventListener("click", function () { addChip(o); });
+        list.appendChild(b);
+      });
+      group.appendChild(list);
+      panel.appendChild(group);
     });
-    suggestList.hidden = false;
+    panel.hidden = !any;
+    box.classList.toggle("is-open", any);
+  }
+
+  function closePanel() {
+    panel.hidden = true;
+    box.classList.remove("is-open");
   }
 
   function addChip(o) {
     if (!hasChip(o.facet, o.value)) chips.push(o);
     input.value = "";
-    renderChips(); renderSuggestions(); apply();
-    input.focus();
+    renderChips(); apply(); closePanel();
+    input.blur();                            // put the results in view on a phone
   }
 
-  input.addEventListener("input", function () { renderSuggestions(); apply(); });
-
+  input.addEventListener("focus", renderPanel);
+  input.addEventListener("input", function () { renderPanel(); apply(); });
   input.addEventListener("keydown", function (e) {
     if (e.key === "Enter") {
-      // Enter takes the top suggestion — the fast path once you know the tags.
+      // Enter takes the first value when typing narrowed the panel to some.
       e.preventDefault();
-      var first = suggestList.querySelector(".facet-suggest-btn");
-      if (first) first.click();
+      var first = input.value.trim() && panel.querySelector(".facet-value");
+      if (first) first.click(); else { closePanel(); input.blur(); }
     } else if (e.key === "Escape") {
-      suggestList.hidden = true;
+      closePanel();
     } else if (e.key === "Backspace" && input.value === "" && chips.length) {
-      // Backspace on an empty input drops the last chip, as in any token field.
+      // Backspace on an empty box drops the last chip, as in any token field.
       chips.pop();
-      renderChips(); apply(); renderSuggestions();
+      renderChips(); apply(); renderPanel();
     }
   });
-
   document.addEventListener("click", function (e) {
-    if (!box.contains(e.target)) suggestList.hidden = true;
+    if (!box.contains(e.target)) closePanel();
   });
+  clearBtn.addEventListener("click", function () {
+    chips = [];
+    input.value = "";
+    renderChips(); apply(); closePanel();
+  });
+
+  // ---- kept across opening a recipe and coming back -------------------------
+  function save() {
+    try {
+      sessionStorage.setItem(STORE_KEY, JSON.stringify({ chips: chips, text: input.value }));
+    } catch (e) {}
+  }
+  (function restore() {
+    var saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem(STORE_KEY) || "null"); } catch (e) {}
+    if (!saved) return;
+    // Only values that still exist (a cuisine may have gone since).
+    chips = (saved.chips || []).filter(function (c) {
+      return OPTIONS.some(function (o) { return o.facet === c.facet && o.value === c.value; });
+    });
+    input.value = saved.text || "";
+  })();
 
   renderChips();
   apply();

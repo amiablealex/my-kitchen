@@ -200,6 +200,16 @@
       <p class="servings-note" hidden>Scaled from {{ recipe.servings }}<span class="sep">·</span>the method's amounts are for {{ recipe.servings }}<span class="sep">·</span><button type="button" class="servings-reset">Reset</button></p>
     {% endif %}
     {% if recipe.ingredients %}
+      {# 0.36.2: a required line with no catalogue link keeps a recipe out of
+         suggestions (it can't be checked against stock), so say so, here at the
+         top. recipe_links.js keeps the count right as lines are linked. #}
+      {% set unlinked = recipe.ingredients | selectattr('ingredient_id', 'none') | rejectattr('to_buy') | list %}
+      <p class="unlinked-note" id="unlinked-note"{% if not unlinked %} hidden{% endif %}>
+        {{ icon('info') }}
+        <span><strong id="unlinked-count">{{ unlinked | length }} ingredient{{ "s aren't" if unlinked | length != 1 else " isn't" }} linked</strong>,
+          so this recipe won't come up in suggestions.
+          <button type="button" class="text-btn" id="unlinked-fix">Link it</button></span>
+      </p>
       {# Structured source (keystone): render the ordered RecipeIngredient rows.
          The freetext line ({amount} {unit} {raw_text}) is byte-identical to the
          old ingredients_json render; the calm pill shows each line's catalogue
@@ -209,7 +219,7 @@
       <p class="link-edit-hint" id="link-edit-hint" hidden>Tap a line’s edit button to change its catalogue link.</p>
       <ul class="ingredient-list" id="ingredient-list">
         {% for ri in recipe.ingredients %}
-          <li class="ingredient-row" data-ri-id="{{ ri.id }}" data-raw-text="{{ ri.raw_text }}"
+          <li class="ingredient-row" data-ri-id="{{ ri.id }}" data-raw-text="{{ ri.raw_text }}"{% if ri.to_buy %} data-optional{% endif %}
               data-link-url="{{ url_for('wizard.recipe_ingredient_link', recipe_id=recipe.id, ri_id=ri.id) }}"
               data-add-link-url="{{ url_for('wizard.recipe_ingredient_add_and_link', recipe_id=recipe.id, ri_id=ri.id) }}">
             {{ scalable_line(ri.amount, ri.unit, ri.raw_text) }}

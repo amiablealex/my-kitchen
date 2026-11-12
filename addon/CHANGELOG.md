@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.36.2
+- **Recipes is one list, newest first.** The AI / by hand / imported groups
+  are gone; each row's coloured dot still shows where it came from. Favourites
+  works the same way.
+- **Tap the search box to see every filter at once**: who made it, meal,
+  cuisine and cook. One tap adds a filter, so your own recipes are two taps
+  away. A count shows while filtering, with *Clear*. The filter is kept when
+  you open a recipe and come back.
+- **Tidier rows:** meal, cuisine, cook, when ("today", "yesterday") and
+  quick or relaxed. The servings figure is gone, since every recipe scales.
+- **Recipes that can't be suggested now say so.** If an ingredient line isn't
+  linked to your catalogue, the recipe can't be checked against your stock and
+  won't come up in suggestions. A note under *Ingredients* says how many lines
+  need linking, and *Link it* takes you to the first. Imported recipes show
+  the same note while you check them.
+- **Water is now a staple** in the starting catalogue, so recipes that list it
+  can be suggested. Existing installs: add *Water* as a staple yourself
+  (*Manage → Ingredients*) and link it on any recipe that shows the note.
+
 ## 0.36.1
 - **Check every line of a receipt.** The sheet after a receipt scan or a
   pasted list now shows every line it read, with the receipt's own text,

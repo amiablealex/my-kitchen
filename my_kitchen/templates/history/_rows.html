@@ -1,21 +1,24 @@
-{# Shared pieces of the compact recipe rows (Recipes + Favourites), 0.28.
-   One line of title, one line of meta. Who cooked it is a small tinted initial
-   that leads the meta line (0.28.1), so the title keeps the full width. #}
+{# Shared pieces of the Recipes and Favourites lists.
+   0.36.2: one list, newest first, no grouping. A row is the source dot and the
+   title, then one muted line: meal · cuisine · cook · when · Quick/Relaxed.
+   The servings figure is gone (everything scales), and the cook is their name
+   rather than an initial. The search box is the organiser: tap it for every
+   filter at once (filter_box below + recipe_facets.js). #}
 {% from "_icons.html" import icon %}
-{% from "_person.html" import person_mark %}
+{% from "_source.html" import source_dot %}
 
-{% macro cook_av(user, verb="Cooked by") -%}
-  {{ person_mark(user, verb ~ " " ~ (user.name if user else "someone unknown")) }}
+{% macro row_meta(when, who=None, meal=None, cuisine=None, time_band=None) -%}
+  {%- set parts = [] -%}
+  {%- if meal %}{% set _ = parts.append(meal) %}{% endif -%}
+  {%- if cuisine %}{% set _ = parts.append(cuisine) %}{% endif -%}
+  {%- if who %}{% set _ = parts.append(who.name) %}{% endif -%}
+  {%- if when %}{% set _ = parts.append(when | relday) %}{% endif -%}
+  {%- if time_band %}{% set _ = parts.append("Quick" if time_band == "quick" else "Relaxed") %}{% endif -%}
+  <div class="row-meta">{% for p in parts %}{% if not loop.first %}<span class="sep">·</span>{% endif %}<span>{{ p }}</span>{% endfor %}</div>
 {%- endmacro %}
 
-{% macro row_meta(when, cuisine=None, time_band=None, servings=None, who=None, verb="Cooked by") -%}
-  <div class="row-meta">
-    {{ cook_av(who, verb) }}
-    <span>{{ when | shortdate }}</span>
-    {% if cuisine %}<span class="sep">·</span><span>{{ cuisine }}</span>{% endif %}
-    {% if time_band %}<span class="sep">·</span><span class="meta-i">{{ icon('schedule') }}{{ time_band }}</span>{% endif %}
-    {% if servings %}<span class="sep">·</span><span class="meta-i" aria-label="serves {{ servings }}">{{ icon('person') }}{{ servings }}</span>{% endif %}
-  </div>
+{% macro row_title(recipe) -%}
+  <div class="row-title">{{ source_dot(recipe.source) }}<a href="{{ url_for('wizard.recipe', recipe_id=recipe.id) }}">{{ recipe.title }}</a></div>
 {%- endmacro %}
 
 {% macro row_ind(recipe_id, noted_ids, fav_ids, version=1) -%}
@@ -26,4 +29,23 @@
       {% if recipe_id in fav_ids %}<span class="row-star" title="Favourite">{{ icon('star_fill') }}</span>{% endif %}
     </span>
   {% endif %}
+{%- endmacro %}
+
+{# The search box, its filter panel, the chosen filters and the count line.
+   The panel opens from the box when it's tapped; chips sit under the box and
+   above "N recipes", which only shows while filtering. #}
+{% macro filter_box(noun="recipe") -%}
+  <div class="facet-box" id="facet-box" data-noun="{{ noun }}">
+    <label class="recipe-filter">
+      {{ icon('search') }}
+      <input type="search" id="facet-input" autocomplete="off" aria-controls="facet-panel"
+             placeholder="Search, or pick a filter">
+    </label>
+    <div class="facet-panel" id="facet-panel" hidden></div>
+    <div class="facet-chips" id="facet-chips" hidden></div>
+    <p class="facet-count" id="facet-count" hidden>
+      <span id="facet-count-n"></span>
+      <button type="button" class="text-btn" id="facet-clear">Clear</button>
+    </p>
+  </div>
 {%- endmacro %}

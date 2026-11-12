@@ -2,7 +2,7 @@
 {% from "_icons.html" import icon %}
 {% block title %}Favourites — My Kitchen{% endblock %}
 {% block page_title %}Favourites{% endblock %}
-{% from "history/_rows.html" import row_meta %}
+{% from "history/_rows.html" import filter_box, row_meta, row_title %}
 
 {% macro fav_row(r, noted_ids, facets) %}
   {% set f = facets[r.id] %}
@@ -10,9 +10,8 @@
       data-cuisine="{{ f.cuisine }}" data-meal="{{ f.meal }}"
       data-cook="{{ f.cook }}" data-source="{{ f.source }}">
     <div class="row-main">
-      <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a></div>
-      {% if r.generation %}{{ row_meta(r.created_at, r.cuisine, r.time_band, r.servings, r.generation.created_by) }}
-      {% else %}{{ row_meta(r.created_at, r.cuisine, r.time_band, r.servings, r.author, "Created by") }}{% endif %}
+      {{ row_title(r) }}
+      {{ row_meta(r.created_at, r.author or (r.generation.created_by if r.generation else None), r.meal_type, r.cuisine, r.time_band) }}
     </div>
     <span class="row-ind">
       {% if r.id in noted_ids %}<span class="row-note" title="Has notes">{{ icon('comment') }}</span>{% endif %}
@@ -32,55 +31,11 @@
       <a class="btn btn--primary" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Lets cook</a>
     </div>
   {% else %}
-    <div class="recipe-toolbar">
-      <div class="facet-box" id="facet-box">
-        <div class="facet-chips" id="facet-chips" hidden></div>
-        <label class="recipe-filter">
-          {{ icon('search') }}
-          <input type="search" id="facet-input" autocomplete="off"
-                 placeholder="Filter by name, cuisine, meal type, cook…">
-        </label>
-        <ul class="facet-suggest" id="facet-suggest" hidden></ul>
-      </div>
-    </div>
-
-    {% set ns = namespace(ai=[], hand=[], imported=[]) %}
-    {% for r in recipes %}
-      {% if r.source == 'user' %}{% set ns.hand = ns.hand + [r] %}
-      {% elif r.source == 'imported' %}{% set ns.imported = ns.imported + [r] %}
-      {% else %}{% set ns.ai = ns.ai + [r] %}{% endif %}
-    {% endfor %}
-
-    {% if ns.ai %}
-      <section class="recipe-group recipe-group--ai">
-        <header class="recipe-group-head">
-          <h2 class="recipe-group-name">AI generated</h2>
-          <span class="recipe-group-count">{{ ns.ai | length }}</span>
-        </header>
-        <ul class="recipe-list">{% for r in ns.ai %}{{ fav_row(r, noted_ids, facets) }}{% endfor %}</ul>
-      </section>
-    {% endif %}
-
-    {% if ns.hand %}
-      <section class="recipe-group recipe-group--hand">
-        <header class="recipe-group-head">
-          <h2 class="recipe-group-name">Created by hand</h2>
-          <span class="recipe-group-count">{{ ns.hand | length }}</span>
-        </header>
-        <ul class="recipe-list">{% for r in ns.hand %}{{ fav_row(r, noted_ids, facets) }}{% endfor %}</ul>
-      </section>
-    {% endif %}
-
-    {% if ns.imported %}
-      <section class="recipe-group recipe-group--imported">
-        <header class="recipe-group-head">
-          <h2 class="recipe-group-name">Imported</h2>
-          <span class="recipe-group-count">{{ ns.imported | length }}</span>
-        </header>
-        <ul class="recipe-list">{% for r in ns.imported %}{{ fav_row(r, noted_ids, facets) }}{% endfor %}</ul>
-      </section>
-    {% endif %}
-
+    {{ filter_box("favourite") }}
+    {# One list, newest first (0.36.2), as on Recipes. #}
+    <section class="recipe-group recipe-group--all">
+      <ul class="recipe-list">{% for r in recipes %}{{ fav_row(r, noted_ids, facets) }}{% endfor %}</ul>
+    </section>
     <p class="recipe-nomatch" id="recipe-nomatch" hidden><em>No favourites match your filter.</em></p>
   {% endif %}
 {% endblock %}

@@ -73,6 +73,15 @@
       {% else %}
         <p class="muted">Each line links to a catalogue ingredient. Add the amount and unit as you'd write them.</p>
       {% endif %}
+      {% if imported %}
+        {# 0.36.2: unlinked lines keep a recipe out of suggestions; say so while
+           it's one tap to fix. recipe_form.js keeps the count live. #}
+        <p class="unlinked-note" id="rf-unlinked-note" hidden>
+          {{ icon('info') }}
+          <span><strong id="rf-unlinked-count"></strong>, so this recipe won't come up in
+            suggestions until they are. Use <em>Pick</em> to link them.</span>
+        </p>
+      {% endif %}
       <ul class="rf-ing-list" id="rf-ing-list"></ul>
       <button type="button" class="btn btn--sm btn--secondary" id="rf-add-ing">{{ icon('add') }} Add ingredient</button>
     </section>

@@ -39,6 +39,7 @@ POSITIVES = [
     ("1 tsp ground cumin", "Ground cumin"),
     ("200ml coconut milk", "Coconut milk"),
     ("sea salt, to taste", "Salt"),
+    ("180 ml lukewarm water", "Water"),
 ]
 
 # free_text -> None (must return unmatched)
@@ -49,6 +50,8 @@ NEGATIVES = [
     ("1 stalk lemongrass, bruised", None),
     ("1 tbsp white miso paste", None),
     ("handful of curry leaves", None),
+    ("200ml coconut water", None),     # not Water (0.36.2)
+    ("1 tsp rose water", None),
 ]
 
 # free_text -> (must_be, [must_not_be, …])

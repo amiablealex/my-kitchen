@@ -3,7 +3,7 @@ from flask_login import current_user
 from datetime import datetime
 
 from ..extensions import db
-from ..models import Generation, Recipe, RecipeComment, User, utcnow
+from ..models import CUISINES, MEAL_TYPE_NAMES, Generation, Recipe, RecipeComment, User, utcnow
 
 history_bp = Blueprint("history", __name__, url_prefix="/history")
 
@@ -14,7 +14,8 @@ history_bp = Blueprint("history", __name__, url_prefix="/history")
 # design: an unchosen AI row links to two recipes whose tags may differ, so the
 # row matches if EITHER does.
 
-SOURCE_LABELS = {"ai": "AI generated", "user": "Created by hand", "imported": "Imported"}
+# The filter's labels for a recipe's source, in the panel's order (0.36.2).
+SOURCE_LABELS = {"user": "By hand", "imported": "Imported", "ai": "AI"}
 
 
 def _row_recipes(row):
@@ -59,9 +60,18 @@ def _recipe_cook(recipe):
 class _FacetOptions:
     """Collects the facet values that actually occur, so the filter never offers
     a value matching nothing. Shared by both list pages so their suggestion
-    lists can't drift apart."""
+    lists can't drift apart.
 
-    FACETS = ("cuisine", "meal", "cook", "source")
+    Since 0.36.2 the whole list is shown as a panel when the search box is
+    tapped, so it's ordered the way the panel reads: Made by (hand, imported,
+    AI), then Meal and Cuisine in the app's own orders, then Cook A–Z."""
+
+    FACETS = ("source", "meal", "cuisine", "cook")
+    ORDER = {
+        "source": list(SOURCE_LABELS),
+        "meal": [m.lower() for m in MEAL_TYPE_NAMES],
+        "cuisine": [c.lower() for c in CUISINES],
+    }
 
     def __init__(self):
         self._seen = {f: {} for f in self.FACETS}
@@ -73,8 +83,12 @@ class _FacetOptions:
     def as_list(self):
         out = []
         for facet in self.FACETS:
-            for value, label in sorted(self._seen[facet].items(),
-                                       key=lambda kv: kv[1].lower()):
+            order = self.ORDER.get(facet, [])
+
+            def key(kv, order=order):
+                value, label = kv
+                return (order.index(value) if value in order else len(order), label.lower())
+            for value, label in sorted(self._seen[facet].items(), key=key):
                 out.append({"facet": facet, "value": value, "label": label})
         return out
 

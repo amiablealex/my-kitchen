@@ -201,6 +201,15 @@ class ResolveResult:
 
 UNMATCHED = ResolveResult(ingredient_id=None, matched_name=None, score=0.0, method="unmatched")
 
+# A fuzzy hit on these catalogue names is refused when the line also carries
+# one of the listed words, which make it a different ingredient: "coconut
+# water" is not Water (0.36.2). Narrow on purpose — a curated constant like the
+# alias map, exercised by the golden set's negatives. Exact and alias matches
+# are unaffected.
+FUZZY_GUARDS = {
+    "water": {"coconut", "rose", "tonic", "blossom"},
+}
+
 
 def resolve_with_index(free_text: str, index: Index,
                        threshold: float = FUZZY_THRESHOLD) -> ResolveResult:
@@ -243,6 +252,8 @@ def resolve_with_index(free_text: str, index: Index,
                 choice, score, idx = max(
                     tied, key=lambda r: (len(qset & set(r[0].split())), len(r[0])))
                 ing_id, name = index.fuzzy_targets[idx]
+                if qset & FUZZY_GUARDS.get(choice, set()):
+                    return UNMATCHED
                 return ResolveResult(ing_id, name, float(score), "fuzzy")
     return UNMATCHED
 

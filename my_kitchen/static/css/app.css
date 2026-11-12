@@ -1179,50 +1179,6 @@ p.recipe-intro { display: block; padding: var(--space-4); }
 .row-note { display: inline-flex; align-items: center; color: var(--text-muted); }
 .row-note .icon { width: 1em; height: 1em; }
 
-/* ================================================== facet filter ========= */
-/* One input, chips for tag filters, free text for titles (Phase 21). */
-/* The box now owns the row-stretch that .recipe-filter used to do. Also resets
-   .recipe-filter's flex: its 12rem basis was written for the row-direction
-   toolbar, and inside this column container that basis becomes a HEIGHT. */
-.facet-box { position: relative; display: flex; flex-direction: column; gap: var(--space-2); flex: 1 1 22rem; }
-.facet-box .recipe-filter { flex: none; }
-.facet-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.facet-chips[hidden] { display: none; }
-
-.facet-chip {
-  display: inline-flex; align-items: center; gap: var(--space-2);
-  padding: 0.3rem 0.6rem; min-height: 32px;
-  background: var(--surface-2); color: var(--text);
-  border: 1px solid var(--divider); border-radius: 999px;
-  font-size: var(--fs-small); cursor: pointer;
-}
-.facet-chip:hover { border-color: var(--accent-4); }
-.facet-chip-facet { color: var(--text-muted); text-transform: uppercase; font-size: 0.7em; letter-spacing: 0.06em; }
-.facet-chip-value { font-weight: 600; }
-.facet-chip-x { color: var(--text-muted); font-size: 1.1em; line-height: 1; }
-.facet-chip--cuisine { border-color: var(--accent-1); }
-.facet-chip--meal    { border-color: var(--accent-2); }
-.facet-chip--cook    { border-color: var(--accent-3); }
-.facet-chip--source  { border-color: var(--accent-4); }
-
-.facet-suggest {
-  position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
-  margin: var(--space-1) 0 0; padding: var(--space-1); list-style: none;
-  background: var(--surface-2); border: 1px solid var(--divider);
-  border-radius: var(--radius-sm); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  max-height: 300px; overflow-y: auto;
-}
-.facet-suggest[hidden] { display: none; }
-.facet-suggest li { margin: 0; }
-.facet-suggest-btn {
-  display: flex; align-items: baseline; gap: var(--space-2);
-  width: 100%; min-height: 44px; padding: var(--space-2) var(--space-3);
-  background: transparent; border: 0; border-radius: var(--radius-sm);
-  color: var(--text); text-align: left; cursor: pointer; font-size: var(--fs-body);
-}
-.facet-suggest-btn:hover { background: var(--surface); }
-.facet-suggest-facet { color: var(--text-muted); text-transform: uppercase; font-size: 0.7em; letter-spacing: 0.06em; flex: none; }
-
 /* --- servings scaler (Phase 24) --- */
 .servings { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3);
   margin: 0 0 var(--space-3); }
@@ -2089,3 +2045,56 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
 /* A line that just re-filed itself catches the eye for a moment. */
 @keyframes sheet-moved { from { background: var(--accent-1-tint, rgba(90, 209, 185, 0.35)); } }
 .sheet-row.is-moved { animation: sheet-moved 0.9s ease-out; }
+
+/* ============================== recipe list + filter (0.36.2) ========== */
+/* One newest-first list in a single plain card, no group header. */
+.recipe-group--all { --group: var(--accent-1); --group-tint: transparent; }
+.recipe-list-tools:has([data-group-select][hidden]) { display: none; }
+.recipe-list-tools { display: flex; justify-content: flex-end; padding: var(--space-2) var(--space-3) 0; }
+.recipe-row .row-title .source-dot { flex: none; margin: 0 2px 0 0; }
+
+/* The filter belongs to the search box: the panel opens from it as one piece
+   (the same teal ring), chips sit under it, and "N recipes" under those. */
+.facet-box { position: relative; display: flex; flex-direction: column; margin-bottom: var(--space-3); }
+.facet-box .recipe-filter { flex: none; }
+.facet-box .recipe-filter:focus-within { box-shadow: inset 0 0 0 2px var(--accent-1); }
+/* The box draws the ring; the field inside it draws nothing of its own. */
+.facet-box .recipe-filter input, .facet-box .recipe-filter input:focus,
+.facet-box .recipe-filter input:focus-visible { border: 0; box-shadow: none; outline: none; background: none; }
+.facet-box.is-open .recipe-filter { border-radius: var(--petal) var(--petal) 0 0; }
+.facet-panel { position: absolute; top: 44px; left: 0; right: 0; z-index: 20;
+  max-height: min(60vh, 420px); overflow-y: auto; padding: var(--space-1) var(--space-4) var(--space-3);
+  background: var(--surface); border-radius: 0 0 var(--petal-sm) var(--petal-sm);
+  box-shadow: inset 2px 0 0 var(--accent-1), inset -2px 0 0 var(--accent-1), inset 0 -2px 0 var(--accent-1),
+              0 12px 24px rgba(20, 4, 32, 0.45); }
+.facet-panel[hidden] { display: none; }
+.facet-panel::before { content: ""; display: block; height: 1px; margin: 0 0 var(--space-1); background: var(--divider); }
+.facet-group-name { margin: var(--space-2) 0 6px; color: var(--text-muted); font-size: 0.75rem; font-weight: 700; }
+.facet-values { display: flex; flex-wrap: wrap; gap: 6px; }
+.facet-value { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 var(--space-3);
+  border: 0; border-radius: var(--petal-sm); background: none; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.2);
+  color: var(--text); font: inherit; font-size: var(--fs-small); font-weight: 600; cursor: pointer; }
+.facet-value:hover, .facet-value:focus-visible { box-shadow: inset 0 0 0 2px var(--accent-1); outline: none; }
+.facet-value:active { border-radius: var(--petal-flip-sm); }
+.facet-value .source-dot, .facet-chip .source-dot { width: 8px; height: 8px; margin: 0; }
+
+.facet-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--space-2); }
+.facet-chips[hidden] { display: none; }
+.facet-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 5px 0 var(--space-3);
+  border: 0; border-radius: var(--petal-sm); background: var(--surface-2); color: var(--text);
+  font: inherit; font-size: var(--fs-small); font-weight: 600; cursor: pointer; }
+.facet-chip-x { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 11px;
+  background: rgba(255, 255, 255, 0.12); color: var(--text-muted); font-size: 0.9rem; line-height: 1; }
+.facet-chip:hover .facet-chip-x { background: var(--accent-1); color: var(--on-accent); }
+.facet-count { display: flex; justify-content: space-between; align-items: baseline; margin: var(--space-2) 2px 0;
+  color: var(--text-muted); font-size: var(--fs-small); }
+.facet-count[hidden] { display: none; }
+
+/* "N ingredients aren't linked" (0.36.2): quiet, under the Ingredients
+   heading — muted text with the teal info icon, no box. */
+.unlinked-note { display: flex; gap: var(--space-2); align-items: flex-start; margin: 0 0 var(--space-3);
+  color: var(--text-muted); font-size: var(--fs-small); line-height: 1.45; }
+.unlinked-note[hidden] { display: none; }
+.unlinked-note > .icon { flex: none; width: 1.15em; height: 1.15em; margin-top: 1px; color: var(--accent-1); }
+.unlinked-note strong { color: var(--text); font-weight: 600; }
+.unlinked-note .text-btn { font-size: inherit; }

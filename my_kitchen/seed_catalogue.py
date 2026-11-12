@@ -222,6 +222,9 @@ INGREDIENTS = [
     ("Dark chocolate", "Pantry", False),
     ("Breadcrumbs", "Pantry", False),
     ("Stock cubes", "Pantry", True),
+    # 0.36.2: imported recipes list water ("180 ml lukewarm water"); unlinked,
+    # it kept them out of suggestions. A staple, so it never blocks anything.
+    ("Water", "Pantry", True),
     ("Tinned tomatoes", "Pantry", False),
     ("Passata", "Pantry", False),
     ("Coconut milk", "Pantry", False),
