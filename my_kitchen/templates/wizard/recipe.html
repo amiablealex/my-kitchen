@@ -292,6 +292,11 @@
         <li>{% if step.title %}<span class="step-title">{{ step.title }}.</span> {% endif %}{{ step.text }}{% if step.timer_minutes %} <span class="timer">{{ step.timer_minutes }} min</span>{% endif %}</li>
       {% endfor %}
     </ol>
+    {# Phase 32: one quiet line where you are when you've finished cooking. #}
+    {% if used_up_items %}
+      <p class="used-up"><button type="button" class="text-btn" id="used-up-open">Finished? Mark anything you've used up.</button></p>
+      <script type="application/json" id="used-up-items">{{ used_up_items | tojson }}</script>
+    {% endif %}
   </section>
 
   {% if recipe.tips_json %}
@@ -394,6 +399,8 @@
 
   <p class="cook-else"><a class="btn btn--ghost" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Cook something else</a></p>
 
+  {% if used_up_items %}{% include "stock/_sheet.html" %}{% endif %}
+
   {% if can_refine %}
     {# Shown before every refine (including "rewrite the method for N"), so a
        plain question never turns into a full regeneration by accident. #}
@@ -420,6 +427,11 @@
   {% if can_refine %}<script src="{{ url_for('static', filename='refine.js') }}"></script>{% endif %}
   <script src="{{ url_for('static', filename='servings.js') }}"></script>
   <script src="{{ url_for('static', filename='notes.js') }}"></script>
+  {% if used_up_items %}
+    <script src="{{ url_for('static', filename='toast.js') }}"></script>
+    <script src="{{ url_for('static', filename='stock_sheet.js') }}"></script>
+    <script src="{{ url_for('static', filename='used_up.js') }}"></script>
+  {% endif %}
   {% if recipe.ingredients %}
     <script src="{{ url_for('static', filename='recipe_links.js') }}"></script>
   {% endif %}

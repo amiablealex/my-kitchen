@@ -1,0 +1,54 @@
+{% from "_icons.html" import icon %}
+{# The stock confirmation sheet (Phase 32). One dialog, filled by
+   static/stock_sheet.js: "mark these as in stock?" (a pasted list, a receipt
+   in Phase 33) or "used anything up?" (recipe page). Pills are .option
+   checkboxes, so the picked style is the app's own. Lines the app couldn't
+   place go to "Needs a hand" rather than vanishing. The caller passes
+   `sheet_catalogue` ([{id, name, section}]) and `categories` when the sheet
+   can place lines; the recipe page's used-up sheet passes neither. #}
+<dialog class="confirm sheet stock-sheet" id="stock-sheet" aria-labelledby="stock-sheet-title"
+        data-bulk-url="{{ url_for('stock.bulk') }}" data-create-url="{{ url_for('stock.create') }}">
+  <div class="confirm-head">
+    <span class="confirm-bead sheet-bead" aria-hidden="true">{{ icon('shelves') }}</span>
+    <h2 id="stock-sheet-title" data-title></h2>
+  </div>
+  <div class="sheet-body">
+    <p class="sheet-note" data-note hidden></p>
+    <div class="options options--chips stock-sheet-picks" data-picks></div>
+    <section class="needs-hand" data-needs hidden>
+      <h3 class="needs-head">Needs a hand</h3>
+      <ul class="needs-list" data-needs-list></ul>
+    </section>
+  </div>
+  <p class="sheet-left" data-left hidden></p>
+  <div class="btn-row">
+    <button type="button" class="btn btn--primary" data-go disabled></button>
+    <button type="button" class="btn btn--ghost" data-cancel>Cancel</button>
+  </div>
+</dialog>
+
+{% if sheet_catalogue is defined %}
+  <script type="application/json" id="stock-sheet-catalogue">{{ sheet_catalogue | tojson }}</script>
+  {# One placing panel, cloned under whichever "Needs a hand" line is opened. #}
+  <template id="needs-panel-tpl">
+    <div class="needs-panel">
+      <label class="pantry-filter needs-search">
+        {{ icon('search') }}
+        <input type="search" autocomplete="off" aria-label="Search your catalogue" data-needs-q>
+      </label>
+      <div class="needs-results" data-needs-results></div>
+      <div class="needs-new" data-needs-new hidden>
+        <select data-needs-cat aria-label="Category">
+          <option value="" selected disabled>Category…</option>
+          {% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+        </select>
+        <button type="button" class="btn btn--sm btn--primary" data-needs-create>{{ icon('add') }} Add</button>
+      </div>
+      <div class="needs-actions">
+        <button type="button" class="text-btn" data-needs-addnew>Add as new…</button>
+        <button type="button" class="text-btn text-btn--muted" data-needs-skip>Skip this line</button>
+      </div>
+      <p class="needs-error" data-needs-error hidden></p>
+    </div>
+  </template>
+{% endif %}

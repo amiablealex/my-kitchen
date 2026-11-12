@@ -7,6 +7,7 @@
   <p class="lead">What you've got in. Tap an item to add a note; × when you've run out.</p>
 
   {% include "stock/_editor.html" %}
+  {% include "stock/_sheet.html" %}
 
   {% if return_to %}
     {# Mid-wizard: a docked way back, so nobody reaches for the Cook tab (which
@@ -19,5 +20,6 @@
 
 {% block scripts %}
   <script src="{{ url_for('static', filename='toast.js') }}"></script>
+  <script src="{{ url_for('static', filename='stock_sheet.js') }}"></script>
   <script src="{{ url_for('static', filename='stock.js') }}"></script>
 {% endblock %}

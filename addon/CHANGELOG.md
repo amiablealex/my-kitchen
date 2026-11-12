@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.32.0
+- **Add several things to stock at once.** Type a list into the stock search
+  ("milk, eggs, leeks") or paste one, such as an online order email. The
+  search offers *Add these N items*. A sheet shows what it found, already
+  ticked: untick anything you don't want and tap *Mark as in stock*. *Undo*
+  puts it all back.
+- **Nothing gets lost.** Lines it couldn't recognise sit under *Needs a hand*.
+  Tap one to say what it was: pick from your catalogue, add it as a new
+  ingredient, or skip it. If you untick one of its guesses, that line comes
+  back here too.
+- **Used anything up?** At the end of a recipe's method, one quiet line opens
+  the same sheet with that recipe's ingredients that are in stock. Tap
+  what's run out. *Undo* is there if you tap the wrong one.
+
 ## 0.31.0
 - **A new line on the home page every visit.** The big "My Kitchen" title is
   replaced by a rotating line, sometimes about you or what's in stock

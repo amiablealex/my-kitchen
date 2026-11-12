@@ -8,8 +8,9 @@
 <div class="pantry-toolbar">
   <label class="pantry-filter">
     {{ icon('search') }}
-    <input type="search" id="stock-search" placeholder="Search your stock or add an item…"
-           autocomplete="off" data-search-url="{{ url_for('stock.search') }}">
+    <input type="search" id="stock-search" placeholder="Search, add an item, or paste a list…"
+           autocomplete="off" data-search-url="{{ url_for('stock.search') }}"
+           data-parse-url="{{ url_for('stock.parse') }}">
   </label>
 </div>
 

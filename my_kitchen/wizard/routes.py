@@ -560,8 +560,20 @@ def recipe(recipe_id):
                                      .order_by(db.func.lower(Ingredient.name)).all()
         ]
         categories = Category.query.order_by(*Category.ordering()).all()
+    # "Used anything up?" (Phase 32): the recipe's linked ingredients that are
+    # in stock right now — staples are assumed, so never offered. Deduped,
+    # recipe order. Empty -> the line isn't shown.
+    used_up_items, seen = [], set()
+    for line in recipe.ingredients:
+        ing = line.ingredient
+        if (ing is None or ing.id in seen or ing.is_staple
+                or not (ing.in_stock and ing.is_active)):
+            continue
+        seen.add(ing.id)
+        used_up_items.append({"id": ing.id, "name": ing.name, "section": ing.category.section})
     return render_template(
         "wizard/recipe.html", recipe=recipe, favourited=favourited,
+        used_up_items=used_up_items,
         allergy_caveat=bool(allergies),
         link_catalogue=link_catalogue, categories=categories,
         meal_type_names=MEAL_TYPE_NAMES,

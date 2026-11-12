@@ -538,6 +538,7 @@ th { color: var(--text-muted); font-weight: 600; }
 
 /* --- pantry / stock (styles the existing stock markup; no template change) --- */
 #pantry { margin-bottom: var(--space-5); }
+#pantry[hidden] { display: none; }
 /* --- stock editor: pivot-table style, section-coloured groups --- */
 .pantry-toolbar { margin-bottom: var(--space-3); }
 .pantry-filter {
@@ -1923,3 +1924,52 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
 .home-cookable-arrow { width: 1.1em; height: 1.1em; color: var(--k); transition: transform 0.18s ease; }
 .home-cookable[open] .home-cookable-arrow { transform: rotate(90deg); }
 .home-cookable .sugg-scroller { margin-top: var(--space-2); }
+
+/* ======================================= stock sheet (0.32) ============ */
+/* A quiet inline text button: "Finished? Mark anything you've used up." */
+.text-btn { min-height: 0; padding: 0; border: 0; background: none; color: var(--accent-1);
+  font: inherit; font-weight: 700; cursor: pointer; text-align: left; }
+.text-btn:hover { text-decoration: underline; }
+.text-btn--muted { color: var(--text-muted); font-weight: 600; }
+.used-up { margin: var(--space-3) 0 0; font-size: var(--fs-small); }
+.used-up[hidden] { display: none; }
+.list-offer { margin-top: var(--space-1); }
+
+.stock-sheet .sheet-note { margin: 0 0 var(--space-3); color: var(--text-muted); font-size: var(--fs-small); }
+.stock-sheet .sheet-note[hidden], .stock-sheet .needs-hand[hidden], .stock-sheet .sheet-left[hidden] { display: none; }
+.stock-sheet-picks { gap: var(--space-2); margin: 0; }
+.stock-sheet-picks:empty { display: none; }
+.stock-sheet-picks .option { min-height: 42px; padding: 4px var(--space-4); flex-wrap: wrap; row-gap: 0; }
+.stock-sheet-picks .option:has(input:checked) { padding-left: var(--space-3); }
+.stock-sheet-picks .option .opt-meta { flex-basis: 100%; font-size: 0.72rem; font-style: italic; line-height: 1.2;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 2px; }
+.stock-sheet-picks .option:has(input:checked) .opt-meta { padding-left: 15px; }
+
+/* "Needs a hand": each line as printed, dashed until it's placed. */
+.needs-hand { margin-top: var(--space-4); }
+.needs-head { margin: 0 0 var(--space-2); font-size: 1rem; }
+.stock-sheet .needs-row { margin: 0; }
+.stock-sheet .needs-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.needs-line { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: 100%;
+  min-height: 44px; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--petal-sm);
+  background: none; outline: 2px dashed var(--divider); outline-offset: -2px;
+  color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.needs-line:hover { outline-color: var(--accent-1); }
+.needs-row.is-open .needs-line { outline-style: solid; outline-color: var(--accent-1); }
+.needs-text { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; overflow-wrap: anywhere; }
+.needs-ask { flex: none; color: var(--accent-1); font-size: var(--fs-small); font-weight: 700; }
+.needs-row.is-open .needs-ask { display: none; }
+.needs-panel { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2) 0 var(--space-1); }
+.needs-search { margin: 0; }
+.needs-results { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.needs-pick { min-height: 38px; padding: 0 var(--space-3); border: 0; border-radius: 19px; background: transparent;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.2); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+.needs-pick:hover { background: var(--pick); color: var(--on-accent); }
+.needs-none { margin: 0; color: var(--text-muted); font-size: var(--fs-small); }
+.needs-new { display: flex; gap: var(--space-2); align-items: center; }
+.needs-new[hidden] { display: none; }
+.needs-new select { flex: 1; min-width: 0; }
+.needs-actions { display: flex; justify-content: space-between; gap: var(--space-3); font-size: var(--fs-small); }
+.needs-error { margin: 0; color: var(--danger); font-size: var(--fs-small); }
+.needs-error[hidden] { display: none; }
+.stock-sheet .sheet-left { margin: var(--space-3) 0 0; color: var(--text-muted); font-size: var(--fs-small); }

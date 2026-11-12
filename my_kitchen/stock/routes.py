@@ -4,7 +4,9 @@ from flask import Blueprint, render_template, request, jsonify, abort, flash
 
 from ..extensions import db
 from ..models import Category, Ingredient
-from .service import in_stock_groups, search_catalogue
+from .service import (
+    in_stock_groups, parse_list, search_catalogue, set_stock, sheet_catalogue,
+)
 
 stock_bp = Blueprint("stock", __name__, url_prefix="/stock")
 
@@ -29,6 +31,7 @@ def index():
         groups=in_stock_groups(),
         categories=Category.query.order_by(*Category.ordering()).all(),
         return_to=_safe_return(request.args.get("return_to")),
+        sheet_catalogue=sheet_catalogue(),
     )
 
 
@@ -80,6 +83,9 @@ def create():
     name = (request.form.get("name") or "").strip()
     category_id = request.form.get("category_id", type=int)
     is_staple = (request.form.get("is_staple") or "").lower() in ("on", "true", "1", "yes")
+    # The confirmation sheet's "Add as new" (Phase 32) creates WITHOUT stocking:
+    # stocking happens when the sheet is confirmed, so Cancel stocks nothing.
+    stock_it = (request.form.get("stock") or "1") != "0"
     if not name:
         return jsonify(ok=False, message="Give the ingredient a name."), 400
     if category_id is None or db.session.get(Category, category_id) is None:
@@ -90,16 +96,41 @@ def create():
         .first()
     )
     if existing is not None:
-        return jsonify(ok=False, message=f'"{existing.name}" is already in your catalogue.'), 409
+        # The id lets the confirmation sheet simply use the existing item.
+        return jsonify(ok=False, message=f'"{existing.name}" is already in your catalogue.',
+                       id=existing.id, name=existing.name, is_staple=existing.is_staple,
+                       section=existing.category.section), 409
     ing = Ingredient(
-        name=name, category_id=category_id, is_staple=is_staple, in_stock=not is_staple
+        name=name, category_id=category_id, is_staple=is_staple,
+        in_stock=stock_it and not is_staple,
     )
     db.session.add(ing)
     db.session.commit()
-    if is_staple:
+    if is_staple and stock_it:
         flash(
             f'Added "{ing.name}" as a staple — assumed always available, '
             "so it won't appear in your stock list.",
             "info",
         )
-    return jsonify(ok=True, id=ing.id, name=ing.name, is_staple=ing.is_staple)
+    return jsonify(ok=True, id=ing.id, name=ing.name, is_staple=ing.is_staple,
+                   section=ing.category.section)
+
+
+@stock_bp.route("/parse", methods=["POST"])
+def parse():
+    """A typed or pasted list -> the confirmation sheet's contents (Phase 32)."""
+    return jsonify(parse_list(request.form.get("text", "")))
+
+
+@stock_bp.route("/bulk", methods=["POST"])
+def bulk():
+    """Mark several ingredients in or out of stock at once — the sheet's
+    confirm, and its Undo. JSON {ids: [...], in_stock: bool}. Staples and
+    retired ingredients are ignored. Returns the ids that changed."""
+    data = request.get_json(silent=True) or {}
+    try:
+        ids = [int(i) for i in data.get("ids") or []]
+    except (TypeError, ValueError):
+        return jsonify(ok=False, message="Bad ingredient list."), 400
+    changed = set_stock(ids, bool(data.get("in_stock")))
+    return jsonify(ok=True, changed=changed)

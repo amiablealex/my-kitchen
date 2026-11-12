@@ -18,6 +18,7 @@ function refreshEmptyState() {
 
 // Carry the current query across an add/create reload (one-shot).
 var SEARCH_KEY = "mk-stock-search";
+var TOAST_KEY = "mk-stock-toast";
 function saveSearch(q) { try { sessionStorage.setItem(SEARCH_KEY, q || ""); } catch (e) {} }
 function popSearch() {
   try { var v = sessionStorage.getItem(SEARCH_KEY); sessionStorage.removeItem(SEARCH_KEY); return v; }
@@ -203,15 +204,100 @@ document.addEventListener("click", function (event) {
       });
   }
 
+  // --- Phase 32: a list in the box ("milk, eggs, leeks", or a pasted order)
+  // becomes one "Add N items" offer instead of a search. The parse is the
+  // server's (the resolver); this count is just for the button label.
+  function listItems(raw) {
+    return raw.split(/[,;]+/).map(function (p) { return p.trim(); })
+      .filter(function (p) { return /[a-z]/i.test(p); });
+  }
+  function isList(raw) { return /[,;]/.test(raw) && listItems(raw).length > 1; }
+
+  function showListOffer(raw) {
+    hideNewForm();
+    if (!results) return;
+    const n = listItems(raw).length;
+    results.innerHTML = "";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn btn--primary list-offer";
+    btn.id = "stock-list-go";
+    btn.textContent = "Add these " + n + " items →";
+    results.appendChild(btn);
+    if (catalogue) catalogue.hidden = false;
+  }
+
+  function openListSheet() {
+    const go = document.getElementById("stock-list-go");
+    if (go) go.disabled = true;
+    fetch(input.dataset.parseUrl, {
+      method: "POST",
+      headers: { "X-CSRFToken": csrfToken() },
+      body: new URLSearchParams({ text: input.value }),
+    })
+      .then(function (r) { if (!r.ok) throw new Error("parse failed"); return r.json(); })
+      .then(function (d) {
+        if (go) go.disabled = false;
+        const skipped = [];
+        if (d.already) skipped.push(d.already + " already in stock");
+        if (d.staples) skipped.push(d.staples + (d.staples === 1 ? " staple" : " staples") + " (always assumed)");
+        if (!d.matched.length && !d.unplaced.length) {
+          if (window.showToast) window.showToast({ message: "Nothing new to add" + (skipped.length ? ": " + skipped.join(", ") : "") + "." });
+          return;
+        }
+        window.mkStockSheet.open({
+          mode: "in",
+          title: d.matched.length ? "Mark these as in stock?" : "Which items were these?",
+          note: skipped.join(" · "),
+          items: d.matched,
+          unplaced: d.unplaced,
+          onDone: function (changed) {
+            try {
+              sessionStorage.setItem(TOAST_KEY, JSON.stringify({
+                message: "Added " + changed.length + " to stock", ids: changed }));
+            } catch (e) {}
+            window.location.reload();
+          },
+        });
+      })
+      .catch(function () { if (go) go.disabled = false; alert("Could not read that list — is the server running?"); });
+  }
+
+  // A single-line search box silently drops line breaks from a paste, merging
+  // the lines ("Milk\nEggs" -> "MilkEggs"), so turn them into commas first.
+  input.addEventListener("paste", function (ev) {
+    const text = (ev.clipboardData || window.clipboardData).getData("text");
+    if (!text || !/[\r\n]/.test(text)) return;
+    ev.preventDefault();
+    const joined = text.split(/[\r\n]+/).map(function (l) { return l.trim(); }).filter(Boolean).join(", ");
+    const start = input.selectionStart || 0, end = input.selectionEnd || 0;
+    input.value = input.value.slice(0, start) + joined + input.value.slice(end);
+    input.dispatchEvent(new Event("input"));
+  });
+
   input.addEventListener("input", function () {
+    // A trailing comma is a list being typed ("milk,"), not part of the name.
     const raw = input.value.trim();
-    filterPantry(raw.toLowerCase());
+    const term = raw.replace(/[\s,;]+$/, "");
     clearTimeout(timer);
-    timer = setTimeout(function () { runCatalogue(raw); }, 200);
+    // In list mode the pantry steps aside, so the offer sits right under the box.
+    const listMode = isList(raw);
+    if (pantry) pantry.hidden = listMode;
+    if (listMode) {
+      showListOffer(raw);
+      return;
+    }
+    filterPantry(term.toLowerCase());
+    timer = setTimeout(function () { runCatalogue(term); }, 200);
+  });
+
+  input.addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter" && isList(input.value.trim())) { ev.preventDefault(); openListSheet(); }
   });
 
   if (results) {
     results.addEventListener("click", function (ev) {
+      if (ev.target.closest("#stock-list-go")) { openListSheet(); return; }
       const trig = ev.target.closest("#stock-new-trigger");
       if (!trig) return;
       showNewForm(trig.dataset.newName || input.value.trim());
@@ -253,6 +339,22 @@ document.addEventListener("click", function (event) {
         });
     });
   }
+
+  // A list was just added: the page reloaded to show it, so say so, with Undo.
+  (function listToast() {
+    let saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem(TOAST_KEY) || "null"); sessionStorage.removeItem(TOAST_KEY); } catch (e) {}
+    if (!saved || !window.showToast) return;
+    window.showToast({
+      message: saved.message,
+      actionLabel: saved.ids && saved.ids.length ? "Undo" : null,
+      onAction: function () {
+        window.mkStockUndo(saved.ids, true)
+          .then(function () { window.location.reload(); })
+          .catch(function () { alert("Could not undo — is the server still running?"); });
+      },
+    });
+  })();
 
   // Restore the query after an add/create reload (one-shot): refilter + refetch.
   (function restore() {
