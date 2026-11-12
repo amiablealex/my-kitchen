@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
-{% from "_source.html" import source_dot %}
+{% from "_suggestions.html" import sugg_card %}
 {% block title %}Cook — Review{% endblock %}
 {% block page_title %}Lets Cook{% endblock %}
 {% from "_components.html" import step_dots %}
@@ -81,22 +81,7 @@
           </div>
         </div>
         <div class="sugg-scroller">
-          {% for r in suggestions %}
-            <a class="sugg-card" href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">
-              <span class="sugg-card-top">
-                {{ source_dot(r.source) }}
-                <span class="sugg-card-title">{{ r.title }}</span>
-              </span>
-              {% if r.meal_type or r.cuisine or r.time_band %}
-                <span class="sugg-card-tags">
-                  {% if r.meal_type %}<span class="tag-pill tag-pill--meal">{{ r.meal_type }}</span>{% endif %}
-                  {% if r.cuisine %}<span class="tag-pill tag-pill--cuisine">{{ r.cuisine }}</span>{% endif %}
-                  {% if r.time_band %}<span class="badge badge--muted">{{ "Quick" if r.time_band == "quick" else "Relaxed" }}</span>{% endif %}
-                </span>
-              {% endif %}
-              <span class="sugg-card-serves muted">Serves {{ r.servings }}</span>
-            </a>
-          {% endfor %}
+          {% for r in suggestions %}{{ sugg_card(r) }}{% endfor %}
         </div>
       </section>
     {% endif %}

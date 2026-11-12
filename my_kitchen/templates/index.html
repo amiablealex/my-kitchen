@@ -1,13 +1,28 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_suggestions.html" import sugg_card %}
 {% block title %}My Kitchen{% endblock %}
 {% block page_title %}Home{% endblock %}
 {% block content %}
+  {# Phase 31: a rotating line (main/hero.py) in place of the wordmark. #}
   <section class="home-hero">
-    <p class="home-eyebrow">What's for dinner?</p>
-    <h1 class="display home-title">My Kitchen</h1>
+    <h1 class="display home-line">{{ hero_line }}</h1>
     <a class="btn btn--cta" href="{{ url_for('wizard.start') }}">{{ icon('cooking') }} Lets Cook</a>
   </section>
+
+  {# Saved recipes cookable from current stock, folded away behind one quiet
+     line. A <details>, so it works without JS; hidden entirely at zero. #}
+  {% if cookable_count %}
+    <details class="home-cookable k-recipes">
+      <summary>
+        {{ cookable_count }} saved recipe{{ "" if cookable_count == 1 else "s" }} you could make right now
+        {{ icon('arrow_forward', 'home-cookable-arrow') }}
+      </summary>
+      <div class="sugg-scroller">
+        {% for r in cookable %}{{ sugg_card(r) }}{% endfor %}
+      </div>
+    </details>
+  {% endif %}
 
   <div class="home-tiles">
     <a class="card home-link k-stock" href="{{ url_for('stock.index') }}"><span class="tile-bead">{{ icon('shelves') }}</span><span>Update stock</span></a>

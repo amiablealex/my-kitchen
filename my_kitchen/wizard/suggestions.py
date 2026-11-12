@@ -31,8 +31,10 @@ and cuisine when constrained) are SQL-filtered; cookability + must-use run in
 Python for clarity.
 """
 
+from sqlalchemy.orm import selectinload
+
 from ..extensions import db
-from ..models import Recipe, SURPRISE_ME, meal_type_takes_cuisine
+from ..models import Recipe, RecipeIngredient, SURPRISE_ME, meal_type_takes_cuisine
 
 
 def _cuisine_constrained(meal_type, cuisine):
@@ -94,3 +96,20 @@ def suggest_recipes(meal_type, cuisine, must_use_ids, limit=None):
         if limit is not None and len(out) >= limit:
             break
     return out
+
+
+def cookable_now():
+    """Every saved recipe the household could cook right now, newest-first —
+    the home page's quiet "you could make" line (Phase 31). Same provenance,
+    archive and cookability rules as suggest_recipes, but NO meal-type, cuisine
+    or must-use constraint: the home page has no brief. Recipes with no
+    structured lines (legacy, pre-keystone) are skipped rather than counted as
+    vacuously cookable. Lines + their ingredients are eager-loaded, since this
+    walks the whole bank on every home page load."""
+    q = (
+        Recipe.query
+        .filter(db.or_(Recipe.source != "ai", Recipe.was_chosen.is_(True)), Recipe.live())
+        .options(selectinload(Recipe.ingredients).selectinload(RecipeIngredient.ingredient))
+        .order_by(Recipe.created_at.desc(), Recipe.id.desc())
+    )
+    return [r for r in q.all() if r.ingredients and _is_cookable(r)]

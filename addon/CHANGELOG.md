@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.31.0
+- **A new line on the home page every visit.** The big "My Kitchen" title is
+  replaced by a rotating line, sometimes about you or what's in stock
+  ("Leeks and chicken in. Something good will come of that.").
+- **What you could make right now.** Under *Lets Cook*, one quiet line says
+  how many saved recipes you can cook with your current stock. Tap it to see
+  them. It isn't shown when there are none.
+
 ## 0.30.2
 - **A calmer top to the recipe page.** Fewer bubbles between the title and
   the ingredients:

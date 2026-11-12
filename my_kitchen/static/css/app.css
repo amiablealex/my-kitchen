@@ -1902,3 +1902,24 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
 #ingredients-section .servings-note .sep { opacity: 0.5; }
 #ingredients-section .servings-reset { min-height: 0; padding: 0; color: var(--accent-1); font-weight: 700; text-decoration: none; }
 #ingredients-section .servings-reset:hover { text-decoration: underline; }
+
+/* ===================================================== home (0.31) ====== */
+/* The rotating hero line replaces the wordmark: same rainbow display type,
+   sized down for a sentence and balanced so it never leaves a lone word. */
+.home-line {
+  font-size: clamp(1.75rem, 7.5vw, 2.7rem); line-height: 1.12;
+  max-width: 18ch; margin: 0 auto var(--space-5);
+  text-wrap: balance;
+}
+/* "N saved recipes you could make right now" — one quiet line, opens in place. */
+.home-cookable { margin: calc(var(--space-5) * -0.5) 0 var(--space-5); }
+.home-cookable > summary {
+  list-style: none; cursor: pointer; text-align: center;
+  color: var(--text-muted); font-size: var(--fs-small); font-weight: 600;
+  padding: var(--space-2) 0;
+}
+.home-cookable > summary::-webkit-details-marker { display: none; }
+.home-cookable > summary:hover { color: var(--text); }
+.home-cookable-arrow { width: 1.1em; height: 1.1em; color: var(--k); transition: transform 0.18s ease; }
+.home-cookable[open] .home-cookable-arrow { transform: rotate(90deg); }
+.home-cookable .sugg-scroller { margin-top: var(--space-2); }

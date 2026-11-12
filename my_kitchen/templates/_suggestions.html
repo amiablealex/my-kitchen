@@ -1,0 +1,21 @@
+{# A saved-recipe card for the horizontal scroll-snap row. Shared by the cook
+   wizard's review step (Phase 18) and the home page's "you could make" row
+   (Phase 31). #}
+{% from "_source.html" import source_dot %}
+
+{% macro sugg_card(r) %}
+  <a class="sugg-card" href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">
+    <span class="sugg-card-top">
+      {{ source_dot(r.source) }}
+      <span class="sugg-card-title">{{ r.title }}</span>
+    </span>
+    {% if r.meal_type or r.cuisine or r.time_band %}
+      <span class="sugg-card-tags">
+        {% if r.meal_type %}<span class="tag-pill tag-pill--meal">{{ r.meal_type }}</span>{% endif %}
+        {% if r.cuisine %}<span class="tag-pill tag-pill--cuisine">{{ r.cuisine }}</span>{% endif %}
+        {% if r.time_band %}<span class="badge badge--muted">{{ "Quick" if r.time_band == "quick" else "Relaxed" }}</span>{% endif %}
+      </span>
+    {% endif %}
+    <span class="sugg-card-serves muted">Serves {{ r.servings }}</span>
+  </a>
+{% endmacro %}
