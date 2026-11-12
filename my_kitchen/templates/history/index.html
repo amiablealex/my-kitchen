@@ -12,7 +12,7 @@
     </details>
   {% endif %}
 {% endblock %}
-{% from "history/_rows.html" import filter_box, row_ind, row_meta, row_title %}
+{% from "history/_rows.html" import filter_box, row_ind, row_mark, row_meta, row_title %}
 {% from "_source.html" import source_dot %}
 {% block content %}
 
@@ -41,7 +41,8 @@
             {% if row.kind in ('user', 'imported') %}
               <li class="recipe-row" data-archive-key="recipe_id" data-archive-id="{{ row.recipe.id }}" data-title="{{ row.f_title }}"
                   data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
-                  data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
+                  data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}" data-ing="{{ row.f_ing }}">
+                {{ row_mark(row.recipe.source) }}
                 <div class="row-main">
                   {{ row_title(row.recipe) }}
                   {{ row_meta(row.recipe.created_at, row.recipe.author, row.recipe.meal_type, row.recipe.cuisine, row.recipe.time_band) }}
@@ -51,7 +52,8 @@
             {% elif row.status == "chosen" %}
               <li class="recipe-row" data-archive-key="generation_id" data-archive-id="{{ row.gen.id }}" data-title="{{ row.f_title }}"
                   data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
-                  data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
+                  data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}" data-ing="{{ row.f_ing }}">
+                {{ row_mark('ai') }}
                 <div class="row-main">
                   {{ row_title(row.chosen) }}
                   {{ row_meta(row.gen.created_at, row.gen.created_by, row.chosen.meal_type, row.chosen.cuisine, row.gen.time_band) }}
@@ -59,11 +61,12 @@
                 {{ row_ind(row.chosen.id, noted_ids, fav_ids, versions.get(row.chosen.id, 1)) }}
               </li>
             {% elif row.status == "unchosen" %}
-              <li class="recipe-row" data-archive-key="generation_id" data-archive-id="{{ row.gen.id }}" data-archive-n="{{ row.recipes|length }}" data-title="{{ row.f_title }}"
+              <li class="recipe-row recipe-row--pair" data-archive-key="generation_id" data-archive-id="{{ row.gen.id }}" data-archive-n="{{ row.recipes|length }}" data-title="{{ row.f_title }}"
                   data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
-                  data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
+                  data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}" data-ing="{{ row.f_ing }}">
+                {{ row_mark('ai') }}
                 <div class="row-main">
-                  <div class="row-meta">{{ source_dot('ai') }}<a class="pick-tag" href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">Pick one</a>{% if row.gen.created_by %}<span>{{ row.gen.created_by.name }}</span><span class="sep">·</span>{% endif %}<span>{{ row.gen.created_at | relday }}</span></div>
+                  <div class="row-meta"><a class="pick-tag" href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">Pick one</a>{% if row.gen.created_by %}<span>{{ row.gen.created_by.name }}</span><span class="sep">·</span>{% endif %}<span>{{ row.gen.created_at | relday }}</span></div>
                   {% for r in row.recipes %}
                     <div class="pair-line"><span class="pair-n">{{ loop.index }}</span><a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a>{{ row_ind(r.id, noted_ids, fav_ids, 1) }}</div>
                   {% endfor %}
@@ -71,7 +74,8 @@
               </li>
             {% else %}
               <li class="recipe-row" data-archive-key="generation_id" data-archive-id="{{ row.gen.id }}" data-archive-failed data-title="generation failed"
-                  data-cuisine="" data-meal="" data-cook="{{ row.f_cook }}" data-source="">
+                  data-cuisine="" data-meal="" data-cook="{{ row.f_cook }}" data-source="" data-ing="">
+                <span class="source-dot source-dot--failed" aria-hidden="true"></span>
                 <div class="row-main">
                   <div class="row-title"><span class="muted">Generation failed</span></div>
                   <div class="row-meta">{% if row.gen.created_by %}<span>{{ row.gen.created_by.name }}</span><span class="sep">·</span>{% endif %}<span>{{ row.gen.created_at | relday }}</span>{% if row.gen.error %}<span class="sep">·</span><span>{{ row.gen.error }}</span>{% endif %}</div>
@@ -92,6 +96,7 @@
 
 {% block scripts %}
   <script type="application/json" id="facet-options">{{ facet_options | tojson }}</script>
+  <script type="application/json" id="facet-ingredients">{{ facet_ingredients | tojson }}</script>
   <script src="{{ url_for('static', filename='recipe_facets.js') }}"></script>
   {# Select mode (0.30.1): docked bar for archiving several rows at once. #}
   <div class="select-bar" id="select-bar" hidden>

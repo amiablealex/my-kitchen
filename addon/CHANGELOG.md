@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.36.3
+- **Search by ingredient.** Type an ingredient's name in the Recipes search
+  box, say "brown sugar", and recipes that use it show alongside any with it
+  in the title. The count line tells you: "3 recipes use brown sugar".
+- **Lighter recipe rows.** The source mark is now a small petal in its own
+  column, so titles and their details line up. Petal marks are used
+  everywhere the source is shown.
+- **The filter panel opens in place** and pushes the list down, without the
+  teal outline. Title results stay in view while you type.
+- Fixed square corners on the search box and on the receipt cropper's shaded
+  strips.
+
 ## 0.36.2
 - **Recipes is one list, newest first.** The AI / by hand / imported groups
   are gone; each row's coloured dot still shows where it came from. Favourites

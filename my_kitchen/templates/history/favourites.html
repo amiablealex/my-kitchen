@@ -2,13 +2,14 @@
 {% from "_icons.html" import icon %}
 {% block title %}Favourites — My Kitchen{% endblock %}
 {% block page_title %}Favourites{% endblock %}
-{% from "history/_rows.html" import filter_box, row_meta, row_title %}
+{% from "history/_rows.html" import filter_box, row_mark, row_meta, row_title %}
 
 {% macro fav_row(r, noted_ids, facets) %}
   {% set f = facets[r.id] %}
   <li class="recipe-row" data-title="{{ f.title }}"
       data-cuisine="{{ f.cuisine }}" data-meal="{{ f.meal }}"
-      data-cook="{{ f.cook }}" data-source="{{ f.source }}">
+      data-cook="{{ f.cook }}" data-source="{{ f.source }}" data-ing="{{ f.ing }}">
+    {{ row_mark(r.source) }}
     <div class="row-main">
       {{ row_title(r) }}
       {{ row_meta(r.created_at, r.author or (r.generation.created_by if r.generation else None), r.meal_type, r.cuisine, r.time_band) }}
@@ -44,5 +45,6 @@
   {# Options blob MUST come first — recipe_facets.js is a plain IIFE and reads
      it at parse time. #}
   <script type="application/json" id="facet-options">{{ facet_options | tojson }}</script>
+  <script type="application/json" id="facet-ingredients">{{ facet_ingredients | tojson }}</script>
   <script src="{{ url_for('static', filename='recipe_facets.js') }}"></script>
 {% endblock %}

@@ -13,6 +13,12 @@
 // Chip semantics: different facets AND together, same-facet chips OR together,
 // free text ANDs on top. Client-side: the whole list is in the DOM.
 //
+// Ingredient search (0.36.3): when the typed text is an ingredient's whole
+// name (#facet-ingredients, name -> id), recipes using it join the title
+// matches, and the count line says so ("3 recipes use brown sugar"). Whole
+// names only, so "brown" doesn't drag in brown sugar AND brown rice; a simple
+// plural either way is forgiven ("eggs" finds Egg).
+//
 // The filter is kept in sessionStorage per page, so opening a recipe and
 // coming back finds it as you left it.
 (function () {
@@ -40,6 +46,28 @@
     catch (e) { console.error("recipe_facets: could not parse #facet-options", e); }
   }
 
+  var INGREDIENTS = {};
+  var ingEl = document.getElementById("facet-ingredients");
+  if (ingEl) {
+    try { INGREDIENTS = JSON.parse(ingEl.textContent) || {}; }
+    catch (e) { console.error("recipe_facets: could not parse #facet-ingredients", e); }
+  }
+
+  // The ingredient the typed text names, as {id, name}, or null.
+  function ingredientFor(text) {
+    var q = text.replace(/\s+/g, " ");
+    if (q.length < 2) return null;
+    var tries = [q, q + "s", q + "es"];
+    if (/es$/.test(q)) tries.push(q.slice(0, -2));
+    if (/s$/.test(q)) tries.push(q.slice(0, -1));
+    for (var i = 0; i < tries.length; i++) {
+      if (Object.prototype.hasOwnProperty.call(INGREDIENTS, tries[i])) {
+        return { id: INGREDIENTS[tries[i]], name: tries[i] };
+      }
+    }
+    return null;
+  }
+
   var GROUP_NAMES = { source: "Made by", meal: "Meal", cuisine: "Cuisine", cook: "Cook" };
   var GROUP_ORDER = ["source", "meal", "cuisine", "cook"];
   var chips = [];  // [{facet, value, label}]
@@ -60,8 +88,9 @@
   // A row matches a facet if it carries ANY of that facet's chipped values.
   // Fields are pipe-bounded ("|italian|indian|"), so "|italian|" is a whole-
   // value match: "indian" can't half-match "west indian".
-  function rowMatches(row, text) {
-    if (text && (row.dataset.title || "").indexOf(text) === -1) return false;
+  function rowMatches(row, text, ing) {
+    if (text && (row.dataset.title || "").indexOf(text) === -1 &&
+        !(ing && (row.dataset.ing || "").indexOf("|" + ing.id + "|") !== -1)) return false;
     var byFacet = {};
     chips.forEach(function (c) { (byFacet[c.facet] = byFacet[c.facet] || []).push(c.value); });
     for (var facet in byFacet) {
@@ -75,15 +104,17 @@
   function apply() {
     var text = input.value.trim().toLowerCase();
     var filtering = !!text || chips.length > 0;
+    var ing = text ? ingredientFor(text) : null;
     var shown = 0;
     rows.forEach(function (r) {
       if (!r.isConnected) return;           // archived away since load
-      var m = rowMatches(r, text);
+      var m = rowMatches(r, text, ing);
       r.hidden = !m;
       if (m) shown++;
     });
     countLine.hidden = !filtering;
-    countN.textContent = shown + " " + noun + (shown === 1 ? "" : "s");
+    countN.textContent = shown + " " + noun + (shown === 1 ? "" : "s") +
+      (ing && shown ? (shown === 1 ? " uses " : " use ") + ing.name : "");
     if (nomatch) nomatch.hidden = !filtering || shown > 0;
     save();
   }

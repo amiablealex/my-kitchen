@@ -493,7 +493,11 @@ th { color: var(--text-muted); font-weight: 600; }
   font-variant-numeric: tabular-nums; background: var(--surface-2); border-radius: 999px; padding: 1px 9px; }
 
 .recipe-list { list-style: none; margin: 0; padding: 0; }
-.recipe-list > .recipe-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); }
+.recipe-list > .recipe-row { display: flex; align-items: center; gap: var(--space-3); padding: 8px var(--space-3); }
+/* The source petal has its own column, centred across title and meta, so both
+   lines share one left edge (0.36.3). A pick-one pair aligns it to its first line. */
+.recipe-list > .recipe-row > .source-dot { width: 11px; height: 11px; margin: 0; }
+.recipe-list > .recipe-row--pair > .source-dot { align-self: flex-start; margin-top: 6px; }
 .recipe-list > .recipe-row[hidden] { display: none; }
 .recipe-list > .recipe-row + .recipe-row { border-top: 1px solid var(--divider); }
 .recipe-nomatch { color: var(--text-muted); }
@@ -826,8 +830,8 @@ p.recipe-intro { display: block; padding: var(--space-4); }
 .tag-error { color:var(--accent-4); width:100%; }
 
 /* ---- source dots (Phase 18 / 4c) ---- */
-.source-dot { display:inline-block; width:18px; height:18px; border-radius:50%;
-  vertical-align:-3px; margin-right:.55em; flex:0 0 auto; box-shadow:0 1px 3px rgba(0,0,0,.25); }
+.source-dot { display:inline-block; width:18px; height:18px; border-radius:50% 50% 50% 18%;  /* a petal (0.36.3) */
+  vertical-align:-3px; margin-right:.55em; flex:0 0 auto; }
 .source-dot--user { background:var(--accent-2); }       /* lime — made by hand */
 .source-dot--imported { background:var(--accent-3); }   /* orange — reserved */
 .source-dot--ai {                                       /* wizard four-colour pinwheel */
@@ -839,6 +843,7 @@ p.recipe-intro { display: block; padding: var(--space-4); }
 }
 .recipes-filters { display:flex; gap:var(--space-3); flex-wrap:wrap; align-items:flex-end; }
 .recipe-source-dot .source-dot { width:22px; height:22px; vertical-align:-4px; }
+.source-dot--failed { background:none; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.28); }
 
 /* ---- wizard suggestions (Phase 18 — the keystone payoff) ---- */
 .suggestions { margin-bottom: var(--space-5); }
@@ -1384,9 +1389,9 @@ dialog.confirm::backdrop { background: rgba(20, 4, 32, 0.74); }
 .confirm .btn-row { margin-top: var(--space-4); }
 
 /* --- recipe rows (Recipes, Favourites): one line of title, one of meta --- */
-.recipe-row .row-title { flex-wrap: nowrap; }
-.recipe-row .row-meta { display: flex; align-items: center; gap: 5px; margin-top: 1px;
-  white-space: nowrap; overflow: hidden; font-size: 0.8rem; }
+.recipe-row .row-title { flex-wrap: nowrap; font-weight: 550; line-height: 1.35; }
+.recipe-row .row-meta { display: flex; align-items: center; gap: 5px; margin-top: 2px;
+  white-space: nowrap; overflow: hidden; font-size: 0.8rem; line-height: 1.35; }
 .recipe-row .row-meta > * { flex: none; }
 .recipe-row .row-meta .sep { opacity: 0.5; }
 .meta-i { display: inline-flex; align-items: center; gap: 2px; }
@@ -1935,8 +1940,8 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
 .frame { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; user-select: none; -webkit-user-select: none; }
 .frame img { display: block; max-width: 100%; max-height: 56svh; border-radius: var(--petal-sm); }
 .frame-shade { position: absolute; left: 0; right: 0; background: rgba(20, 4, 32, 0.72); pointer-events: none; }
-.frame-shade--top { top: 0; border-radius: var(--petal-sm) var(--petal-sm) 0 0; }
-.frame-shade--bottom { bottom: 0; border-radius: 0 0 var(--petal-sm) var(--petal-sm); }
+.frame-shade--top { top: 0; border-radius: 16px 16px 0 0; }
+.frame-shade--bottom { bottom: 0; border-radius: 0 0 16px 5px; }
 /* A bar is a 2px line in a 36px-tall touch strip, with a grip in the middle. */
 .frame-handle { position: absolute; left: -6px; right: -6px; height: 36px; transform: translateY(-50%);
   display: grid; place-items: center; cursor: ns-resize; touch-action: none; }
@@ -2051,22 +2056,21 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
 .recipe-group--all { --group: var(--accent-1); --group-tint: transparent; }
 .recipe-list-tools:has([data-group-select][hidden]) { display: none; }
 .recipe-list-tools { display: flex; justify-content: flex-end; padding: var(--space-2) var(--space-3) 0; }
-.recipe-row .row-title .source-dot { flex: none; margin: 0 2px 0 0; }
 
-/* The filter belongs to the search box: the panel opens from it as one piece
-   (the same teal ring), chips sit under it, and "N recipes" under those. */
+/* The filter belongs to the search box: the panel opens from it as one petal
+   card, in the page flow so it pushes the list down rather than covering half a
+   row (and title results stay visible while typing). Chips sit under it, and
+   "N recipes" under those. */
 .facet-box { position: relative; display: flex; flex-direction: column; margin-bottom: var(--space-3); }
 .facet-box .recipe-filter { flex: none; }
-.facet-box .recipe-filter:focus-within { box-shadow: inset 0 0 0 2px var(--accent-1); }
-/* The box draws the ring; the field inside it draws nothing of its own. */
+/* No ring (0.36.3): the teal search icon says the box is live. */
+.facet-box .recipe-filter .icon { transition: color 0.15s ease; }
+.facet-box .recipe-filter:focus-within .icon { color: var(--accent-1); }
 .facet-box .recipe-filter input, .facet-box .recipe-filter input:focus,
 .facet-box .recipe-filter input:focus-visible { border: 0; box-shadow: none; outline: none; background: none; }
-.facet-box.is-open .recipe-filter { border-radius: var(--petal) var(--petal) 0 0; }
-.facet-panel { position: absolute; top: 44px; left: 0; right: 0; z-index: 20;
-  max-height: min(60vh, 420px); overflow-y: auto; padding: var(--space-1) var(--space-4) var(--space-3);
-  background: var(--surface); border-radius: 0 0 var(--petal-sm) var(--petal-sm);
-  box-shadow: inset 2px 0 0 var(--accent-1), inset -2px 0 0 var(--accent-1), inset 0 -2px 0 var(--accent-1),
-              0 12px 24px rgba(20, 4, 32, 0.45); }
+.facet-box.is-open .recipe-filter { border-radius: 20px 20px 0 0; }  /* --petal is four values: spell the top two out */
+.facet-panel { padding: var(--space-1) var(--space-4) var(--space-3);
+  background: var(--surface); border-radius: 0 0 20px 6px; }
 .facet-panel[hidden] { display: none; }
 .facet-panel::before { content: ""; display: block; height: 1px; margin: 0 0 var(--space-1); background: var(--divider); }
 .facet-group-name { margin: var(--space-2) 0 6px; color: var(--text-muted); font-size: 0.75rem; font-weight: 700; }
@@ -2076,7 +2080,7 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
   color: var(--text); font: inherit; font-size: var(--fs-small); font-weight: 600; cursor: pointer; }
 .facet-value:hover, .facet-value:focus-visible { box-shadow: inset 0 0 0 2px var(--accent-1); outline: none; }
 .facet-value:active { border-radius: var(--petal-flip-sm); }
-.facet-value .source-dot, .facet-chip .source-dot { width: 8px; height: 8px; margin: 0; }
+.facet-value .source-dot, .facet-chip .source-dot { width: 10px; height: 10px; margin: 0; }
 
 .facet-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--space-2); }
 .facet-chips[hidden] { display: none; }

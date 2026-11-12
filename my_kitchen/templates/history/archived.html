@@ -22,8 +22,9 @@
       <ul class="recipe-list">
         {% for r in recipes %}
           <li class="recipe-row">
+            {{ source_dot(r.source) }}
             <div class="row-main">
-              <div class="row-title">{{ source_dot(r.source) }}<a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a></div>
+              <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">{{ r.title }}</a></div>
               <div class="row-meta">archived {{ r.archived_at | localdt }}{% if r.archived_by %} by {{ r.archived_by.name }}{% endif %}</div>
             </div>
             <form method="post" class="row-actions"

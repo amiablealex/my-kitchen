@@ -17,8 +17,12 @@
   <div class="row-meta">{% for p in parts %}{% if not loop.first %}<span class="sep">·</span>{% endif %}<span>{{ p }}</span>{% endfor %}</div>
 {%- endmacro %}
 
+{# The source petal sits in its own column, centred across both lines, so the
+   title and the meta line share one left edge (0.36.3). #}
+{% macro row_mark(source) -%}{{ source_dot(source) }}{%- endmacro %}
+
 {% macro row_title(recipe) -%}
-  <div class="row-title">{{ source_dot(recipe.source) }}<a href="{{ url_for('wizard.recipe', recipe_id=recipe.id) }}">{{ recipe.title }}</a></div>
+  <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=recipe.id) }}">{{ recipe.title }}</a></div>
 {%- endmacro %}
 
 {% macro row_ind(recipe_id, noted_ids, fav_ids, version=1) -%}

@@ -3,7 +3,8 @@ from flask_login import current_user
 from datetime import datetime
 
 from ..extensions import db
-from ..models import CUISINES, MEAL_TYPE_NAMES, Generation, Recipe, RecipeComment, User, utcnow
+from ..models import (CUISINES, MEAL_TYPE_NAMES, Generation, Ingredient, Recipe, RecipeComment,
+                      RecipeIngredient, User, utcnow)
 
 history_bp = Blueprint("history", __name__, url_prefix="/history")
 
@@ -138,6 +139,31 @@ def _recipe_facets(recipes):
     return fields, opts.as_list()
 
 
+def _ingredient_search(recipe_ids):
+    """Ingredient search (0.36.3): typing an ingredient's whole name in the
+    search box also finds recipes that use it, not just titles containing it.
+
+    Returns ({recipe_id: set of linked ingredient ids}, {lowercased name: id}).
+    The lookup only holds ingredients these recipes actually use, so a match
+    always finds something and the page carries no more than it needs.
+    Unlinked lines can't match, the same rule suggestions follow."""
+    wanted = set(recipe_ids)
+    by_recipe, names = {}, {}
+    if not wanted:
+        return by_recipe, names
+    q = (db.session.query(RecipeIngredient.recipe_id, Ingredient.id, Ingredient.name)
+         .join(Ingredient, RecipeIngredient.ingredient_id == Ingredient.id))
+    for rid, iid, name in q:
+        if rid in wanted:
+            by_recipe.setdefault(rid, set()).add(iid)
+            names[name.strip().lower()] = iid
+    return by_recipe, names
+
+
+def _ing_field(ids):
+    return "|" + "|".join(str(i) for i in sorted(ids)) + "|" if ids else ""
+
+
 def _lineage_context(generations):
     """What hides a generation row because something newer stands in for it
     (Phase 26), plus each recipe's version number for the "v3" badge.
@@ -231,11 +257,17 @@ def index():
     rows.sort(key=lambda row: row["sort_at"] or datetime.min, reverse=True)
 
     facet_options = _attach_facets(rows)
+    ing_by_recipe, facet_ingredients = _ingredient_search(
+        r.id for row in rows for r in _row_recipes(row))
+    for row in rows:
+        row["f_ing"] = _ing_field(set().union(*[ing_by_recipe.get(r.id, set())
+                                                for r in _row_recipes(row)]))
     fav_ids = {r.id for r in current_user.favourite_recipes}
     noted_ids = {rid for (rid,) in db.session.query(RecipeComment.recipe_id).distinct()}
     return render_template("history/index.html", rows=rows,
                            versions=ctx["versions"],
                            facet_options=facet_options,
+                           facet_ingredients=facet_ingredients,
                            fav_ids=fav_ids, noted_ids=noted_ids)
 
 
@@ -248,9 +280,13 @@ def favourites():
                .order_by(Recipe.created_at.desc()).all())
     noted_ids = {rid for (rid,) in db.session.query(RecipeComment.recipe_id).distinct()}
     facets, facet_options = _recipe_facets(recipes)
+    ing_by_recipe, facet_ingredients = _ingredient_search(r.id for r in recipes)
+    for r in recipes:
+        facets[r.id]["ing"] = _ing_field(ing_by_recipe.get(r.id, set()))
     return render_template("history/favourites.html", recipes=recipes,
                            noted_ids=noted_ids, facets=facets,
-                           facet_options=facet_options)
+                           facet_options=facet_options,
+                           facet_ingredients=facet_ingredients)
 
 
 # --- Archive (Phase 24) -----------------------------------------------------
