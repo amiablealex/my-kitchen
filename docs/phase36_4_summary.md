@@ -28,3 +28,11 @@ Dinner; "brown sugar" shows no panel and the matching recipe; the button opens
 and closes the panel and drops focus; picking Dinner closes it and the button
 turns teal; typing while pinned narrows and clearing the text keeps it open;
 tapping outside closes; Favourites works the same. No JS errors.
+
+## 0.36.5 fix
+With text typed, the button set `pinned` but the panel still narrowed to the
+text. "brown sugar" matches no value, so the panel stayed hidden and the button
+seemed dead. Now a pinned panel ignores the text and shows every value. A pick
+from it keeps the text, so the search and the chip combine; only a suggestion
+found by typing replaces the text, as before. Enter picks the first value only
+for typed suggestions; while pinned it just closes the panel.

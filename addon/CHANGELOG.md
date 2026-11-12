@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.36.5
+- **The filter button works while you've typed something.** It always shows
+  every filter, and picking one keeps your search, so "brown sugar" plus
+  *Dessert* works in either order.
+
 ## 0.36.4
 - **Filters have their own button** at the end of the Recipes search box. It
   opens the filters without the keyboard, and tapping it again closes them.

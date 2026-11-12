@@ -4,9 +4,11 @@
 // The filter button at the end of the box (0.36.4) opens a panel listing every
 // filter value that occurs, under Made by / Meal / Cuisine / Cook
 // (#facet-options, already in that order), without the keyboard; tapping it
-// again closes it. Tapping the text only types: the panel then appears just
-// for values matching what's typed. Picking one makes it a chip under the box
-// and closes the panel. While anything is filtering, "N recipes" shows with
+// again closes it, and it always shows every value whatever is typed (0.36.5),
+// so "brown sugar" + Dessert works in either order; picking keeps the text.
+// Tapping the text only types: the panel then appears just for values matching
+// what's typed, and picking one of those swaps the typed text for the chip.
+// Either way the panel closes on a pick. While anything is filtering, "N recipes" shows with
 // Clear, and the button turns teal.
 //
 // Why pick-a-value rather than auto-detecting tags: "italian" is both a
@@ -156,7 +158,8 @@
   // Unless the filter button opened it, it only shows while something typed
   // matches a value, so plain searching keeps the list in view.
   function renderPanel() {
-    var q = input.value.trim().toLowerCase();
+    // Opened from the button: every value. Otherwise: matches for the text.
+    var q = pinned ? "" : input.value.trim().toLowerCase();
     panel.innerHTML = "";
     if (!pinned && !q) { closePanel(); return; }
     var any = false;
@@ -202,7 +205,9 @@
 
   function addChip(o) {
     if (!hasChip(o.facet, o.value)) chips.push(o);
-    input.value = "";
+    // A suggestion found by typing replaces that text; a pick from the full
+    // panel leaves your search alone.
+    if (!pinned) input.value = "";
     renderChips(); apply(); closePanel();
     input.blur();                            // put the results in view on a phone
   }
@@ -222,7 +227,7 @@
     if (e.key === "Enter") {
       // Enter takes the first value when typing narrowed the panel to some.
       e.preventDefault();
-      var first = input.value.trim() && panel.querySelector(".facet-value");
+      var first = !pinned && input.value.trim() && panel.querySelector(".facet-value");
       if (first) first.click(); else { closePanel(); input.blur(); }
     } else if (e.key === "Escape") {
       closePanel();
