@@ -1258,6 +1258,13 @@ def recipe_edit(recipe_id):
                            **_form_context("edit", recipe=recipe))
 
 
+@wizard_bp.route("/recipe/add")
+def recipe_add():
+    """The one way in to adding a recipe: a choice of how (0.34.1). By hand ->
+    the create form; from the web -> the import page."""
+    return render_template("wizard/recipe_add.html")
+
+
 @wizard_bp.route("/recipe/import", methods=["GET", "POST"])
 def recipe_import():
     """Import a recipe from a web page or pasted text (Phase 34). Success

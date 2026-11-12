@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.34.1
+- **Add a recipe**, in place of *Create a recipe* on the Recipes page, opens a
+  choice: *Write it yourself* or *Import from the web*.
+- **Imported recipes now appear on the Recipes page**, in their own
+  *Imported* group, and can be edited from the recipe's ⋯ menu.
+- Pages for adding and editing recipes now highlight *Recipes* in the
+  navigation, not *Cook*.
+
 ## 0.34.0
 - **Import a recipe from a website.** On *Create a recipe*, follow *Got it on
   a website? Import it*, and paste a link. My Kitchen lays it out as

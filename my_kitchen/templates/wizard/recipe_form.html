@@ -7,13 +7,15 @@
 {% block page_title %}{{ heading }}{% endblock %}
 {% block content %}
   <h1 class="display">{{ heading }}</h1>
-  <p><a class="back-link" href="{{ url_for('history.index') }}">{{ icon('arrow_back') }} Recipes</a></p>
+  {% if mode == "edit" %}
+    <p><a class="back-link" href="{{ url_for('history.index') }}">{{ icon('arrow_back') }} Recipes</a></p>
+  {% else %}
+    <p><a class="back-link" href="{{ url_for('wizard.recipe_add') }}">{{ icon('arrow_back') }} Add a recipe</a></p>
+  {% endif %}
   {% if is_import %}
     {# Phase 34: the create form is the import's review step. Nothing is saved
        until Save. #}
     <p class="rf-import-note">{% if source_url %}From <a href="{{ source_url }}" target="_blank" rel="noopener noreferrer">{{ source_url | urlhost }}</a>. {% endif %}Check it over and fix anything that came through oddly, then save.</p>
-  {% elif mode == "new" %}
-    <p class="rf-import-offer"><a href="{{ url_for('wizard.recipe_import') }}">Got it on a website? Import it →</a></p>
   {% endif %}
 
   <form method="post" action="{{ form_action }}" id="recipe-form" class="form rf-form">

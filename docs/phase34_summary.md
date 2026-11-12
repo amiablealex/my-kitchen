@@ -67,6 +67,16 @@ already styled; Favourites already grouped them). Rows carry
 `kind=r.source`, and `_row_recipes` treats `imported` like `user`. *Edit
 recipe* in the recipe page's ⋯ menu shows for imported recipes too.
 
+## Add a recipe (0.34.1)
+The Recipes header button is now **Add a recipe** → `wizard.recipe_add`
+(`recipe_add.html`): large options in the home tiles' petal style, coloured
+like the source dot their recipes get — *Write it yourself* (lime, → the
+create form) and *Import from the web* (orange, → the import page). Phase 35
+adds *From a photo*. The create form's "Got it on a website?" line is gone; the
+create and import pages link back to Add a recipe (edit still goes back to
+Recipes). The nav highlights Recipes, not Cook, on these pages. New `link`
+icon (Material Symbols).
+
 ## Mock
 "RECIPE IMPORTER" → `_mock_import`: echoes the JSON-LD's name, ingredients
 and steps (amounts not split), or a fixed recipe.

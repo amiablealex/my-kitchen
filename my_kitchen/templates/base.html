@@ -25,6 +25,9 @@
 {% set ep = request.endpoint or '' %}
 {% set nav_active = namespace(x='') %}
 {% if ep == 'main.index' %}{% set nav_active.x = 'home' %}
+{# Adding, writing, importing and editing recipes belong to Recipes, though
+   their routes live in the wizard blueprint. #}
+{% elif ep in ('wizard.recipe_add', 'wizard.recipe_new', 'wizard.recipe_import', 'wizard.recipe_edit') %}{% set nav_active.x = 'recipes' %}
 {% elif ep.startswith('wizard.') %}{% set nav_active.x = 'cook' %}
 {% elif ep.startswith('stock.') %}{% set nav_active.x = 'stock' %}
 {% elif ep == 'history.favourites' %}{% set nav_active.x = 'favourites' %}

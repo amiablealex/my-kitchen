@@ -6,7 +6,7 @@
   {# Phase 34. A link, or the recipe's text pasted in. Either way the result
      opens in the create form for checking; nothing is saved until then. #}
   <h1 class="display">Import a recipe</h1>
-  <p><a class="back-link" href="{{ url_for('wizard.recipe_new') }}">{{ icon('arrow_back') }} Create a recipe</a></p>
+  <p><a class="back-link" href="{{ url_for('wizard.recipe_add') }}">{{ icon('arrow_back') }} Add a recipe</a></p>
   <p class="lead">Paste a link to a recipe. It's put into My Kitchen's layout (ingredients, prep, cook, tips) with the recipe's own wording, ready for you to check.</p>
 
   <form method="post" action="{{ url_for('wizard.recipe_import') }}" class="form import-form" id="import-form">

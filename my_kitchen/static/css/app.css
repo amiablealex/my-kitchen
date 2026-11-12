@@ -2008,8 +2008,6 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
 .btn-row [hidden] { display: none; }
 
 /* ======================================== recipe import (0.34) ========= */
-.rf-import-offer { margin: 0 0 var(--space-4); font-size: var(--fs-small); }
-.rf-import-offer a { font-weight: 700; }
 .rf-import-note { margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4); border-radius: var(--petal-sm);
   background: var(--grape); font-size: var(--fs-small); }
 .rf-ing-chosen--unlinked { font-weight: 600; font-style: italic; color: var(--text-muted); }
@@ -2022,3 +2020,19 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
 .import-note { font-size: var(--fs-small); }
 .recipe-meta .rm-source { color: var(--text-muted); text-decoration: underline; text-underline-offset: 2px; }
 .recipe-source { margin: 0 0 var(--space-3); font-size: var(--fs-small); }
+
+/* ================================= add a recipe chooser (0.34.1) ====== */
+/* Big, tappable options in the home tiles' petal style, coloured like the
+   source dot their recipes get: hand-made lime, imported orange. */
+.k-hand   { --k: var(--accent-2); }
+.k-import { --k: var(--accent-3); }
+.add-options { display: grid; gap: var(--space-3); max-width: 560px; }
+.add-option { display: flex; align-items: center; gap: var(--space-4); margin: 0; min-height: 96px;
+  padding: var(--space-4); border-radius: var(--petal-lg); color: var(--text); text-decoration: none;
+  transition: border-radius 0.18s ease, background 0.15s ease; }
+.add-option:hover { background: var(--surface-2); text-decoration: none; }
+.add-option:active { border-radius: var(--petal-flip-lg); }
+.add-option .tile-bead { flex: none; width: 54px; height: 54px; border-radius: 27px 27px 27px 8px; }
+.add-option-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.add-option-title { font-family: var(--font-display); font-size: 1.2rem; line-height: 1.2; }
+.add-option-sub { color: var(--text-muted); font-size: var(--fs-small); line-height: 1.4; }
