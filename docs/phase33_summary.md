@@ -69,3 +69,28 @@ photos to the item lines first, as the app would. Uses the configured
 provider and counts towards today's usage.
 
 `sw.js` cache → v19.
+
+## 0.36.1 — every line shown
+The sheet hid matched lines that needed no action ("2 already in stock"),
+so a wrong match onto an in-stock item, or a line the AI dropped, couldn't be
+seen. Now every line read is a row, with the receipt's own text, in groups:
+**Add to stock** (tick box), **Needs a hand**, **Already have** (in stock or a
+staple, faded) and **Skipped** (a folded `<details>`).
+- The receipt prompt now asks for one entry per item line (no merging
+  duplicates) and reports non-food lines with `"food": false` instead of
+  dropping them, so the count can match the receipt.
+- `classify()` returns `{"lines": [...]}`: each line has a `status` of
+  `add` | `have` | `unplaced` | `skipped`. Counts and the
+  `matched`/`unplaced` split are gone.
+- One rule in the sheet: **tap a line to change it**. The panel (search, *Add
+  as new*, *Skip this line*) re-files the line by what it is now: out of
+  stock → Add (ticked), in stock or a staple → Already have. You never pick a
+  group. `sheet_catalogue()` therefore lists every active ingredient with
+  `in_stock` and `staple`; `stock.create` returns `in_stock` (and its 409
+  places the existing item, staples included).
+- The tick box only means add or not. Unticking no longer drops the line
+  into Needs a hand; that rule is gone.
+- A row's receipt text is hidden when it just repeats the name ("butter").
+  A re-filed row flashes briefly.
+- *Used anything up?* keeps its pills (mode `out`): there's nothing to
+  correct there.

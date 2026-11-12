@@ -240,19 +240,17 @@ document.addEventListener("click", function (event) {
       .then(function (r) { if (!r.ok) throw new Error("parse failed"); return r.json(); })
       .then(function (d) {
         if (go) { go.disabled = false; go.textContent = label; }
-        const skipped = [];
-        if (d.already) skipped.push(d.already + " already in stock");
-        if (d.staples) skipped.push(d.staples + (d.staples === 1 ? " staple" : " staples") + " (always assumed)");
-        if (!d.matched.length && !d.unplaced.length) {
-          if (window.showToast) window.showToast({ message: "Nothing new to add" + (skipped.length ? ": " + skipped.join(", ") : "") + "." });
+        if (!d.lines || !d.lines.length) {
+          if (window.showToast) window.showToast({ message: "No items found in that list." });
           return;
         }
+        // Every line is shown, already-in-stock ones too, so it can be checked.
+        const adding = d.lines.some(function (l) { return l.status === "add"; });
         window.mkStockSheet.open({
           mode: "in",
-          title: d.matched.length ? "Mark these as in stock?" : "Which items were these?",
-          note: skipped.join(" · "),
-          items: d.matched,
-          unplaced: d.unplaced,
+          source: "list",
+          title: adding ? "Mark these as in stock?" : "Check your list",
+          lines: d.lines,
           onDone: function (changed) {
             try {
               sessionStorage.setItem(TOAST_KEY, JSON.stringify({

@@ -106,7 +106,7 @@ def create():
         # The id lets the confirmation sheet simply use the existing item.
         return jsonify(ok=False, message=f'"{existing.name}" is already in your catalogue.',
                        id=existing.id, name=existing.name, is_staple=existing.is_staple,
-                       section=existing.category.section), 409
+                       in_stock=bool(existing.in_stock), section=existing.category.section), 409
     ing = Ingredient(
         name=name, category_id=category_id, is_staple=is_staple,
         in_stock=stock_it and not is_staple,
@@ -120,7 +120,7 @@ def create():
             "info",
         )
     return jsonify(ok=True, id=ing.id, name=ing.name, is_staple=ing.is_staple,
-                   section=ing.category.section)
+                   in_stock=bool(ing.in_stock), section=ing.category.section)
 
 
 def receipt_enabled():

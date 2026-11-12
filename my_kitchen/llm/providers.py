@@ -431,6 +431,7 @@ def _mock_receipt(user_prompt, from_image):
              for i, name in ids]
     lines.append({"text": "TSCO DRGN FRT", "id": None, "guess": "dragon fruit", "category": "Fruit"})
     lines.append({"text": "WR SPCL 2PK", "id": None, "guess": None, "category": None})
+    lines.append({"text": "TOILET ROLL 9PK", "food": False, "id": None, "guess": None, "category": None})
     return {"lines": lines}
 
 

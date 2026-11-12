@@ -93,47 +93,39 @@ def split_list(text):
 
 
 def classify(entries):
-    """Matched lines -> the stock sheet's contents. Every id is checked here
-    against the live catalogue, whoever proposed it (the resolver or an AI).
+    """Matched lines -> the stock sheet's lines, one per line read, each with
+    a status. Every id is checked here against the live catalogue, whoever
+    proposed it (the resolver or an AI).
 
-    entries: [{text, id|None, guess, category_id, loose}]. `loose` marks a
-    fuzzy resolver hit, which is not trusted onto a staple.
+    entries: [{text, id|None, guess, category_id, loose, food}]. `loose` marks
+    a fuzzy resolver hit, which is not trusted onto a staple ("peppers" ->
+    Black pepper would otherwise be filed as a staple and never questioned).
 
-    Returns {matched, unplaced, already, staples}:
-      matched  — [{id, name, section, raw}] to stock; `raw` is the line as
-                 written, only when it differs from the name (the sheet shows
-                 it, and an unticked guess drops to "Needs a hand").
-      unplaced — [{text, guess, category_id}] lines nobody could place. A loose
-                 hit on a staple lands here too: "peppers" -> Black pepper
-                 would otherwise be silently skipped as a staple.
-      already  — count already in stock; staples — count of staple hits
-                 (assumed always available, so nothing to do).
+    Returns {"lines": [...]}, each {text, status, id, name, section, staple,
+    guess, category_id}, status one of:
+      add      — a catalogue ingredient you're out of; ticked to stock
+      have     — already in stock, or a staple: shown faded, no action
+      unplaced — nobody could place it: "Needs a hand"
+      skipped  — not food (a receipt line the AI flagged)
+    Every line is kept (0.36.1), so the cook can check them all against the
+    receipt and re-link any the AI got wrong.
     """
     by_id = {i.id: i for i in Ingredient.query.filter_by(is_active=True)}
-    matched, unplaced, seen, seen_text = [], [], set(), set()
-    already = staples = 0
+    lines = []
     for e in entries:
+        line = {"text": e["text"], "id": None, "name": None, "section": None, "staple": False,
+                "guess": e.get("guess") or e["text"], "category_id": e.get("category_id")}
         ing = by_id.get(e.get("id"))
-        if ing is None or (ing.is_staple and e.get("loose")):
-            key = e["text"].lower()
-            if key not in seen_text:
-                seen_text.add(key)
-                unplaced.append({"text": e["text"], "guess": e.get("guess") or e["text"],
-                                 "category_id": e.get("category_id")})
-            continue
-        if ing.id in seen:
-            continue
-        seen.add(ing.id)
-        if ing.is_staple:
-            staples += 1
-        elif ing.in_stock:
-            already += 1
+        if e.get("food") is False:
+            line.update(status="skipped", guess=None)
+        elif ing is None or (ing.is_staple and e.get("loose")):
+            line["status"] = "unplaced"
         else:
-            matched.append({
-                "id": ing.id, "name": ing.name, "section": ing.category.section,
-                "raw": e["text"] if e["text"].lower() != ing.name.lower() else "",
-            })
-    return {"matched": matched, "unplaced": unplaced, "already": already, "staples": staples}
+            line.update(id=ing.id, name=ing.name, section=ing.category.section,
+                        staple=ing.is_staple,
+                        status="have" if (ing.is_staple or ing.in_stock) else "add")
+        lines.append(line)
+    return {"lines": lines}
 
 
 def parse_list(text, ai_match=None):
@@ -161,11 +153,13 @@ def parse_list(text, ai_match=None):
 
 
 def sheet_catalogue():
-    """What "Needs a hand" can search: active, non-staple ingredients (staples
-    are assumed, never stocked). [{id, name, section}], alphabetical."""
-    rows = (Ingredient.query.filter_by(is_active=True, is_staple=False)
+    """What the sheet's "change this line" panel can search: every active
+    ingredient, with what it needs to re-file a line by itself — out of stock
+    goes to Add, in stock or a staple to Already have (0.36.1). Alphabetical."""
+    rows = (Ingredient.query.filter_by(is_active=True)
             .order_by(db.func.lower(Ingredient.name)).all())
-    return [{"id": i.id, "name": i.name, "section": i.category.section} for i in rows]
+    return [{"id": i.id, "name": i.name, "section": i.category.section,
+             "in_stock": bool(i.in_stock), "staple": bool(i.is_staple)} for i in rows]
 
 
 def set_stock(ids, in_stock):

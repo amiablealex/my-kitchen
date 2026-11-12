@@ -1,11 +1,13 @@
 {% from "_icons.html" import icon %}
-{# The stock confirmation sheet (Phase 32). One dialog, filled by
-   static/stock_sheet.js: "mark these as in stock?" (a pasted list, a receipt
-   in Phase 33) or "used anything up?" (recipe page). Pills are .option
-   checkboxes, so the picked style is the app's own. Lines the app couldn't
-   place go to "Needs a hand" rather than vanishing. The caller passes
-   `sheet_catalogue` ([{id, name, section}]) and `categories` when the sheet
-   can place lines; the recipe page's used-up sheet passes neither. #}
+{# The stock confirmation sheet (Phase 32; rows since 0.36.1). One dialog,
+   filled by static/stock_sheet.js, two modes:
+   - "in" (a pasted list, a receipt): every line read, as rows grouped Add to
+     stock / Needs a hand / Already have / Skipped. Tap a line to change what
+     it is; it re-files itself. Add rows have a tick box.
+   - "out" (recipe page, "Used anything up?"): pills, none picked.
+   The caller passes `sheet_catalogue` ([{id, name, section, in_stock,
+   staple}]) and `categories` when lines can be changed; the recipe page's
+   used-up sheet passes neither. #}
 <dialog class="confirm sheet stock-sheet" id="stock-sheet" aria-labelledby="stock-sheet-title"
         data-bulk-url="{{ url_for('stock.bulk') }}" data-create-url="{{ url_for('stock.create') }}">
   <div class="confirm-head">
@@ -15,10 +17,7 @@
   <div class="sheet-body">
     <p class="sheet-note" data-note hidden></p>
     <div class="options options--chips stock-sheet-picks" data-picks></div>
-    <section class="needs-hand" data-needs hidden>
-      <h3 class="needs-head">Needs a hand</h3>
-      <ul class="needs-list" data-needs-list></ul>
-    </section>
+    <div class="sheet-lines" data-lines></div>
   </div>
   <p class="sheet-left" data-left hidden></p>
   <div class="btn-row">
@@ -29,7 +28,7 @@
 
 {% if sheet_catalogue is defined %}
   <script type="application/json" id="stock-sheet-catalogue">{{ sheet_catalogue | tojson }}</script>
-  {# One placing panel, cloned under whichever "Needs a hand" line is opened. #}
+  {# One "change this line" panel, cloned under whichever line is opened. #}
   <template id="needs-panel-tpl">
     <div class="needs-panel">
       <label class="pantry-filter needs-search">

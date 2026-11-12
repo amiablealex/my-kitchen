@@ -32,10 +32,12 @@ or order. Find the food and drink items that were bought and match each one to t
 household's ingredient catalogue.
 
 Rules:
-- One entry per food or drink item, in the order they appear. Skip everything else: prices, \
-quantities, multibuy and discount lines, totals, payment and card details, loyalty points, \
-bags, and non-food products (toiletries, cleaning, household, pet). Also skip ready meals \
-and snacks that aren't cooking ingredients.
+- One entry per item line, in the order they appear, so the cook can check every line \
+against the receipt. Skip lines that aren't items: prices on their own, quantities, \
+multibuy and discount lines, totals, payment and card details, loyalty points.
+- "food": true for food and drink. For anything else that was bought (toiletries, cleaning, \
+household, pet, bags), "food": false and "id" null. Ready meals and snacks that aren't \
+cooking ingredients are "food": true with "id" null.
 - "text": the line as written, abbreviations and all, without the price.
 - "id": the catalogue id of the ingredient this item IS, or null. Match the ingredient, \
 not the brand, size or pack: "TSCO BRIT SEMI SKIM MILK 2.272L" is Milk; "WR BNLSS CHKN \
@@ -46,11 +48,10 @@ miss: sweet peppers are not black pepper.
 e.g. "chicken thighs", "greek yoghurt". Null only if you genuinely can't tell what it is.
 - "category": when "id" is null and you have a guess, the best category from the list \
 given; otherwise null.
-- The same ingredient bought twice is one entry.
 - If the photo isn't a receipt, or nothing is readable, return {"lines": []}.
 
 Return JSON only, in exactly this shape:
-{"lines": [{"text": "...", "id": 12, "guess": "...", "category": null}]}"""
+{"lines": [{"text": "...", "food": true, "id": 12, "guess": "...", "category": null}]}"""
 
 
 def build_prompt(catalogue, categories, lines=None):
@@ -70,8 +71,9 @@ def build_prompt(catalogue, categories, lines=None):
 
 
 def _clean(data, active_ids, categories):
-    """The model's JSON -> [{text, id, guess, category_id}]. Unknown ids
-    become null (the line goes to "Needs a hand"); unknown categories drop."""
+    """The model's JSON -> [{text, id, guess, category_id, food}]. Unknown ids
+    become null (the line goes to "Needs a hand"); unknown categories drop.
+    A non-food line keeps no id or guess (0.36.1: reported, not dropped)."""
     cat_ids = {c.name.lower(): c.id for c in categories}
     out = []
     entries = data.get("lines") if isinstance(data, dict) else None
@@ -86,11 +88,13 @@ def _clean(data, active_ids, categories):
             iid = int(e["id"]) if e.get("id") is not None else None
         except (TypeError, ValueError):
             iid = None
+        food = e.get("food") is not False
         out.append({
             "text": text or guess,
-            "id": iid if iid in active_ids else None,
-            "guess": guess,
-            "category_id": cat_ids.get(str(e.get("category") or "").strip().lower()),
+            "id": iid if (food and iid in active_ids) else None,
+            "guess": guess if food else None,
+            "category_id": cat_ids.get(str(e.get("category") or "").strip().lower()) if food else None,
+            "food": food,
         })
     return out
 

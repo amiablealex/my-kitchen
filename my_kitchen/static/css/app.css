@@ -1936,7 +1936,6 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
 .list-offer { margin-top: var(--space-1); }
 
 .stock-sheet .sheet-note { margin: 0 0 var(--space-3); color: var(--text-muted); font-size: var(--fs-small); }
-.stock-sheet .sheet-note[hidden], .stock-sheet .needs-hand[hidden], .stock-sheet .sheet-left[hidden] { display: none; }
 .stock-sheet-picks { gap: var(--space-2); margin: 0; }
 .stock-sheet-picks:empty { display: none; }
 .stock-sheet-picks .option { min-height: 42px; padding: 4px var(--space-4); flex-wrap: wrap; row-gap: 0; }
@@ -1945,20 +1944,8 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 2px; }
 .stock-sheet-picks .option:has(input:checked) .opt-meta { padding-left: 15px; }
 
-/* "Needs a hand": each line as printed, dashed until it's placed. */
-.needs-hand { margin-top: var(--space-4); }
-.needs-head { margin: 0 0 var(--space-2); font-size: 1rem; }
-.stock-sheet .needs-row { margin: 0; }
-.stock-sheet .needs-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
-.needs-line { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: 100%;
-  min-height: 44px; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--petal-sm);
-  background: none; outline: 2px dashed var(--divider); outline-offset: -2px;
-  color: var(--text); font: inherit; text-align: left; cursor: pointer; }
-.needs-line:hover { outline-color: var(--accent-1); }
-.needs-row.is-open .needs-line { outline-style: solid; outline-color: var(--accent-1); }
 .needs-text { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; overflow-wrap: anywhere; }
 .needs-ask { flex: none; color: var(--accent-1); font-size: var(--fs-small); font-weight: 700; }
-.needs-row.is-open .needs-ask { display: none; }
 .needs-panel { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2) 0 var(--space-1); }
 .needs-search { margin: 0; }
 .needs-results { display: flex; flex-wrap: wrap; gap: var(--space-2); }
@@ -2056,3 +2043,49 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
 .form .photo-add[hidden] { display: none; }
 .form .photo-add > input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
 .rm-source--plain { color: var(--text-muted); }
+
+/* ============================ stock sheet rows (0.36.1) ================ */
+/* Adding stock shows EVERY line read, grouped, so a receipt can be checked
+   line by line. Tap a line to change what it is; add rows carry a tick box. */
+.stock-sheet .sheet-note[hidden], .stock-sheet .sheet-left[hidden] { display: none; }
+.stock-sheet .sheet-group { margin-top: var(--space-3); }
+.stock-sheet .sheet-group-head { display: flex; justify-content: space-between; margin: 0 0 var(--space-2);
+  color: var(--text-muted); font-family: inherit; font-size: var(--fs-small); font-weight: 700; }
+.sheet-group-n { font-variant-numeric: tabular-nums; }
+.sheet-group--skipped > summary { list-style: none; cursor: pointer; }
+.sheet-group--skipped > summary::-webkit-details-marker { display: none; }
+.sheet-group--skipped > summary .sheet-group-n::after { content: " ▾"; }
+.sheet-group--skipped[open] > summary .sheet-group-n::after { content: " ▴"; }
+
+.sheet-row { display: flex; flex-wrap: wrap; align-items: center; margin: 0 0 6px; border-radius: var(--petal-sm);
+  background: var(--surface-2); }
+.sheet-row-main { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-3); min-height: 48px; padding: 6px var(--space-3); border: 0; background: none;
+  color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.sheet-row-main:disabled { cursor: default; }
+.sheet-row-text { display: flex; flex-direction: column; min-width: 0; }
+.sheet-row-name { font-weight: 700; }
+.sheet-row-tag { color: var(--text-muted); font-weight: 600; }
+.sheet-row-raw { color: var(--text-muted); font-size: 0.72rem; overflow-wrap: anywhere; }
+.sheet-row-change { flex: none; color: var(--text-muted); font-size: 0.78rem; }
+.sheet-row-main:hover .sheet-row-change { color: var(--accent-1); }
+/* The tick box in the section's colour: a ring when off, filled with a check
+   when on (the native box is a white square on grape). */
+.sheet-row-tick { -webkit-appearance: none; appearance: none; flex: none; display: grid; place-items: center;
+  width: 24px; height: 24px; margin: 0 var(--space-3) 0 0; border-radius: 8px 8px 8px 3px; cursor: pointer;
+  box-shadow: inset 0 0 0 2px var(--pick, var(--accent-2)); background: none; }
+.sheet-row-tick:checked { background: var(--pick, var(--accent-2)); }
+.sheet-row-tick:checked::after { content: ""; width: 6px; height: 11px; margin-top: -2px;
+  border: solid var(--on-accent); border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
+.sheet-row-tick:focus-visible { outline: 2px solid var(--accent-1); outline-offset: 2px; }
+/* Nothing to do: faded. Needs a hand: dashed until it's placed. */
+.sheet-row--have, .sheet-row--skipped { background: none; outline: 1px solid var(--divider); outline-offset: -1px; }
+.sheet-row--have .sheet-row-name, .sheet-row--skipped .sheet-row-name { color: var(--text-muted); font-weight: 600; }
+.sheet-row--unplaced { background: none; outline: 2px dashed var(--divider); outline-offset: -2px; }
+.sheet-row--unplaced:hover { outline-color: var(--accent-1); }
+.sheet-row.is-open { outline: 2px solid var(--accent-1); outline-offset: -2px; }
+.sheet-row .needs-panel { flex-basis: 100%; padding: 0 var(--space-3) var(--space-3); }
+.needs-pick.is-current { box-shadow: inset 0 0 0 2px var(--accent-1); }
+/* A line that just re-filed itself catches the eye for a moment. */
+@keyframes sheet-moved { from { background: var(--accent-1-tint, rgba(90, 209, 185, 0.35)); } }
+.sheet-row.is-moved { animation: sheet-moved 0.9s ease-out; }

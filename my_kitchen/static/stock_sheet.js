@@ -1,9 +1,18 @@
-// The stock confirmation sheet (Phase 32): window.mkStockSheet.open({...}).
-// Markup: templates/stock/_sheet.html. One <dialog>, two uses:
-//   mode "in"  — "Mark these as in stock?" Pills start picked. Lines the app
-//                couldn't place sit under "Needs a hand" until the cook says
-//                what they were (search the catalogue, add as new, or skip).
-//   mode "out" — "Used anything up?" Pills start unpicked; nothing to place.
+// The stock confirmation sheet: window.mkStockSheet.open({...}).
+// Markup: templates/stock/_sheet.html. One <dialog>, two modes.
+//
+// mode "in" (0.36.1) — a pasted list or a receipt. EVERY line read is shown
+//   as a row, so the cook can check them all against the receipt, grouped:
+//     Add to stock  — out of stock: ticked, with a tick box to leave it out
+//     Needs a hand  — nobody could place it
+//     Already have  — in stock or a staple: faded, no action
+//     Skipped       — not food, or skipped by the cook: folded away
+//   One rule for every row: tap the line to change what it is. The panel
+//   searches the catalogue (or adds a new ingredient, or skips the line), and
+//   the line re-files itself by what it is now. You never pick a group.
+//
+// mode "out" — "Used anything up?" on a recipe: pills, none picked.
+//
 // Confirm posts {ids, in_stock} to stock.bulk and hands the changed ids to
 // onDone, so the caller can offer Undo. URLs come from data-* (url_for).
 (function () {
@@ -13,15 +22,14 @@
   var titleEl = dlg.querySelector("[data-title]");
   var noteEl = dlg.querySelector("[data-note]");
   var picks = dlg.querySelector("[data-picks]");
-  var needs = dlg.querySelector("[data-needs]");
-  var needsList = dlg.querySelector("[data-needs-list]");
+  var linesEl = dlg.querySelector("[data-lines]");
   var leftEl = dlg.querySelector("[data-left]");
   var goBtn = dlg.querySelector("[data-go]");
   var tpl = document.getElementById("needs-panel-tpl");
   var catalogue = [];
   try { catalogue = JSON.parse(document.getElementById("stock-sheet-catalogue").textContent); } catch (e) {}
 
-  var state = null;   // { mode, onDone }
+  var state = null;   // { mode, onDone, lines, open (index), moved (index) }
 
   function csrfToken() {
     var m = document.querySelector('meta[name="csrf-token"]');
@@ -36,61 +44,114 @@
   function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
   function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
-  // ---- pills ---------------------------------------------------------------
-  function findPill(id) { return picks.querySelector('input[value="' + id + '"]'); }
-
-  function addPill(item, checked) {
-    var existing = findPill(item.id);
-    if (existing) { existing.checked = true; refresh(); return; }
+  // ---- mode "out": pills ----------------------------------------------------
+  function addPill(item) {
     var label = el("label", "option sec-pick--" + (item.section || "other"));
     var input = el("input");
     input.type = "checkbox";
     input.value = item.id;
-    input.checked = !!checked;
     label.appendChild(input);
     label.appendChild(el("span", null, item.name));
-    if (item.raw) {
-      label.dataset.raw = item.raw;
-      label.appendChild(el("small", "opt-meta", "“" + item.raw + "”"));
-    }
     picks.appendChild(label);
   }
+  picks.addEventListener("change", refresh);
 
-  // Unticking a guess (a pill named differently from its line) means "that's
-  // not it", so the line goes back to Needs a hand instead of being lost.
-  picks.addEventListener("change", function (e) {
-    var label = e.target.closest("label");
-    if (state && state.mode === "in" && tpl && label && label.dataset.raw && !e.target.checked) {
-      addNeedsRow({ text: label.dataset.raw, guess: label.dataset.raw }, true);
-      label.remove();
-    }
-    refresh();
-  });
+  // ---- mode "in": lines --------------------------------------------------------
+  var GROUPS = [
+    ["add", "Add to stock"],
+    ["unplaced", "Needs a hand"],
+    ["have", "Already have"],
+    ["skipped", "Skipped"],
+  ];
 
-  // ---- needs a hand ----------------------------------------------------------
-  function addNeedsRow(line, atTop) {
-    var li = el("li", "needs-row");
-    li.dataset.text = line.text;
-    li.dataset.guess = line.guess || line.text;
-    if (line.category_id) li.dataset.cat = line.category_id;
-    var btn = el("button", "needs-line");
-    btn.type = "button";
-    btn.appendChild(el("span", "needs-text", line.text));
-    // An AI guess that differs from the line reads as a question ("dragon fruit?").
-    var hasGuess = line.guess && line.guess.toLowerCase() !== line.text.toLowerCase();
-    btn.appendChild(el("span", "needs-ask", hasGuess ? cap(line.guess) + "?" : "What was this?"));
-    li.appendChild(btn);
-    if (atTop) needsList.insertBefore(li, needsList.firstChild); else needsList.appendChild(li);
-    refresh();
+  // Re-file a line by what it is now.
+  function setItem(line, item) {
+    line.id = item.id;
+    line.name = item.name;
+    line.section = item.section;
+    line.staple = !!item.staple;
+    line.status = (item.staple || item.in_stock) ? "have" : "add";
+    line.checked = true;
   }
 
-  function closePanels() {
-    needsList.querySelectorAll(".needs-panel").forEach(function (p) {
-      p.closest(".needs-row").classList.remove("is-open");
-      p.remove();
+  function renderLines() {
+    linesEl.innerHTML = "";
+    var counts = {};
+    GROUPS.forEach(function (g) {
+      var idx = [];
+      state.lines.forEach(function (l, i) { if (l.status === g[0]) idx.push(i); });
+      counts[g[0]] = idx.length;
+      if (!idx.length) return;
+      var box = g[0] === "skipped" ? el("details", "sheet-group sheet-group--skipped") : el("section", "sheet-group");
+      var head = el(g[0] === "skipped" ? "summary" : "h3", "sheet-group-head");
+      head.appendChild(el("span", null, g[1]));
+      head.appendChild(el("span", "sheet-group-n", String(idx.length)));
+      box.appendChild(head);
+      if (g[0] === "skipped" && idx.indexOf(state.open) !== -1) box.open = true;
+      idx.forEach(function (i) { box.appendChild(renderRow(state.lines[i], i)); });
+      linesEl.appendChild(box);
     });
+    refresh(counts);
   }
 
+  function renderRow(line, i) {
+    var row = el("div", "sheet-row sheet-row--" + line.status);
+    if (line.status === "add" || line.status === "have") row.classList.add("sec-pick--" + (line.section || "other"));
+    if (state.open === i) row.classList.add("is-open");
+    if (state.moved === i) row.classList.add("is-moved");
+    var main = el("button", "sheet-row-main");
+    main.type = "button";
+    main.setAttribute("aria-expanded", state.open === i ? "true" : "false");
+    var text = el("span", "sheet-row-text");
+    if (line.status === "unplaced") {
+      text.appendChild(el("span", "needs-text", line.text));
+    } else {
+      var name = line.status === "skipped" ? (line.name || "Not food") : line.name;
+      var nm = el("span", "sheet-row-name", name);
+      if (line.staple) nm.appendChild(el("span", "sheet-row-tag", " · staple"));
+      text.appendChild(nm);
+      // The line as written, unless it just repeats the name ("butter").
+      if (!name || line.text.toLowerCase() !== name.toLowerCase()) {
+        text.appendChild(el("span", "needs-text sheet-row-raw", line.text));
+      }
+    }
+    main.appendChild(text);
+    if (line.status === "unplaced") {
+      var hasGuess = line.guess && line.guess.toLowerCase() !== line.text.toLowerCase();
+      main.appendChild(el("span", "needs-ask", hasGuess ? cap(line.guess) + "?" : "What was this?"));
+    } else if (tpl && state.open !== i) {
+      main.appendChild(el("span", "sheet-row-change", "Change"));
+    }
+    if (tpl) main.addEventListener("click", function () { toggle(i); });
+    else main.disabled = true;
+    row.appendChild(main);
+    if (line.status === "add") {
+      var tick = el("input", "sheet-row-tick");
+      tick.type = "checkbox";
+      tick.checked = line.checked !== false;
+      tick.setAttribute("aria-label", "Add " + line.name + " to stock");
+      tick.addEventListener("change", function () { line.checked = tick.checked; refresh(); });
+      row.appendChild(tick);
+    }
+    if (state.open === i) row.appendChild(panel(line, i));
+    return row;
+  }
+
+  function toggle(i) {
+    state.open = state.open === i ? null : i;
+    state.moved = null;
+    renderLines();
+    var q = linesEl.querySelector("[data-needs-q]");
+    if (q) { q.focus(); q.select(); }
+  }
+
+  function done(i) {
+    state.open = null;
+    state.moved = i;
+    renderLines();
+  }
+
+  // ---- the "change this line" panel -----------------------------------------------
   function search(q) {
     var words = q.toLowerCase().split(/\s+/).filter(function (w) { return w.length > 1; });
     if (!words.length) return [];
@@ -107,58 +168,46 @@
     return all.slice(0, 8);
   }
 
-  function renderResults(panel, row) {
-    var q = panel.querySelector("[data-needs-q]").value.trim();
-    var box = panel.querySelector("[data-needs-results]");
-    box.innerHTML = "";
-    var hits = search(q);
-    if (!hits.length) {
-      box.appendChild(el("p", "needs-none", q ? "Nothing in your catalogue matches." : "Type what it was."));
-      // With a suggested category, "add it as new" is almost certainly next.
-      if (q && row.dataset.cat) panel.querySelector("[data-needs-new]").hidden = false;
-      return;
+  function panel(line, i) {
+    var p = tpl.content.firstElementChild.cloneNode(true);
+    var q = p.querySelector("[data-needs-q]");
+    var box = p.querySelector("[data-needs-results]");
+    var newBox = p.querySelector("[data-needs-new]");
+    var cat = p.querySelector("[data-needs-cat]");
+    var err = p.querySelector("[data-needs-error]");
+    q.value = line.status === "unplaced" ? (line.guess || line.text) : line.text;
+    if (line.category_id) cat.value = line.category_id;
+
+    function results() {
+      box.innerHTML = "";
+      var hits = search(q.value.trim());
+      if (!hits.length) {
+        box.appendChild(el("p", "needs-none", q.value.trim() ? "Nothing in your catalogue matches." : "Type what it was."));
+        if (q.value.trim() && line.category_id) newBox.hidden = false;
+        return;
+      }
+      hits.forEach(function (c) {
+        var b = el("button", "needs-pick" + (c.id === line.id ? " is-current" : ""), c.name);
+        b.type = "button";
+        b.addEventListener("click", function () { setItem(line, c); done(i); });
+        box.appendChild(b);
+      });
     }
-    hits.forEach(function (c) {
-      var b = el("button", "needs-pick sec-pick--" + c.section, c.name);
-      b.type = "button";
-      b.addEventListener("click", function () { place(row, c); });
-      box.appendChild(b);
+    q.addEventListener("input", results);
+    results();
+
+    p.querySelector("[data-needs-skip]").addEventListener("click", function () {
+      line.status = "skipped";
+      line.id = null;
+      line.name = null;
+      line.staple = false;
+      done(i);
     });
-  }
-
-  function place(row, item) {
-    addPill({ id: item.id, name: item.name, section: item.section, raw: row.dataset.text }, true);
-    row.remove();
-    refresh();
-  }
-
-  function openPanel(row) {
-    var wasOpen = row.classList.contains("is-open");
-    closePanels();
-    if (wasOpen) return;
-    var panel = tpl.content.firstElementChild.cloneNode(true);
-    var q = panel.querySelector("[data-needs-q]");
-    var newBox = panel.querySelector("[data-needs-new]");
-    var err = panel.querySelector("[data-needs-error]");
-    q.value = row.dataset.guess;
-    if (row.dataset.cat) panel.querySelector("[data-needs-cat]").value = row.dataset.cat;
-    row.appendChild(panel);
-    row.classList.add("is-open");
-    renderResults(panel, row);
-    q.addEventListener("input", function () { renderResults(panel, row); });
-    q.focus();
-    q.select();
-
-    panel.querySelector("[data-needs-skip]").addEventListener("click", function () {
-      row.remove();
-      refresh();
-    });
-    panel.querySelector("[data-needs-addnew]").addEventListener("click", function () {
+    p.querySelector("[data-needs-addnew]").addEventListener("click", function () {
       newBox.hidden = !newBox.hidden;
     });
-    panel.querySelector("[data-needs-create]").addEventListener("click", function () {
+    p.querySelector("[data-needs-create]").addEventListener("click", function () {
       var name = cap(q.value.trim());   // catalogue names start with a capital
-      var cat = panel.querySelector("[data-needs-cat]");
       if (!name) { q.focus(); return; }
       if (!cat.value) { err.textContent = "Pick a category first."; err.hidden = false; cat.focus(); return; }
       err.hidden = true;
@@ -170,38 +219,44 @@
       })
         .then(function (r) { return r.json().catch(function () { return {}; }); })
         .then(function (d) {
-          // Already in the catalogue (and not a staple): just use that one.
-          if (!d.ok && d.id && !d.is_staple) { place(row, { id: d.id, name: d.name, section: d.section }); return; }
-          if (!d.ok) { err.textContent = d.message || "Could not add it."; err.hidden = false; return; }
-          var item = { id: d.id, name: d.name, section: d.section };
-          catalogue.push(item);
-          place(row, item);
+          if (!d.id) { err.textContent = d.message || "Could not add it."; err.hidden = false; return; }
+          // New, or already in the catalogue: either way, that's what it is.
+          var item = { id: d.id, name: d.name, section: d.section, in_stock: d.in_stock, staple: d.is_staple };
+          if (d.ok) catalogue.push(item);
+          setItem(line, item);
+          done(i);
         })
         .catch(function () { err.textContent = "Could not add it — is the server running?"; err.hidden = false; });
     });
+    return p;
   }
 
-  needsList.addEventListener("click", function (e) {
-    var btn = e.target.closest(".needs-line");
-    if (btn) openPanel(btn.closest(".needs-row"));
-  });
+  // ---- footer ----------------------------------------------------------------------
+  function selectedIds() {
+    if (state.mode === "out") {
+      return Array.prototype.map.call(picks.querySelectorAll("input:checked"), function (i) { return +i.value; });
+    }
+    var ids = [];
+    state.lines.forEach(function (l) {
+      if (l.status === "add" && l.checked !== false && ids.indexOf(l.id) === -1) ids.push(l.id);
+    });
+    return ids;
+  }
 
-  // ---- footer ----------------------------------------------------------------
   function refresh() {
     if (!state) return;
-    var n = picks.querySelectorAll("input:checked").length;
+    var n = selectedIds().length;
     goBtn.disabled = n === 0;
     goBtn.textContent = state.mode === "out"
       ? (n ? "Mark " + n + " as used up" : "Mark as used up")
       : (n ? "Mark " + n + " as in stock" : "Mark as in stock");
-    var left = needsList.querySelectorAll(".needs-row").length;
-    needs.hidden = left === 0;
+    var left = state.mode === "in"
+      ? state.lines.filter(function (l) { return l.status === "unplaced"; }).length : 0;
     leftEl.hidden = left === 0;
     leftEl.textContent = plural(left, "line", "lines") + " still to place";
   }
 
   function close() {
-    closePanels();
     if (dlg.open) dlg.close();
     state = null;
   }
@@ -210,7 +265,7 @@
 
   goBtn.addEventListener("click", function () {
     if (!state) return;
-    var ids = Array.prototype.map.call(picks.querySelectorAll("input:checked"), function (i) { return +i.value; });
+    var ids = selectedIds();
     var mode = state.mode, onDone = state.onDone;
     goBtn.disabled = true;
     fetch(dlg.dataset.bulkUrl, {
@@ -224,18 +279,26 @@
   });
 
   window.mkStockSheet = {
-    // opts: { mode, title, note, items: [{id, name, section, raw}],
-    //         unplaced: [{text, guess, category_id}], onDone(changedIds) }
+    // in:  { mode: "in", title, lines: [{text, status, id, name, section, staple, guess, category_id}],
+    //        source: "receipt" | "list", onDone(changedIds) }
+    // out: { mode: "out", title, note, items: [{id, name, section}], onDone(changedIds) }
     open: function (opts) {
-      state = { mode: opts.mode || "in", onDone: opts.onDone };
+      state = { mode: opts.mode || "in", onDone: opts.onDone, open: null, moved: null };
       titleEl.textContent = opts.title || "";
-      noteEl.textContent = opts.note || "";
-      noteEl.hidden = !opts.note;
       picks.innerHTML = "";
-      needsList.innerHTML = "";
-      (opts.items || []).forEach(function (it) { addPill(it, state.mode === "in"); });
-      if (tpl) (opts.unplaced || []).forEach(function (u) { addNeedsRow(u); });
-      refresh();
+      linesEl.innerHTML = "";
+      if (state.mode === "out") {
+        noteEl.textContent = opts.note || "";
+        (opts.items || []).forEach(addPill);
+        refresh();
+      } else {
+        state.lines = (opts.lines || []).map(function (l) { return Object.assign({ checked: true }, l); });
+        var n = state.lines.length;
+        noteEl.textContent = plural(n, "line", "lines") + (opts.source === "receipt" ? " read" : "") +
+          (tpl ? " · tap a line to change it" : "");
+        renderLines();
+      }
+      noteEl.hidden = !noteEl.textContent;
       if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
     },
   };

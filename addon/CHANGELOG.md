@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.36.1
+- **Check every line of a receipt.** The sheet after a receipt scan or a
+  pasted list now shows every line it read, with the receipt's own text,
+  grouped: *Add to stock*, *Needs a hand*, *Already have* (in stock or a
+  staple) and *Skipped* (not food, folded away). Before, things already in
+  stock were only counted, so a wrong match there couldn't be seen.
+- **Tap any line to change it.** Pick the right ingredient, add a new one, or
+  skip the line, and it moves to the right group by itself. That covers a
+  wrong match, and a food item the AI took for something else.
+- The tick box on each *Add to stock* line now just means add it or not.
+
 ## 0.36.0
 - **Use your own model (untested).** A new provider, `openai_compatible`,
   works with any server that speaks the OpenAI chat API: Ollama, LM Studio,

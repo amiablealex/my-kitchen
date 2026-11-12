@@ -140,19 +140,13 @@
   });
 
   function openResults(d) {
-    var skipped = [];
-    if (d.already) skipped.push(d.already + " already in stock");
-    if (d.staples) skipped.push(d.staples + (d.staples === 1 ? " staple" : " staples") + " (always assumed)");
-    if (!d.matched.length && !d.unplaced.length) {
-      if (window.showToast) window.showToast({ message: "Everything on it is already in stock." });
-      return;
-    }
+    // Every line read is shown, already-in-stock and non-food ones too, so the
+    // cook can check the whole receipt (0.36.1).
     window.mkStockSheet.open({
       mode: "in",
+      source: "receipt",
       title: "Found on your receipt",
-      note: skipped.join(" · "),
-      items: d.matched,
-      unplaced: d.unplaced,
+      lines: d.lines,
       onDone: function (changed) {
         try {
           sessionStorage.setItem(TOAST_KEY, JSON.stringify({
