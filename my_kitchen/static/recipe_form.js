@@ -21,6 +21,9 @@
   var catalogue = readJSON("rf-catalogue-data", []);
   var prefill = readJSON("rf-prefill-data", {});
   var urls = readJSON("rf-urls", {});
+  // Imported recipes (Phase 34) keep each line's own wording and may leave a
+  // line unlinked; hand-made ones link every line to the catalogue.
+  var imported = readJSON("rf-imported", false);
 
   // Six-dot grip, themed via currentColor. Sortable's `handle` option targets
   // this, so dragging only starts from the grip — inputs stay fully tappable.
@@ -65,10 +68,31 @@
   var ingList = document.getElementById("rf-ing-list");
   var ingIdx = 0;
 
-  function setRowLink(row, id, name) {
+  // The line as the source wrote it, shown under its link when it differs
+  // (or as the label when it isn't linked). Picking a new link by hand drops
+  // it, so the old wording can't sit under a different ingredient.
+  function syncRaw(row) {
+    var raw = row.querySelector(".rf-ing-raw").value;
+    var name = row.querySelector(".rf-ing-name").value;
+    var note = row.querySelector(".rf-ing-rawnote");
+    var lbl = row.querySelector(".rf-ing-chosen");
+    var linked = !!row.querySelector(".rf-ing-id").value;
+    note.textContent = raw;
+    note.hidden = !(raw && linked && raw.toLowerCase() !== name.toLowerCase());
+    if (!linked && raw) {
+      lbl.textContent = raw;
+      lbl.classList.remove("rf-ing-chosen--empty");
+      lbl.classList.add("rf-ing-chosen--unlinked");
+    } else {
+      lbl.classList.remove("rf-ing-chosen--unlinked");
+    }
+  }
+
+  function setRowLink(row, id, name, byHand) {
     var hidId = row.querySelector(".rf-ing-id");
     var hidName = row.querySelector(".rf-ing-name");
     var lbl = row.querySelector(".rf-ing-chosen");
+    if (byHand) row.querySelector(".rf-ing-raw").value = "";
     if (id) {
       hidId.value = String(id);
       hidName.value = name;
@@ -80,6 +104,7 @@
       lbl.textContent = "No ingredient selected";
       lbl.classList.add("rf-ing-chosen--empty");
     }
+    syncRaw(row);
   }
 
   function addIngredientRow(data) {
@@ -94,7 +119,9 @@
           '<span class="rf-ing-chosen rf-ing-chosen--empty">No ingredient selected</span>' +
           '<input type="hidden" class="rf-ing-id" name="ing-' + i + '-ingredient_id" value="">' +
           '<input type="hidden" class="rf-ing-name" name="ing-' + i + '-name" value="">' +
+          '<input type="hidden" class="rf-ing-raw" name="ing-' + i + '-raw" value="">' +
           '<button type="button" class="btn btn--sm rf-ing-choose">Pick</button>' +
+          '<span class="rf-ing-rawnote" hidden></span>' +
         '</div>' +
         '<div class="rf-ing-fields">' +
           '<input type="text" class="rf-ing-amount" name="ing-' + i + '-amount" placeholder="amount" value="">' +
@@ -104,7 +131,9 @@
         '</div>' +
       '</div>';
     ingList.appendChild(row);
+    row.querySelector(".rf-ing-raw").value = data.raw || "";
     if (data.ingredient_id) setRowLink(row, data.ingredient_id, data.name || "");
+    else syncRaw(row);
     row.querySelector(".rf-ing-amount").value = data.amount || "";
     row.querySelector(".rf-ing-unit").value = data.unit || "";
     if (data.to_buy) row.querySelector(".rf-ing-tobuycb").checked = true;
@@ -187,7 +216,7 @@
   pResults.addEventListener("click", function (ev) {
     var btn = ev.target.closest(".rf-result-btn");
     if (!btn || !activeRow) return;
-    setRowLink(activeRow, btn.dataset.ingredientId, btn.dataset.ingredientName);
+    setRowLink(activeRow, btn.dataset.ingredientId, btn.dataset.ingredientName, true);
     closePicker();
   });
 
@@ -218,7 +247,7 @@
         if (!res.ok) { showAddError((res.data && res.data.message) || "Could not add."); return; }
         catalogue.push({ id: res.data.ingredient_id, name: res.data.name });
         catalogue.sort(function (a, b) { return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1; });
-        setRowLink(row, res.data.ingredient_id, res.data.name);
+        setRowLink(row, res.data.ingredient_id, res.data.name, true);
         closePicker();
       })
       .catch(function () { showAddError("Could not add — is the server still running?"); })
@@ -315,7 +344,9 @@
     reindexRows(document.getElementById("rf-tips-list"));
 
     var hasIng = false;
-    ingList.querySelectorAll(".rf-ing-id").forEach(function (h) { if (h.value) hasIng = true; });
+    ingList.querySelectorAll(".rf-ing-row").forEach(function (r) {
+      if (r.querySelector(".rf-ing-id").value || (imported && r.querySelector(".rf-ing-raw").value)) hasIng = true;
+    });
     if (!hasIng) {
       ev.preventDefault();
       alert("Add at least one ingredient and pick its catalogue link.");

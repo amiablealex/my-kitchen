@@ -80,6 +80,13 @@ def create_app(config_class=Config):
         return value.astimezone(tz).strftime(fmt)
 
     # Compact date for list rows: "9 Nov" this year, "9 Nov 2025" otherwise.
+    @app.template_filter("urlhost")
+    def urlhost(value):
+        """'https://www.bbcgoodfood.com/recipes/x' -> 'bbcgoodfood.com' (Phase 34)."""
+        from urllib.parse import urlparse
+        host = urlparse(value or "").netloc.lower()
+        return host[4:] if host.startswith("www.") else host
+
     @app.template_filter("shortdate")
     def shortdate(value):
         if value is None:

@@ -19,7 +19,7 @@
   <details class="overflow">
     <summary class="icon-btn" aria-label="More actions">{{ icon('more') }}</summary>
     <div class="overflow-menu">
-      {% if recipe.source == 'user' %}
+      {% if recipe.source in ('user', 'imported') %}
         <a class="menu-item" href="{{ url_for('wizard.recipe_edit', recipe_id=recipe.id) }}">{{ icon('edit') }}<span>Edit recipe</span></a>
       {% endif %}
       <button type="button" class="menu-item" id="tag-edit-toggle">{{ icon('edit') }}<span>Edit tags</span></button>
@@ -126,6 +126,7 @@
       <span class="rm-item" id="tag-meal-pill"{% if not recipe.meal_type %} hidden{% endif %}>{{ recipe.meal_type or "" }}</span>
       <span class="rm-item" id="tag-cuisine-pill"{% if not (cuisine_allowed and recipe.cuisine) %} hidden{% endif %}>{{ recipe.cuisine or "" }}</span>
       {% if band %}<span class="rm-item meta-i">{{ icon('schedule') }}{{ band }}</span>{% endif %}
+      {% if recipe.source_host %}<a class="rm-item rm-source" href="{{ recipe.source_url }}" target="_blank" rel="noopener noreferrer">from {{ recipe.source_host }}</a>{% endif %}
     </p>
     <div class="recipe-tags-edit" id="recipe-tags-edit" hidden>
       <label>Meal type

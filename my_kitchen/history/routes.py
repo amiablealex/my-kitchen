@@ -21,7 +21,7 @@ def _row_recipes(row):
     """The recipes a row actually links to — its filterable surface. A chosen
     generation shows only the chosen recipe; an unchosen one shows both; a
     failed generation shows none."""
-    if row["kind"] == "user":
+    if row["kind"] in ("user", "imported"):
         return [row["recipe"]]
     if row["status"] == "chosen":
         return [row["chosen"]]
@@ -194,8 +194,8 @@ def _generation_row(gen, ctx=None):
 @history_bp.route("/")
 def index():
     """A merged, newest-first list of the recipe bank: AI generations (chosen /
-    unchosen / error, as before) plus hand-created (source='user') recipes, which
-    have no generation."""
+    unchosen / error, as before) plus hand-created (source='user') and imported
+    (source='imported', Phase 34) recipes, which have no generation."""
 
     # Filtering moved fully client-side in Phase 21 (see recipe_facets.js): the
     # whole bank is in the DOM anyway, and instant filtering beats a reload at
@@ -203,7 +203,7 @@ def index():
     # been superseded by the AI/hand grouping below.
 
     generations = Generation.query.all()
-    user_recipes = Recipe.query.filter(Recipe.source == "user", Recipe.live()).all()
+    user_recipes = Recipe.query.filter(Recipe.source.in_(("user", "imported")), Recipe.live()).all()
     ctx = _lineage_context(generations)
 
     rows = []
@@ -212,7 +212,7 @@ def index():
         if row is not None:
             rows.append(row)
     for r in user_recipes:
-        rows.append({"kind": "user", "sort_at": r.created_at, "recipe": r})
+        rows.append({"kind": r.source, "sort_at": r.created_at, "recipe": r})
 
     rows.sort(key=lambda row: row["sort_at"] or datetime.min, reverse=True)
 

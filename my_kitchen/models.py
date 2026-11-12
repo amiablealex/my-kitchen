@@ -358,6 +358,18 @@ class Recipe(db.Model):
     # own URL still renders, with a restore banner. Never hard-deleted.
     archived_at = db.Column(db.DateTime, nullable=True)
     archived_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    # Where an imported recipe came from (Phase 34): shown as "from
+    # bbcgoodfood.com" on the recipe page and its print view. NULL otherwise.
+    source_url = db.Column(db.String, nullable=True)
+
+    @property
+    def source_host(self):
+        """'https://www.bbcgoodfood.com/recipes/x' -> 'bbcgoodfood.com'."""
+        if not self.source_url:
+            return None
+        from urllib.parse import urlparse
+        host = urlparse(self.source_url).netloc.lower()
+        return host[4:] if host.startswith("www.") else host or None
 
     # Structured, catalogue-linked ingredient lines (Phase 3b). order_by position
     # so the collection mirrors the recipe's ingredient order; delete-orphan so a

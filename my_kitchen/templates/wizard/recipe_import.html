@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Import a recipe — My Kitchen{% endblock %}
+{% block page_title %}Import a recipe{% endblock %}
+{% block content %}
+  {# Phase 34. A link, or the recipe's text pasted in. Either way the result
+     opens in the create form for checking; nothing is saved until then. #}
+  <h1 class="display">Import a recipe</h1>
+  <p><a class="back-link" href="{{ url_for('wizard.recipe_new') }}">{{ icon('arrow_back') }} Create a recipe</a></p>
+  <p class="lead">Paste a link to a recipe. It's put into My Kitchen's layout (ingredients, prep, cook, tips) with the recipe's own wording, ready for you to check.</p>
+
+  <form method="post" action="{{ url_for('wizard.recipe_import') }}" class="form import-form" id="import-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Link to the recipe
+      <input type="url" name="url" value="{{ url }}" placeholder="https://…" inputmode="url" autocomplete="off">
+    </label>
+    <details class="import-paste"{% if text %} open{% endif %}>
+      <summary>Or paste the recipe's text</summary>
+      <textarea name="text" rows="8" placeholder="The title, ingredients and method, copied from anywhere">{{ text }}</textarea>
+    </details>
+    <p class="muted import-note">An AI model reads the recipe to lay it out. For a link, only the recipe's details are sent, not the whole page where the site provides them.</p>
+    <div class="rf-actions">
+      <button type="submit" class="btn btn--primary" id="import-go">{{ icon('add') }} Import</button>
+    </div>
+  </form>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    // Reading takes a few seconds: say so, and stop a second tap.
+    document.getElementById("import-form").addEventListener("submit", function (e) {
+      var f = e.target;
+      if (!f.url.value.trim() && !f.text.value.trim()) { e.preventDefault(); f.url.focus(); return; }
+      var b = document.getElementById("import-go");
+      b.disabled = true;
+      b.textContent = "Reading the recipe…";
+    });
+  </script>
+{% endblock %}

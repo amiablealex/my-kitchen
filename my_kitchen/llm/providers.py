@@ -47,6 +47,10 @@ class MockProvider:
     def generate(self, system_prompt, user_prompt, brief=None, json_mode=True, thinking=None,
                  images=None):
         self.last_finish_reason = "stop"
+        if "RECIPE IMPORTER" in system_prompt:  # Phase 34: a canned import for dev
+            out = json.dumps(_mock_import(user_prompt))
+            self.last_usage = {"input": len(user_prompt) // 4, "output": len(out) // 4}
+            return out
         if "RECEIPT READER" in system_prompt:  # Phase 33: a canned read for dev
             out = json.dumps(_mock_receipt(user_prompt, bool(images)))
             self.last_usage = {"input": 1500 if images else len(user_prompt) // 4,
@@ -319,3 +323,26 @@ def _mock_receipt(user_prompt, from_image):
     lines.append({"text": "TSCO DRGN FRT", "id": None, "guess": "dragon fruit", "category": "Fruit"})
     lines.append({"text": "WR SPCL 2PK", "id": None, "guess": None, "category": None})
     return {"lines": lines}
+
+
+def _mock_import(user_prompt):
+    """A canned import for dev: with JSON-LD in the prompt, its own name,
+    ingredients and steps come back (amounts not split out); otherwise a
+    fixed recipe. Proves the plumbing, not the reading."""
+    body = user_prompt.split("<<<", 1)[-1].rsplit(">>>", 1)[0]
+    try:
+        src = json.loads(body)
+    except ValueError:
+        src = {}
+    ings = src.get("recipeIngredient") or ["2 leeks, sliced", "400g chicken thighs", "1 tbsp olive oil"]
+    steps = src.get("recipeInstructions") or ["Soften the leeks in the oil.", "Add the chicken and cook through."]
+    return {
+        "title": src.get("name") or "Mock imported pie",
+        "blurb": "An imported recipe (mock provider).",
+        "intro": src.get("description") or "",
+        "servings": 4, "meal_type": "Dinner", "cuisine": "British", "time_band": "relaxed",
+        "ingredients": [{"item": i, "amount": "", "unit": ""} for i in ings],
+        "prep": [],
+        "cook": [{"title": f"Step {n + 1}", "text": t, "timer_minutes": None} for n, t in enumerate(steps)],
+        "tips": [],
+    }

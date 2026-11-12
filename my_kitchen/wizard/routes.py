@@ -4,6 +4,7 @@ import re
 import threading
 import unicodedata
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 from flask import (
     Blueprint, render_template, request, redirect, url_for, session,
@@ -20,13 +21,14 @@ from ..models import (
     COMMENT_MAX_CHARS, TAG_TYPE_CHOICES, TAG_TYPE_HINTS, utcnow,
     SPECIAL_REQUEST_MAX_CHARS, KITCHEN_MENTION, QUESTION_MAX_CHARS,
 )
+from ..llm.importer import ImportProblem, import_recipe
 from ..llm.qa import answer_question
 from ..llm.service import (
     start_generation, combined_dietary, clean_special_request,
     start_regeneration, start_refine, regenerate_round, recipe_versions,
 )
 from ..usage.service import (
-    generation_blocked_reason, question_blocked_reason, limits_today,
+    generation_blocked_reason, import_blocked_reason, question_blocked_reason, limits_today,
 )
 from .suggestions import suggest_recipes
 from ..stock.service import search_catalogue
@@ -973,11 +975,14 @@ def _parse_steps(prefix, with_timer):
     return steps
 
 
-def _parse_ingredient_lines():
-    """Parse the picked ingredient rows. Each must link to an active catalogue
-    ingredient (the form only lets you pick or add-and-pick). raw_text is the
-    *catalogue* name (server-trusted, not the client-sent label). Returns
-    (lines, error); fully-blank rows are skipped."""
+def _parse_ingredient_lines(imported=False):
+    """Parse the picked ingredient rows. For a hand-made recipe each must link
+    to an active catalogue ingredient (the form only lets you pick or
+    add-and-pick) and raw_text is the *catalogue* name (server-trusted, not the
+    client-sent label). An IMPORTED recipe (Phase 34) keeps the source's own
+    wording as raw_text ("garlic cloves, crushed") and may save a line with no
+    link yet — it shows "not linked" on the recipe page and can be linked
+    there later. Returns (lines, error); fully-blank rows are skipped."""
     lines = []
     for i in _collect_indices("ing", "ingredient_id"):
         raw_id = (request.form.get(f"ing-{i}-ingredient_id") or "").strip()
@@ -985,8 +990,13 @@ def _parse_ingredient_lines():
         unit = (request.form.get(f"ing-{i}-unit") or "").strip()
         to_buy = request.form.get(f"ing-{i}-to_buy") == "on"
         name = (request.form.get(f"ing-{i}-name") or "").strip()
-        if not raw_id and not amount and not unit and not name:
+        raw = (request.form.get(f"ing-{i}-raw") or "").strip()[:200] if imported else ""
+        if not raw_id and not amount and not unit and not name and not raw:
             continue  # blank row — ignore
+        if not raw_id and raw:
+            lines.append({"ingredient_id": None, "raw_text": raw, "amount": amount or None,
+                          "unit": unit or None, "to_buy": to_buy})
+            continue
         if not raw_id:
             return None, "Every ingredient line must be linked to a catalogue ingredient."
         try:
@@ -998,7 +1008,7 @@ def _parse_ingredient_lines():
             return None, "An ingredient line is linked to an unavailable ingredient."
         lines.append({
             "ingredient_id": ing.id,
-            "raw_text": ing.name,
+            "raw_text": raw or ing.name,
             "amount": amount or None,
             "unit": unit or None,
             "to_buy": to_buy,
@@ -1019,10 +1029,13 @@ def _normalise_tags(meal_type_raw, cuisine_raw):
     return meal_type, cuisine
 
 
-def _save_recipe_from_form(recipe=None):
-    """Create (recipe=None) or update a source='user' recipe in place. Writes the
-    structured recipe_ingredients rows AND ingredients_json (display parity with
-    AI recipes / keeps the 'still written' invariant). Returns (recipe, error)."""
+def _save_recipe_from_form(recipe=None, source="user", source_url=None):
+    """Create (recipe=None) or update a source='user' or 'imported' recipe in
+    place. Writes the structured recipe_ingredients rows AND ingredients_json
+    (display parity with AI recipes / keeps the 'still written' invariant).
+    `source`/`source_url` apply when creating (Phase 34). Returns (recipe, error)."""
+    if recipe is not None:
+        source = recipe.source
     title = (request.form.get("title") or "").strip()
     blurb = (request.form.get("blurb") or "").strip()
     intro = (request.form.get("intro") or "").strip()
@@ -1042,7 +1055,7 @@ def _save_recipe_from_form(recipe=None):
     prep = _parse_steps("prep", True)
     cook = _parse_steps("cook", True)
     tips = _parse_steps("tips", False)
-    lines, line_err = _parse_ingredient_lines()
+    lines, line_err = _parse_ingredient_lines(imported=(source == "imported"))
 
     if not title:
         return None, "Please give the recipe a title."
@@ -1063,8 +1076,9 @@ def _save_recipe_from_form(recipe=None):
 
     creating = recipe is None
     if creating:
-        recipe = Recipe(source="user", generation_id=None,
-                        created_by_user_id=current_user.id)
+        recipe = Recipe(source=source, generation_id=None,
+                        created_by_user_id=current_user.id,
+                        source_url=source_url if source == "imported" else None)
         db.session.add(recipe)
 
     recipe.title = title
@@ -1113,6 +1127,7 @@ def _collect_prefill_from_form():
             "amount": request.form.get(f"ing-{i}-amount") or "",
             "unit": request.form.get(f"ing-{i}-unit") or "",
             "to_buy": request.form.get(f"ing-{i}-to_buy") == "on",
+            "raw": request.form.get(f"ing-{i}-raw") or "",
         })
     return {
         "title": request.form.get("title") or "",
@@ -1148,6 +1163,8 @@ def _recipe_to_prefill(recipe):
             "amount": ri.amount or "",
             "unit": ri.unit or "",
             "to_buy": bool(ri.to_buy),
+            # The line's own wording, kept for imported recipes (Phase 34).
+            "raw": ri.raw_text if recipe.source == "imported" else "",
         })
     return {
         "title": recipe.title or "",
@@ -1164,8 +1181,12 @@ def _recipe_to_prefill(recipe):
     }
 
 
-def _form_context(mode, recipe=None, from_form=False):
-    if from_form:
+def _form_context(mode, recipe=None, from_form=False, prefill=None, source_url=None):
+    """mode: "new" | "edit" | "import" (Phase 34: the create form, pre-filled
+    from an import, as its review step)."""
+    if prefill is not None:
+        pass
+    elif from_form:
         prefill = _collect_prefill_from_form()
     elif recipe is not None:
         prefill = _recipe_to_prefill(recipe)
@@ -1188,18 +1209,28 @@ def _form_context(mode, recipe=None, from_form=False):
         "categories": categories, "meal_types": MEAL_TYPE_NAMES,
         "cuisines": CUISINES, "cuisine_meal_types": CUISINE_MEAL_TYPES,
         "time_bands": TIME_BANDS,
+        "source_url": source_url or (recipe.source_url if recipe is not None else None),
+        "imported": mode == "import" or (recipe is not None and recipe.source == "imported"),
     }
+
+
+def _clean_source_url(raw):
+    raw = (raw or "").strip()[:500]
+    return raw if urlparse(raw).scheme in ("http", "https") else None
 
 
 @wizard_bp.route("/recipe/new", methods=["GET", "POST"])
 def recipe_new():
     if request.method == "POST":
-        recipe, error = _save_recipe_from_form(None)
+        imported = request.form.get("source") == "imported"
+        source_url = _clean_source_url(request.form.get("source_url"))
+        recipe, error = _save_recipe_from_form(
+            None, source="imported" if imported else "user", source_url=source_url)
         if error:
             flash(error, "error")
-            return render_template("wizard/recipe_form.html",
-                                   **_form_context("new", from_form=True))
-        flash("Recipe created.", "success")
+            return render_template("wizard/recipe_form.html", **_form_context(
+                "import" if imported else "new", from_form=True, source_url=source_url))
+        flash("Recipe imported." if imported else "Recipe created.", "success")
         return redirect(url_for("wizard.recipe", recipe_id=recipe.id))
     return render_template("wizard/recipe_form.html", **_form_context("new"))
 
@@ -1209,9 +1240,10 @@ def recipe_edit(recipe_id):
     recipe = db.session.get(Recipe, recipe_id)
     if recipe is None:
         abort(404)
-    # Only hand-created recipes are editable here. AI recipes' links are edited
-    # inline on the recipe page (Phase 4a); their bodies aren't hand-editable.
-    if recipe.source != "user":
+    # Only hand-created and imported recipes are editable here. AI recipes'
+    # links are edited inline on the recipe page (Phase 4a); their bodies
+    # aren't hand-editable.
+    if recipe.source not in ("user", "imported"):
         flash("Only recipes you've created can be edited here.", "error")
         return redirect(url_for("wizard.recipe", recipe_id=recipe.id))
     if request.method == "POST":
@@ -1224,6 +1256,55 @@ def recipe_edit(recipe_id):
         return redirect(url_for("wizard.recipe", recipe_id=saved.id))
     return render_template("wizard/recipe_form.html",
                            **_form_context("edit", recipe=recipe))
+
+
+@wizard_bp.route("/recipe/import", methods=["GET", "POST"])
+def recipe_import():
+    """Import a recipe from a web page or pasted text (Phase 34). Success
+    renders the create form, pre-filled, as the review step; nothing is saved
+    until the cook presses Save there."""
+    url = (request.form.get("url") or "").strip()
+    text = request.form.get("text") or ""
+    if request.method == "POST":
+        blocked = import_blocked_reason(current_user.id)
+        problem = blocked
+        if not blocked:
+            try:
+                recipe, source_url = import_recipe(current_app.config, current_user.id,
+                                                   url=url or None, text=text)
+            except ImportProblem as e:
+                problem = str(e)
+            else:
+                return render_template("wizard/recipe_form.html", **_form_context(
+                    "import", prefill=_import_prefill(recipe), source_url=source_url))
+        flash(problem, "error")
+    return render_template("wizard/recipe_import.html", url=url, text=text)
+
+
+def _import_prefill(r):
+    """An importer recipe dict -> the create form's prefill shape."""
+    meal_type, cuisine = _normalise_tags(r.get("meal_type"), r.get("cuisine"))
+
+    def steps(items, with_timer):
+        out = []
+        for st in items:
+            row = {"title": st["title"], "text": st["text"]}
+            if with_timer:
+                row["timer"] = str(st["timer_minutes"]) if st.get("timer_minutes") else ""
+            out.append(row)
+        return out
+    return {
+        "title": r["title"], "blurb": r["blurb"], "intro": r["intro"],
+        "servings": str(r["servings"]), "meal_type": meal_type or "",
+        "cuisine": cuisine or "", "time_band": r.get("time_band") or "",
+        "prep": steps(r["prep"], True), "cook": steps(r["cook"], True),
+        "tips": steps(r["tips"], False),
+        "ingredients": [{
+            "ingredient_id": str(i["ingredient_id"]) if i.get("ingredient_id") else "",
+            "name": i.get("name") or "", "raw": i["item"],
+            "amount": i["amount"], "unit": i["unit"], "to_buy": False,
+        } for i in r["ingredients"]],
+    }
 
 
 @wizard_bp.route("/recipe/ingredient/add", methods=["POST"])

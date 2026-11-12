@@ -1,14 +1,27 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
 {% set is_edit = (mode == "edit") %}
-{% block title %}{{ "Edit recipe" if is_edit else "Create a recipe" }} — My Kitchen{% endblock %}
-{% block page_title %}{{ "Edit recipe" if is_edit else "Create a recipe" }}{% endblock %}
+{% set is_import = (mode == "import") %}
+{% set heading = "Edit recipe" if is_edit else ("Check the import" if is_import else "Create a recipe") %}
+{% block title %}{{ heading }} — My Kitchen{% endblock %}
+{% block page_title %}{{ heading }}{% endblock %}
 {% block content %}
-  <h1 class="display">{{ "Edit recipe" if is_edit else "Create a recipe" }}</h1>
+  <h1 class="display">{{ heading }}</h1>
   <p><a class="back-link" href="{{ url_for('history.index') }}">{{ icon('arrow_back') }} Recipes</a></p>
+  {% if is_import %}
+    {# Phase 34: the create form is the import's review step. Nothing is saved
+       until Save. #}
+    <p class="rf-import-note">{% if source_url %}From <a href="{{ source_url }}" target="_blank" rel="noopener noreferrer">{{ source_url | urlhost }}</a>. {% endif %}Check it over and fix anything that came through oddly, then save.</p>
+  {% elif mode == "new" %}
+    <p class="rf-import-offer"><a href="{{ url_for('wizard.recipe_import') }}">Got it on a website? Import it →</a></p>
+  {% endif %}
 
   <form method="post" action="{{ form_action }}" id="recipe-form" class="form rf-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if is_import %}
+      <input type="hidden" name="source" value="imported">
+      <input type="hidden" name="source_url" value="{{ source_url or '' }}">
+    {% endif %}
 
     <label>Title
       <input type="text" name="title" id="rf-title" required maxlength="200">
@@ -52,7 +65,11 @@
 
     <section class="rf-section">
       <div class="section-head"><h2>Ingredients</h2></div>
-      <p class="muted">Each line links to a catalogue ingredient. Add the amount and unit as you'd write them.</p>
+      {% if imported %}
+        <p class="muted">Lines keep the recipe's own wording. Link one to your catalogue so suggestions can use it; a line can stay unlinked.</p>
+      {% else %}
+        <p class="muted">Each line links to a catalogue ingredient. Add the amount and unit as you'd write them.</p>
+      {% endif %}
       <ul class="rf-ing-list" id="rf-ing-list"></ul>
       <button type="button" class="btn btn--sm btn--secondary" id="rf-add-ing">{{ icon('add') }} Add ingredient</button>
     </section>
@@ -76,7 +93,7 @@
     </section>
 
     <div class="rf-actions">
-      <button type="submit" class="btn btn--primary">{{ "Save changes" if is_edit else "Create recipe" }}</button>
+      <button type="submit" class="btn btn--primary">{{ "Save changes" if is_edit else ("Save recipe" if is_import else "Create recipe") }}</button>
       <a class="btn btn--ghost" href="{{ url_for('history.index') }}">Cancel</a>
     </div>
   </form>
@@ -111,6 +128,7 @@
 
   <script type="application/json" id="rf-catalogue-data">{{ link_catalogue | tojson }}</script>
   <script type="application/json" id="rf-prefill-data">{{ prefill | tojson }}</script>
+  <script type="application/json" id="rf-imported">{{ imported | tojson }}</script>
   <script type="application/json" id="rf-urls">{{ {"add": url_for("wizard.recipe_ingredient_add")} | tojson }}</script>
   <script type="application/json" id="rf-cuisine-meal-types">{{ cuisine_meal_types | tojson }}</script>
 {% endblock %}

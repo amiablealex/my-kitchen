@@ -40,10 +40,13 @@
   {% else %}
     <div id="recipe-bank" data-archive-url="{{ url_for('history.row_archive') }}"
          data-restore-url="{{ url_for('history.row_restore') }}">
-    {# Bucket the merged rows by source. AI rows lack kind=='user'. #}
-    {% set ns = namespace(ai=[], hand=[]) %}
+    {# Bucket the merged rows by source. Generation rows have kind 'generation';
+       recipes without one carry their source ('user' | 'imported', Phase 34). #}
+    {% set ns = namespace(ai=[], hand=[], imported=[]) %}
     {% for row in rows %}
-      {% if row.kind == 'user' %}{% set ns.hand = ns.hand + [row] %}{% else %}{% set ns.ai = ns.ai + [row] %}{% endif %}
+      {% if row.kind == 'user' %}{% set ns.hand = ns.hand + [row] %}
+      {% elif row.kind == 'imported' %}{% set ns.imported = ns.imported + [row] %}
+      {% else %}{% set ns.ai = ns.ai + [row] %}{% endif %}
     {% endfor %}
 
     {% if ns.ai %}
@@ -109,6 +112,29 @@
               <div class="row-main">
                 <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.recipe.id) }}">{{ row.recipe.title }}</a></div>
                 {{ row_meta(row.recipe.created_at, row.recipe.cuisine, row.recipe.time_band, row.recipe.servings, row.recipe.author, "Created by") }}
+              </div>
+              {{ row_ind(row.recipe.id, noted_ids, fav_ids, 1) }}
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+
+    {% if ns.imported %}
+      <section class="recipe-group recipe-group--imported">
+        <header class="recipe-group-head">
+          <h2 class="recipe-group-name">Imported</h2>
+          <button type="button" class="group-select" data-group-select hidden>Select all</button>
+          <span class="recipe-group-count">{{ ns.imported | length }}</span>
+        </header>
+        <ul class="recipe-list">
+          {% for row in ns.imported %}
+            <li class="recipe-row" data-archive-key="recipe_id" data-archive-id="{{ row.recipe.id }}" data-title="{{ row.f_title }}"
+                 data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
+                data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}">
+              <div class="row-main">
+                <div class="row-title"><a href="{{ url_for('wizard.recipe', recipe_id=row.recipe.id) }}">{{ row.recipe.title }}</a></div>
+                {{ row_meta(row.recipe.created_at, row.recipe.cuisine, row.recipe.time_band, row.recipe.servings, row.recipe.author, "Imported by") }}
               </div>
               {{ row_ind(row.recipe.id, noted_ids, fav_ids, 1) }}
             </li>

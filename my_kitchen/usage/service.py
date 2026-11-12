@@ -33,7 +33,7 @@ MODEL_PRICES = {
 
 KIND_LABELS = {None: "Generate", "generate": "Generate",
                "regenerate": "Try again", "refine": "Refine", "question": "Question",
-               "receipt": "Receipt", "match": "List match"}
+               "receipt": "Receipt", "match": "List match", "import": "Import"}
 
 
 def model_id(stored):
@@ -79,10 +79,17 @@ def _questions_since(since, user_id=None):
     return q.count()
 
 
-def _ai_calls_since(since, user_id=None):
+# The kinds that count towards the per-person receipt/list limit. Imports
+# (Phase 34) are rarer and deliberate, so they only count for the household.
+READ_KINDS = ("receipt", "match")
+
+
+def _ai_calls_since(since, user_id=None, kinds=None):
     q = AiCall.query.filter(AiCall.created_at >= since)
     if user_id is not None:
         q = q.filter(AiCall.user_id == user_id)
+    if kinds:
+        q = q.filter(AiCall.kind.in_(kinds))
     return q.count()
 
 
@@ -93,7 +100,7 @@ def limits_today(user_id):
     start = day_start_utc()
     mine = _generations_since(start, user_id)
     my_questions = _questions_since(start, user_id)
-    my_reads = _ai_calls_since(start, user_id)
+    my_reads = _ai_calls_since(start, user_id, kinds=READ_KINDS)
     household = _generations_since(start) + _questions_since(start) + _ai_calls_since(start)
     gen_limit = int(cfg.get("LIMIT_GENERATIONS_PER_USER_DAY", 10))
     q_limit = int(cfg.get("LIMIT_QUESTIONS_PER_USER_DAY", 20))
@@ -146,6 +153,16 @@ def read_blocked_reason(user_id):
     if lim["household"] >= lim["household_limit"]:
         return (f"The household has reached today's limit of {lim['household_limit']} "
                 "AI calls. You can still paste or type a list; it resets at midnight.")
+    return None
+
+
+def import_blocked_reason(user_id):
+    """None if a recipe import may run now (Phase 34): only the household
+    cap applies."""
+    lim = limits_today(user_id)
+    if lim["household"] >= lim["household_limit"]:
+        return (f"The household has reached today's limit of {lim['household_limit']} "
+                "AI calls, so importing will have to wait until midnight.")
     return None
 
 

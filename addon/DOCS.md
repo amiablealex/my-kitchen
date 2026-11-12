@@ -61,6 +61,14 @@ receipt scanning off.
 `limit_receipt_reads_per_user_day` (default 10) caps receipt reads and list
 matches per person; they also count towards `limit_household_calls_day`.
 
+## Importing recipes
+*Create a recipe → Import it* takes a link or pasted text. For a link, My
+Kitchen fetches the page itself and, where the site provides structured recipe
+data (most do), sends only that to the AI model; otherwise it sends the page's
+text. The model lays the recipe out in My Kitchen's sections without
+rewriting it, using `llm_qa_model`. Imports count towards
+`limit_household_calls_day`.
+
 ## Data & backups
 - The SQLite database lives in the add-on's `/data` and is included in Home
   Assistant backups automatically.

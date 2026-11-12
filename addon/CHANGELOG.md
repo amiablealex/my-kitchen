@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.34.0
+- **Import a recipe from a website.** On *Create a recipe*, follow *Got it on
+  a website? Import it*, and paste a link. My Kitchen lays it out as
+  ingredients, prep, cook and tips, keeping the recipe's own wording and
+  quantities (US cups and °F become grams and °C). It opens in the recipe
+  form for you to check before anything is saved.
+- **Or paste the text.** For a site that won't share its page, or a recipe
+  from a message or a note, paste the text instead.
+- **Imported ingredients keep their wording** ("2 garlic cloves, crushed"),
+  linked to your catalogue where My Kitchen recognises them. A line can stay
+  unlinked, and you can link it later on the recipe page.
+- Imported recipes show where they came from ("from bbcgoodfood.com"), on the
+  recipe page and when printed, and can be edited like your own.
+- Includes a small database update (where a recipe came from). It runs
+  automatically.
+
 ## 0.33.0
 - **Scan a receipt.** On the Stock page, tap the receipt icon in the search
   box, take or choose a photo, and drag the two bars to just the item lines.
