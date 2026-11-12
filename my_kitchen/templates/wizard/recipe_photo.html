@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Recipe from a photo — My Kitchen{% endblock %}
+{% block page_title %}From a photo{% endblock %}
+{% block content %}
+  {# Phase 35. Photos of each page, shrunk on the phone by photo_import.js,
+     sent together so a recipe over a page turn is read whole. The result opens
+     in the create form for checking; the photos aren't kept. #}
+  <h1 class="display">From a photo</h1>
+  <p><a class="back-link" href="{{ url_for('wizard.recipe_add') }}">{{ icon('arrow_back') }} Add a recipe</a></p>
+  <p class="lead">Take a photo of each page of the recipe, up to {{ max_pages }}. They're read together, so a recipe that runs over the page is fine.</p>
+
+  <form method="post" action="{{ url_for('wizard.recipe_import_photo') }}" enctype="multipart/form-data"
+        class="form photo-form" id="photo-form" data-max-pages="{{ max_pages }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {# What's actually submitted: photo_import.js fills it with the shrunk pages. #}
+    <input type="file" name="pages" multiple hidden id="photo-pages">
+
+    <ol class="photo-strip" id="photo-strip" aria-label="Pages"></ol>
+    <label class="btn photo-add" id="photo-add">{{ icon('photo_camera') }} <span>Add a page</span>
+      <input type="file" accept="image/*" multiple id="photo-pick">
+    </label>
+    <p class="needs-error" id="photo-error" hidden></p>
+
+    <label>Which recipe? <span class="muted">(optional)</span>
+      <input type="text" name="which" value="{{ which }}" maxlength="120"
+             placeholder="Only if the page has more than one">
+    </label>
+    <p class="muted import-note">An AI model reads the photos to lay the recipe out. They aren't kept.</p>
+    <div class="rf-actions">
+      <button type="submit" class="btn btn--primary" id="photo-go" disabled>Read the recipe</button>
+    </div>
+  </form>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='photo_import.js') }}"></script>
+{% endblock %}

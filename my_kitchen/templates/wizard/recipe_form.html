@@ -15,7 +15,7 @@
   {% if is_import %}
     {# Phase 34: the create form is the import's review step. Nothing is saved
        until Save. #}
-    <p class="rf-import-note">{% if source_url %}From <a href="{{ source_url }}" target="_blank" rel="noopener noreferrer">{{ source_url | urlhost }}</a>. {% endif %}Check it over and fix anything that came through oddly, then save.</p>
+    <p class="rf-import-note">{% if source_url %}From <a href="{{ source_url }}" target="_blank" rel="noopener noreferrer">{{ source_url | urlhost }}</a>. {% elif import_method == "photo" %}From your photos. {% endif %}Check it over and fix anything that came through oddly, then save.</p>
   {% endif %}
 
   <form method="post" action="{{ form_action }}" id="recipe-form" class="form rf-form">
@@ -23,6 +23,7 @@
     {% if is_import %}
       <input type="hidden" name="source" value="imported">
       <input type="hidden" name="source_url" value="{{ source_url or '' }}">
+      <input type="hidden" name="import_method" value="{{ import_method or '' }}">
     {% endif %}
 
     <label>Title

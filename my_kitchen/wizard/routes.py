@@ -21,7 +21,8 @@ from ..models import (
     COMMENT_MAX_CHARS, TAG_TYPE_CHOICES, TAG_TYPE_HINTS, utcnow,
     SPECIAL_REQUEST_MAX_CHARS, KITCHEN_MENTION, QUESTION_MAX_CHARS,
 )
-from ..llm.importer import ImportProblem, import_recipe
+from ..llm.importer import PHOTO_MAX_PAGES, ImportProblem, import_recipe
+from ..llm.providers import provider_reads_images
 from ..llm.qa import answer_question
 from ..llm.service import (
     start_generation, combined_dietary, clean_special_request,
@@ -32,6 +33,7 @@ from ..usage.service import (
 )
 from .suggestions import suggest_recipes
 from ..stock.service import search_catalogue
+from ..stock.routes import _image_mime
 # Reuse the manage blueprint's ingredient-creation validation rather than
 # duplicating the name/category/staple handling (Phase 4a add-and-link). One-way
 # import — manage.routes doesn't import wizard, so there's no cycle.
@@ -1029,7 +1031,7 @@ def _normalise_tags(meal_type_raw, cuisine_raw):
     return meal_type, cuisine
 
 
-def _save_recipe_from_form(recipe=None, source="user", source_url=None):
+def _save_recipe_from_form(recipe=None, source="user", source_url=None, import_method=None):
     """Create (recipe=None) or update a source='user' or 'imported' recipe in
     place. Writes the structured recipe_ingredients rows AND ingredients_json
     (display parity with AI recipes / keeps the 'still written' invariant).
@@ -1078,7 +1080,8 @@ def _save_recipe_from_form(recipe=None, source="user", source_url=None):
     if creating:
         recipe = Recipe(source=source, generation_id=None,
                         created_by_user_id=current_user.id,
-                        source_url=source_url if source == "imported" else None)
+                        source_url=source_url if source == "imported" else None,
+                        import_method=import_method if source == "imported" else None)
         db.session.add(recipe)
 
     recipe.title = title
@@ -1181,7 +1184,8 @@ def _recipe_to_prefill(recipe):
     }
 
 
-def _form_context(mode, recipe=None, from_form=False, prefill=None, source_url=None):
+def _form_context(mode, recipe=None, from_form=False, prefill=None, source_url=None,
+                  import_method=None):
     """mode: "new" | "edit" | "import" (Phase 34: the create form, pre-filled
     from an import, as its review step)."""
     if prefill is not None:
@@ -1210,6 +1214,7 @@ def _form_context(mode, recipe=None, from_form=False, prefill=None, source_url=N
         "cuisines": CUISINES, "cuisine_meal_types": CUISINE_MEAL_TYPES,
         "time_bands": TIME_BANDS,
         "source_url": source_url or (recipe.source_url if recipe is not None else None),
+        "import_method": import_method,
         "imported": mode == "import" or (recipe is not None and recipe.source == "imported"),
     }
 
@@ -1219,17 +1224,24 @@ def _clean_source_url(raw):
     return raw if urlparse(raw).scheme in ("http", "https") else None
 
 
+IMPORT_METHODS = ("link", "text", "photo")
+
+
 @wizard_bp.route("/recipe/new", methods=["GET", "POST"])
 def recipe_new():
     if request.method == "POST":
         imported = request.form.get("source") == "imported"
         source_url = _clean_source_url(request.form.get("source_url"))
+        method = request.form.get("import_method")
+        method = "link" if source_url else (method if method in IMPORT_METHODS else "text")
         recipe, error = _save_recipe_from_form(
-            None, source="imported" if imported else "user", source_url=source_url)
+            None, source="imported" if imported else "user", source_url=source_url,
+            import_method=method)
         if error:
             flash(error, "error")
             return render_template("wizard/recipe_form.html", **_form_context(
-                "import" if imported else "new", from_form=True, source_url=source_url))
+                "import" if imported else "new", from_form=True, source_url=source_url,
+                import_method=method))
         flash("Recipe imported." if imported else "Recipe created.", "success")
         return redirect(url_for("wizard.recipe", recipe_id=recipe.id))
     return render_template("wizard/recipe_form.html", **_form_context("new"))
@@ -1261,8 +1273,10 @@ def recipe_edit(recipe_id):
 @wizard_bp.route("/recipe/add")
 def recipe_add():
     """The one way in to adding a recipe: a choice of how (0.34.1). By hand ->
-    the create form; from the web -> the import page."""
-    return render_template("wizard/recipe_add.html")
+    the create form; from the web -> the import page; from a photo (Phase 35,
+    only when the provider reads images) -> the photo page."""
+    return render_template("wizard/recipe_add.html",
+                           photos_enabled=provider_reads_images(current_app.config))
 
 
 @wizard_bp.route("/recipe/import", methods=["GET", "POST"])
@@ -1283,9 +1297,45 @@ def recipe_import():
                 problem = str(e)
             else:
                 return render_template("wizard/recipe_form.html", **_form_context(
-                    "import", prefill=_import_prefill(recipe), source_url=source_url))
+                    "import", prefill=_import_prefill(recipe), source_url=source_url,
+                    import_method="link" if url else "text"))
         flash(problem, "error")
     return render_template("wizard/recipe_import.html", url=url, text=text)
+
+
+@wizard_bp.route("/recipe/import/photo", methods=["GET", "POST"])
+def recipe_import_photo():
+    """Import a recipe from photos of its pages (Phase 35). The browser shrinks
+    each photo; every page goes to the AI in one call, so a recipe that runs
+    across pages is read whole. The photos are held in memory only. Success
+    renders the create form as the review step, as for a web import."""
+    if not provider_reads_images(current_app.config):
+        abort(404)
+    which = (request.form.get("which") or "").strip()
+    if request.method == "POST":
+        problem = import_blocked_reason(current_user.id)
+        if not problem:
+            pages = []
+            for f in request.files.getlist("pages")[:PHOTO_MAX_PAGES]:
+                data = f.read()
+                mime = _image_mime(data)
+                if mime:
+                    pages.append((data, mime))
+            if not pages:
+                problem = "Add a photo of the recipe first."
+            else:
+                try:
+                    recipe, _ = import_recipe(current_app.config, current_user.id,
+                                              images=pages, which=which)
+                except ImportProblem as e:
+                    problem = str(e)
+                else:
+                    return render_template("wizard/recipe_form.html", **_form_context(
+                        "import", prefill=_import_prefill(recipe), import_method="photo"))
+                finally:
+                    del pages
+        flash(problem, "error")
+    return render_template("wizard/recipe_photo.html", which=which, max_pages=PHOTO_MAX_PAGES)
 
 
 def _import_prefill(r):

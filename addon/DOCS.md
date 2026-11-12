@@ -62,12 +62,15 @@ receipt scanning off.
 matches per person; they also count towards `limit_household_calls_day`.
 
 ## Importing recipes
-*Create a recipe → Import it* takes a link or pasted text. For a link, My
+*Add a recipe* offers *Import from the web* (a link or pasted text) and *From
+a photo*. For a link, My
 Kitchen fetches the page itself and, where the site provides structured recipe
 data (most do), sends only that to the AI model; otherwise it sends the page's
 text. The model lays the recipe out in My Kitchen's sections without
-rewriting it, using `llm_qa_model`. Imports count towards
-`limit_household_calls_day`.
+rewriting it, using `llm_qa_model`. Photos (up to four pages of one recipe)
+are shrunk on your phone, sent together in one call on your main model, which
+reads handwriting better, and aren't kept. *From a photo* only appears when
+your provider reads images. Imports count towards `limit_household_calls_day`.
 
 ## Data & backups
 - The SQLite database lives in the add-on's `/data` and is included in Home

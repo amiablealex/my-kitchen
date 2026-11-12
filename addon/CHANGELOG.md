@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.35.0
+- **Add a recipe from a photo.** *Add a recipe → From a photo*: photograph
+  a cookbook page or a handwritten card. A recipe that runs over the page is
+  fine: add up to four pages and they're read together, so the ingredients on
+  one page and the method on the next come back as one recipe.
+- **Which recipe?** If a page shows more than one recipe, say which you want.
+- As with web imports, it opens in the recipe form to check before saving.
+  The recipe shows "from a photo" on its page and when printed. The photos
+  are shrunk on your phone and aren't kept.
+- Only offered when your AI provider can read images.
+- Includes a small database update (how an imported recipe came in). It runs
+  automatically.
+
 ## 0.34.1
 - **Add a recipe**, in place of *Create a recipe* on the Recipes page, opens a
   choice: *Write it yourself* or *Import from the web*.

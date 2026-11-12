@@ -47,8 +47,8 @@ class MockProvider:
     def generate(self, system_prompt, user_prompt, brief=None, json_mode=True, thinking=None,
                  images=None):
         self.last_finish_reason = "stop"
-        if "RECIPE IMPORTER" in system_prompt:  # Phase 34: a canned import for dev
-            out = json.dumps(_mock_import(user_prompt))
+        if "RECIPE IMPORTER" in system_prompt:  # Phase 34/35: a canned import for dev
+            out = json.dumps(_mock_import(user_prompt, len(images or [])))
             self.last_usage = {"input": len(user_prompt) // 4, "output": len(out) // 4}
             return out
         if "RECEIPT READER" in system_prompt:  # Phase 33: a canned read for dev
@@ -325,10 +325,14 @@ def _mock_receipt(user_prompt, from_image):
     return {"lines": lines}
 
 
-def _mock_import(user_prompt):
+def _mock_import(user_prompt, pages=0):
     """A canned import for dev: with JSON-LD in the prompt, its own name,
-    ingredients and steps come back (amounts not split out); otherwise a
-    fixed recipe. Proves the plumbing, not the reading."""
+    ingredients and steps come back (amounts not split out); photos give a
+    fixed recipe titled with the page count (and the "which recipe" hint if
+    given); otherwise a fixed recipe. Proves the plumbing, not the reading."""
+    if pages:
+        hint = user_prompt.split("<<<", 1)[-1].rsplit(">>>", 1)[0].strip() if "<<<" in user_prompt else ""
+        return {**_mock_import(""), "title": hint or f"Mock recipe from {pages} photo(s)", "cuisine": None}
     body = user_prompt.split("<<<", 1)[-1].rsplit(">>>", 1)[0]
     try:
         src = json.loads(body)

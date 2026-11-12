@@ -7,7 +7,7 @@
    (HTTPS or localhost) — on a plain-HTTP LAN address this registers as a no-op,
    which is fine; the manifest still makes the app installable where supported. */
 
-const CACHE = "mykitchen-static-v21";  // v21: add-a-recipe chooser (0.34.1)
+const CACHE = "mykitchen-static-v22";  // v22: recipe from a photo (0.35.0)
 const ASSETS = [
   "css/app.css",
   "fonts/figtree-var.woff2",

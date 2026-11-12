@@ -5,7 +5,8 @@
 {% block content %}
   {# The single entry from the Recipes page (0.34.1). Each option is coloured
      like the source dot its recipes will carry: hand-made lime, imported
-     orange. Phase 35 adds "From a photo". #}
+     orange (web and photo alike). "From a photo" (Phase 35) only shows when
+     the provider reads images. #}
   <h1 class="display">Add a recipe</h1>
   <p><a class="back-link" href="{{ url_for('history.index') }}">{{ icon('arrow_back') }} Recipes</a></p>
 
@@ -24,5 +25,14 @@
         <span class="add-option-sub">Paste a link or the recipe's text, then check it over.</span>
       </span>
     </a>
+    {% if photos_enabled %}
+      <a class="card add-option k-import" href="{{ url_for('wizard.recipe_import_photo') }}">
+        <span class="tile-bead">{{ icon('photo_camera') }}</span>
+        <span class="add-option-text">
+          <span class="add-option-title">From a photo</span>
+          <span class="add-option-sub">Snap a cookbook page or a handwritten card, over several pages if needed.</span>
+        </span>
+      </a>
+    {% endif %}
   </div>
 {% endblock %}

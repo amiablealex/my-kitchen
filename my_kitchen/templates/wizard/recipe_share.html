@@ -16,7 +16,8 @@
   {% if recipe.blurb %}
     <p class="recipe-blurb">{{ recipe.blurb }}</p>
   {% endif %}
-  {% if recipe.source_host %}<p class="recipe-source muted">From {{ recipe.source_host }}</p>{% endif %}
+  {% if recipe.source_host %}<p class="recipe-source muted">From {{ recipe.source_host }}</p>
+  {% elif recipe.import_method == "photo" %}<p class="recipe-source muted">From a photo</p>{% endif %}
   <p class="recipe-serves">
     Serves {{ recipe.servings }}
     {%- if recipe.meal_type %} · {{ recipe.meal_type }}{% endif %}

@@ -126,7 +126,8 @@
       <span class="rm-item" id="tag-meal-pill"{% if not recipe.meal_type %} hidden{% endif %}>{{ recipe.meal_type or "" }}</span>
       <span class="rm-item" id="tag-cuisine-pill"{% if not (cuisine_allowed and recipe.cuisine) %} hidden{% endif %}>{{ recipe.cuisine or "" }}</span>
       {% if band %}<span class="rm-item meta-i">{{ icon('schedule') }}{{ band }}</span>{% endif %}
-      {% if recipe.source_host %}<a class="rm-item rm-source" href="{{ recipe.source_url }}" target="_blank" rel="noopener noreferrer">from {{ recipe.source_host }}</a>{% endif %}
+      {% if recipe.source_host %}<a class="rm-item rm-source" href="{{ recipe.source_url }}" target="_blank" rel="noopener noreferrer">from {{ recipe.source_host }}</a>
+      {% elif recipe.import_method == "photo" %}<span class="rm-item rm-source--plain">from a photo</span>{% endif %}
     </p>
     <div class="recipe-tags-edit" id="recipe-tags-edit" hidden>
       <label>Meal type

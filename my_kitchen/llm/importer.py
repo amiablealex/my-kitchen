@@ -1,7 +1,12 @@
-"""Importing a recipe from a web page or pasted text (Phase 34).
+"""Importing a recipe from a web page, pasted text (Phase 34) or photos (35).
 
-    URL  -> fetch -> schema.org Recipe JSON-LD (deterministic) -> one AI pass
-    text -> ---------------------------------------------------> one AI pass
+    URL    -> fetch -> schema.org Recipe JSON-LD (deterministic) -> one AI pass
+    text   -> ---------------------------------------------------> one AI pass
+    photos -> ---------------------------------------------------> one AI pass
+
+All the photos go in ONE call, numbered, so a recipe split across pages (the
+ingredients on one, the method over the page turn) is read whole, the way a
+person reads it — no per-page reads to stitch back together.
 
 The AI pass restructures the source into the app's own contract (intro /
 ingredients / prep / cook / tips) without rewriting it: the source's wording,
@@ -33,6 +38,8 @@ from .schema import extract_json, _normalize_step
 FETCH_TIMEOUT = 15            # seconds
 FETCH_MAX_BYTES = 3_000_000   # a recipe page with its ads is well under this
 TEXT_MAX_CHARS = 12_000       # page text / pasted text sent at most
+PHOTO_MAX_PAGES = 4           # a recipe rarely spans more; keeps the call quick
+WHICH_MAX_CHARS = 120         # "Which recipe?" hint for a page with several
 IMPORT_MAX_TOKENS = 8000
 IMPORT_TEMPERATURE = 0.2
 USER_AGENT = ("Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -185,6 +192,10 @@ one short sentence saying what the dish is.
 - "meal_type" from: {meal_types}. "cuisine" from: {cuisines}, or null if none fits. \
 "time_band": "quick" if the whole recipe takes 30 minutes or less, otherwise "relaxed".
 - UK English for anything you write yourself.
+- Photos (of a cookbook, a magazine or a handwritten card): the recipe may run across \
+the pages, which may not be in order; read them as one recipe. Ignore any other recipe, or \
+part of one, that shares a page. Read handwriting carefully; where a word is truly \
+unreadable, write [unclear] rather than guessing.
 - If the input isn't a recipe at all, return {{"error": "not_a_recipe"}}.
 
 Return JSON only, in exactly this shape:
@@ -201,8 +212,19 @@ def _system_prompt():
                                 cuisines=", ".join(CUISINES))
 
 
-def build_prompt(source):
-    """source: a JSON-LD dict, or text."""
+def build_prompt(source, pages=0, which=None):
+    """source: a JSON-LD dict, or text; or None with `pages` photos attached.
+    `which` names the recipe wanted when a page shows several."""
+    if source is None:
+        out = [f"PHOTOS: {pages} page{'s' if pages != 1 else ''} of a recipe, attached in the "
+               "order the cook added them (which may not be the recipe's order)."]
+        which = (which or "").replace("<<<", "").replace(">>>", "").strip()[:WHICH_MAX_CHARS]
+        if which:
+            out += ["The cook wants this recipe, between the markers:", f"<<<\n{which}\n>>>"]
+        else:
+            out.append("If the photos show more than one recipe, take the one that runs across "
+                       "them, or else the most complete one.")
+        return "\n".join(out)
     if isinstance(source, dict):
         head, body = "RECIPE DATA from the web page (JSON):", json.dumps(source, ensure_ascii=False)
     else:
@@ -253,19 +275,23 @@ def _validate(data):
     }
 
 
-def restructure(cfg, user_id, source):
-    """One AI pass (the @kitchen Lite model, falling back to the main model).
-    Records an AiCall. Returns a validated recipe dict or raises ImportProblem."""
-    prompt = build_prompt(source)
+def restructure(cfg, user_id, source, images=None, which=None):
+    """One AI pass. Text and links use the @kitchen Lite model (falling back
+    to the main model); photos use the main model, which reads handwriting
+    noticeably better. Records an AiCall per attempt. Returns a validated
+    recipe dict or raises ImportProblem."""
+    prompt = build_prompt(source, pages=len(images or []), which=which)
+    models = [None] if images else qa_models(cfg)   # None -> LLM_MODEL
     last_error = None
-    for model in qa_models(cfg):
+    for model in models:
         call = AiCall(user_id=user_id, kind="import", status="error")
         provider = None
         try:
             provider = get_provider(cfg, model=model, max_tokens=IMPORT_MAX_TOKENS,
                                     temperature=IMPORT_TEMPERATURE)
             call.model = f"{provider.name}:{provider.model}"
-            text = provider.generate(_system_prompt(), prompt, json_mode=True, thinking="low")
+            text = provider.generate(_system_prompt(), prompt, json_mode=True, thinking="low",
+                                     images=images)
             recipe = _validate(extract_json(text))
             call.status = "done"
             return recipe
@@ -283,11 +309,14 @@ def restructure(cfg, user_id, source):
 
 
 # ---- the whole import --------------------------------------------------------------
-def import_recipe(cfg, user_id, url=None, text=None):
+def import_recipe(cfg, user_id, url=None, text=None, images=None, which=None):
     """(recipe, source_url). recipe is validated and each ingredient carries
-    the catalogue link the resolver found (or None). Raises ImportProblem."""
+    the catalogue link the resolver found (or None). images: [(bytes, mime)]
+    photos of the recipe's pages (Phase 35). Raises ImportProblem."""
     source_url = None
-    if url:
+    if images:
+        source = None
+    elif url:
         page, source_url = fetch_page(url.strip())
         source = extract_recipe_jsonld(page) or page_text(page)
         if not source:
@@ -296,7 +325,7 @@ def import_recipe(cfg, user_id, url=None, text=None):
         source = (text or "").strip()
         if len(source) < 40:
             raise ImportProblem("Paste the whole recipe: its ingredients and method.")
-    recipe = restructure(cfg, user_id, source)
+    recipe = restructure(cfg, user_id, source, images=images, which=which)
     index = build_index(load_catalogue(), ALIASES)
     for ing in recipe["ingredients"]:
         res = resolve_with_index(ing["item"], index)
