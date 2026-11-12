@@ -62,3 +62,13 @@ class Config:
     # Model for @kitchen answers. Blank -> the provider's Lite default
     # (gemini-3.5-flash-lite), falling back to LLM_MODEL if that's refused.
     LLM_QA_MODEL = os.environ.get("LLM_QA_MODEL", "")
+    # Receipt scanning (Phase 33). Off -> the receipt button never renders and
+    # the route 404s. The household-wide switch for anyone who'd rather not
+    # send receipt photos to an AI provider.
+    RECEIPT_SCANNING = os.environ.get("RECEIPT_SCANNING", "true").lower() in ("1", "true", "yes", "on")
+    # Receipt reads + AI matching of pasted list lines, per person per day.
+    # Both also count towards LIMIT_HOUSEHOLD_CALLS_DAY.
+    LIMIT_RECEIPT_READS_PER_USER_DAY = int(os.environ.get("LIMIT_RECEIPT_READS_PER_USER_DAY", "10"))
+    # A receipt photo is cropped and shrunk in the browser first; this is only
+    # a backstop against something odd arriving.
+    MAX_CONTENT_LENGTH = 6 * 1024 * 1024

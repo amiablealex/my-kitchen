@@ -486,3 +486,25 @@ class RecipeComment(db.Model):
     @property
     def is_question(self):
         return self.kind == "question"
+
+
+class AiCall(db.Model):
+    """One AI call that isn't a generation or an @kitchen question (Phase 33):
+    reading a receipt, matching pasted list lines, and later imports.
+
+    Same reason as the other two: every call is a row, so a daily limit is a
+    COUNT and the usage page can price it from the stored tokens. Nothing the
+    call read is stored — no image, no text, no reply — only who, what kind,
+    which model, the tokens and whether it worked.
+    """
+    __tablename__ = "ai_calls"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    kind = db.Column(db.String, nullable=False)          # "receipt" | "match"
+    model = db.Column(db.String, nullable=True)          # "provider:model"
+    input_tokens = db.Column(db.Integer, nullable=True)
+    output_tokens = db.Column(db.Integer, nullable=True)
+    status = db.Column(db.String, nullable=False, default="done")  # "done" | "error"
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
+    created_by = db.relationship("User")

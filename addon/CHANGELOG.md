@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.33.0
+- **Scan a receipt.** On the Stock page, tap the receipt icon in the search
+  box, take or choose a photo, and drag the two bars to just the item lines.
+  Only that part is sent, it's read by an AI model, and it isn't stored. What
+  it finds opens in the same sheet as a pasted list: tick, untick, and mark
+  them as in stock.
+- **Better guesses for odd lines.** Lines that can't be matched show the AI's
+  guess ("Dragon fruit?"). Tap one, and *Add as new* is ready with the name
+  and category filled in.
+- **Pasted lists get the same help.** Lines My Kitchen can't match on its own
+  are read by the AI too. Only those lines are sent, as text.
+- Receipt and list reads have their own daily limit (default 10 per person)
+  and show on the Usage page. Set `receipt_scanning: false` to hide receipt
+  scanning entirely. See the add-on docs for what's sent where.
+- Includes a small database update (a table for counting these calls). It
+  runs automatically.
+
 ## 0.32.0
 - **Add several things to stock at once.** Type a list into the stock search
   ("milk, eggs, leeks") or paste one, such as an online order email. The

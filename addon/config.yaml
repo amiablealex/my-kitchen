@@ -1,5 +1,5 @@
 name: My Kitchen
-version: "0.32.0"
+version: "0.33.0"
 slug: my_kitchen
 description: Self-hosted household recipe generator (LLM-powered).
 url: https://github.com/amiablealex/my-kitchen
@@ -34,6 +34,8 @@ options:
   limit_household_calls_day: 40
   limit_regenerates_per_brief: 3
   limit_questions_per_user_day: 20
+  receipt_scanning: true
+  limit_receipt_reads_per_user_day: 10
   app_timezone: Europe/London
   gunicorn_workers: 2
   gunicorn_threads: 4
@@ -51,6 +53,8 @@ schema:
   limit_household_calls_day: "int(1,1000)"
   limit_regenerates_per_brief: "int(0,20)"
   limit_questions_per_user_day: "int(0,500)"
+  receipt_scanning: bool
+  limit_receipt_reads_per_user_day: "int(0,200)"
   app_timezone: "str"
   gunicorn_workers: "int(1,8)"
   gunicorn_threads: "int(1,16)"

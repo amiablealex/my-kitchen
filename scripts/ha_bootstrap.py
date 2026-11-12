@@ -32,6 +32,8 @@ DIRECT_MAP = {
     "limit_household_calls_day": "LIMIT_HOUSEHOLD_CALLS_DAY",
     "limit_regenerates_per_brief": "LIMIT_REGENERATES_PER_BRIEF",
     "limit_questions_per_user_day": "LIMIT_QUESTIONS_PER_USER_DAY",
+    "receipt_scanning": "RECEIPT_SCANNING",
+    "limit_receipt_reads_per_user_day": "LIMIT_RECEIPT_READS_PER_USER_DAY",
     "app_timezone": "APP_TIMEZONE",
     "gunicorn_workers": "GUNICORN_WORKERS",
     "gunicorn_threads": "GUNICORN_THREADS",

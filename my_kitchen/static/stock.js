@@ -229,7 +229,9 @@ document.addEventListener("click", function (event) {
 
   function openListSheet() {
     const go = document.getElementById("stock-list-go");
-    if (go) go.disabled = true;
+    const label = go ? go.textContent : "";
+    // Lines the resolver can't place get an AI read, which takes a moment.
+    if (go) { go.disabled = true; go.textContent = "Reading…"; }
     fetch(input.dataset.parseUrl, {
       method: "POST",
       headers: { "X-CSRFToken": csrfToken() },
@@ -237,7 +239,7 @@ document.addEventListener("click", function (event) {
     })
       .then(function (r) { if (!r.ok) throw new Error("parse failed"); return r.json(); })
       .then(function (d) {
-        if (go) go.disabled = false;
+        if (go) { go.disabled = false; go.textContent = label; }
         const skipped = [];
         if (d.already) skipped.push(d.already + " already in stock");
         if (d.staples) skipped.push(d.staples + (d.staples === 1 ? " staple" : " staples") + " (always assumed)");
@@ -260,7 +262,10 @@ document.addEventListener("click", function (event) {
           },
         });
       })
-      .catch(function () { if (go) go.disabled = false; alert("Could not read that list — is the server running?"); });
+      .catch(function () {
+        if (go) { go.disabled = false; go.textContent = label; }
+        alert("Could not read that list — is the server running?");
+      });
   }
 
   // A single-line search box silently drops line breaks from a paste, merging

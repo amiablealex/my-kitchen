@@ -35,6 +35,32 @@ there to stop a runaway. The app's **Usage** page shows calls, tokens and an
 estimated cost. For a hard stop on the provider side as well, set a budget
 alert and a daily request quota on your API key.
 
+## Receipt scanning & privacy
+On the Stock page, the receipt icon in the search box reads a photo of a
+shopping receipt and offers to mark what you bought as in stock. Before
+anything is sent you drag two bars to frame just the item lines; the photo is
+cropped and shrunk on your phone, and only that part is uploaded. My Kitchen
+passes it to your AI provider for one read and doesn't store it anywhere.
+Nothing is stocked until you confirm, and anything it couldn't place is listed
+for you to sort out.
+
+A receipt can carry the shop, date and time, card and loyalty details, which
+is why framing comes first. If you'd rather not send receipt photos at all,
+set `receipt_scanning: false` and the icon disappears. Pasting a list or a
+receipt's text into the stock search works either way: it's matched on your
+own server, and only the product names it can't place are sent to the AI, as
+text.
+
+Check how your provider treats what you send. **Free tiers may use submitted
+content, including images, to improve the provider's products, and may allow
+human review**; paid, billing-enabled API projects generally don't. For
+Gemini, Google applies its paid-tier data terms to free quota too in the UK,
+EEA and Switzerland. Elsewhere, use a billing-enabled project, or turn
+receipt scanning off.
+
+`limit_receipt_reads_per_user_day` (default 10) caps receipt reads and list
+matches per person; they also count towards `limit_household_calls_day`.
+
 ## Data & backups
 - The SQLite database lives in the add-on's `/data` and is included in Home
   Assistant backups automatically.

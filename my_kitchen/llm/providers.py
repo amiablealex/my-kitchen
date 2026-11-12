@@ -44,8 +44,14 @@ class MockProvider:
         self.last_finish_reason = None  # set per generate() call
         self.last_usage = None
 
-    def generate(self, system_prompt, user_prompt, brief=None, json_mode=True, thinking=None):
+    def generate(self, system_prompt, user_prompt, brief=None, json_mode=True, thinking=None,
+                 images=None):
         self.last_finish_reason = "stop"
+        if "RECEIPT READER" in system_prompt:  # Phase 33: a canned read for dev
+            out = json.dumps(_mock_receipt(user_prompt, bool(images)))
+            self.last_usage = {"input": 1500 if images else len(user_prompt) // 4,
+                               "output": len(out) // 4}
+            return out
         if not json_mode:  # Phase 27: a plain-text @kitchen answer
             out = ("Good question! (This is the mock provider.) Keep the heat at a "
                    "steady medium and trust your eyes and nose over the timer.")
@@ -81,8 +87,10 @@ class AnthropicProvider:
         self.last_finish_reason = None
         self.last_usage = None
 
-    def generate(self, system_prompt, user_prompt, brief=None, json_mode=True, thinking=None):
+    def generate(self, system_prompt, user_prompt, brief=None, json_mode=True, thinking=None,
+                 images=None):
         # json_mode / thinking are Gemini knobs; Anthropic is steered by the prompt.
+        # images: [(bytes, mime)] sent ahead of the text (Phase 33).
         self.last_usage = None
         try:
             from anthropic import Anthropic
@@ -96,7 +104,7 @@ class AnthropicProvider:
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
                 system=system_prompt,
-                messages=[{"role": "user", "content": user_prompt}],
+                messages=[{"role": "user", "content": _anthropic_content(user_prompt, images)}],
             )
         except Exception as e:
             raise ProviderError(f"Anthropic API call failed: {e}") from e
@@ -122,10 +130,12 @@ class GeminiProvider:
         self.last_finish_reason = None
         self.last_usage = None
 
-    def generate(self, system_prompt, user_prompt, brief=None, json_mode=True, thinking=None):
+    def generate(self, system_prompt, user_prompt, brief=None, json_mode=True, thinking=None,
+                 images=None):
         """json_mode=False for plain text (Phase 27). thinking: an optional
         thinking level ("low") to keep short answers fast and cheap; skipped if
-        this SDK can't express it, and dropped on retry if the API refuses it."""
+        this SDK can't express it, and dropped on retry if the API refuses it.
+        images: [(bytes, mime)] sent ahead of the text (Phase 33)."""
         self.last_usage = None
         try:
             from google import genai
@@ -134,6 +144,9 @@ class GeminiProvider:
             raise ProviderError("The 'google-genai' package isn't installed. Run: pip install google-genai") from e
         client = genai.Client(api_key=self.api_key)
         self.last_finish_reason = None
+        contents = user_prompt
+        if images:
+            contents = [types.Part.from_bytes(data=b, mime_type=m) for b, m in images] + [user_prompt]
         cfg = {
             "system_instruction": system_prompt,
             "temperature": self.temperature,
@@ -150,7 +163,7 @@ class GeminiProvider:
         try:
             try:
                 resp = client.models.generate_content(
-                    model=self.model, contents=user_prompt,
+                    model=self.model, contents=contents,
                     config=types.GenerateContentConfig(
                         **cfg, **({"thinking_config": thinking_cfg} if thinking_cfg else {})),
                 )
@@ -159,7 +172,7 @@ class GeminiProvider:
                     raise
                 # The model may not take that thinking level; one plain retry.
                 resp = client.models.generate_content(
-                    model=self.model, contents=user_prompt,
+                    model=self.model, contents=contents,
                     config=types.GenerateContentConfig(**cfg),
                 )
         except Exception as e:
@@ -178,6 +191,26 @@ class GeminiProvider:
                           + _int(getattr(meta, "thoughts_token_count", 0)),
             }
         return resp.text
+
+
+def _anthropic_content(text, images):
+    if not images:
+        return text
+    import base64
+    blocks = [{"type": "image", "source": {"type": "base64", "media_type": m,
+                                           "data": base64.b64encode(b).decode("ascii")}}
+              for b, m in images]
+    return blocks + [{"type": "text", "text": text}]
+
+
+# Providers whose models read images (Phase 33). The receipt button is only
+# rendered for these; a future text-only provider simply isn't listed (or
+# reads an option), so the feature never appears rather than failing.
+IMAGE_PROVIDERS = {"mock", "gemini", "anthropic"}
+
+
+def provider_reads_images(config):
+    return (config.get("LLM_PROVIDER") or "mock").lower() in IMAGE_PROVIDERS
 
 
 def get_provider(config, model=None, max_tokens=None, temperature=None):
@@ -268,3 +301,21 @@ def _mock_payload(brief):
         "tips": [],  # exercises the "no tips" display path
     }
     return {"recipes": [traybake, stirfry]}
+
+
+def _mock_receipt(user_prompt, from_image):
+    """A canned read for dev. A photo: the first three catalogue entries the
+    prompt lists (so they match), one food item that isn't in the catalogue
+    and one line it can't make out. Pasted lines: each line back as an
+    unmatched guess. Proves the plumbing, not the reading."""
+    import re
+    if not from_image:
+        pasted = user_prompt.rsplit("<<<", 1)[-1].split(">>>")[0].strip().splitlines()
+        return {"lines": [{"text": ln, "id": None, "guess": ln.lower(), "category": None}
+                          for ln in pasted if ln.strip()]}
+    ids = re.findall(r"^(\d+): (.+)$", user_prompt, flags=re.M)[:3]
+    lines = [{"text": name.upper(), "id": int(i), "guess": name.lower(), "category": None}
+             for i, name in ids]
+    lines.append({"text": "TSCO DRGN FRT", "id": None, "guess": "dragon fruit", "category": "Fruit"})
+    lines.append({"text": "WR SPCL 2PK", "id": None, "guess": None, "category": None})
+    return {"lines": lines}

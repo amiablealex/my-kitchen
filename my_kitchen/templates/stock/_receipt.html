@@ -1,0 +1,43 @@
+{% from "_icons.html" import icon %}
+{# Scan a receipt (Phase 33). Three steps in one dialog — pick a photo, frame
+   the item lines, read — driven by static/receipt.js. The photo is cropped and
+   shrunk in the browser, so only the framed part is ever uploaded. Results
+   open in the stock sheet. Only included when receipts are enabled and the
+   provider reads images. No provider or model names in this copy. #}
+<dialog class="confirm sheet receipt-sheet" id="receipt-sheet" aria-labelledby="receipt-title"
+        data-receipt-url="{{ url_for('stock.receipt') }}">
+  <div class="confirm-head">
+    <span class="confirm-bead sheet-bead" aria-hidden="true">{{ icon('receipt') }}</span>
+    <h2 id="receipt-title">Scan a receipt</h2>
+  </div>
+  <div class="sheet-body">
+    <div class="receipt-step" data-step="pick">
+      <p class="receipt-privacy"><strong>A cloud AI model reads this photo to find your items.</strong>
+        You'll frame just the item lines before anything is sent, and only that part leaves your phone.
+        The photo isn't stored. If you'd rather not send it, paste the receipt text into search instead.</p>
+      <label class="btn btn--primary receipt-pick">{{ icon('add') }} Take or choose a photo
+        <input type="file" accept="image/*" data-file>
+      </label>
+    </div>
+    <div class="receipt-step" data-step="frame" hidden>
+      <p class="receipt-hint">Drag the bars to just the item lines.</p>
+      <div class="frame">
+        <img data-img alt="Your receipt">
+        <div class="frame-shade frame-shade--top" data-shade="top"></div>
+        <div class="frame-shade frame-shade--bottom" data-shade="bottom"></div>
+        <div class="frame-handle" data-handle="top" aria-label="Top of the item lines"><span></span></div>
+        <div class="frame-handle" data-handle="bottom" aria-label="Bottom of the item lines"><span></span></div>
+      </div>
+    </div>
+    <div class="receipt-step receipt-reading" data-step="reading" hidden>
+      <div class="gen-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <p>Reading your receipt…</p>
+    </div>
+    <p class="needs-error" data-error hidden></p>
+  </div>
+  <div class="btn-row">
+    <button type="button" class="btn btn--primary" data-read hidden>Read items</button>
+    <button type="button" class="btn btn--ghost" data-another hidden>Another photo</button>
+    <button type="button" class="btn btn--ghost" data-cancel>Cancel</button>
+  </div>
+</dialog>

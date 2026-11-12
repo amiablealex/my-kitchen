@@ -92,30 +92,34 @@ def split_list(text):
     return out
 
 
-def parse_list(text):
-    """Resolve a pasted/typed list against the catalogue for the confirmation
-    sheet. Deterministic (the resolver only — no LLM).
+def classify(entries):
+    """Matched lines -> the stock sheet's contents. Every id is checked here
+    against the live catalogue, whoever proposed it (the resolver or an AI).
+
+    entries: [{text, id|None, guess, category_id, loose}]. `loose` marks a
+    fuzzy resolver hit, which is not trusted onto a staple.
 
     Returns {matched, unplaced, already, staples}:
       matched  — [{id, name, section, raw}] to stock; `raw` is the line as
-                 typed, only when it differs from the name (the sheet shows it,
-                 and an unticked guess drops to "Needs a hand").
-      unplaced — [{text, guess}] lines the resolver couldn't place. A FUZZY hit
-                 on a staple lands here too: "peppers" -> Black pepper would
-                 otherwise be silently skipped as a staple.
-      already  — count already in stock; staples — count of exact staple hits
+                 written, only when it differs from the name (the sheet shows
+                 it, and an unticked guess drops to "Needs a hand").
+      unplaced — [{text, guess, category_id}] lines nobody could place. A loose
+                 hit on a staple lands here too: "peppers" -> Black pepper
+                 would otherwise be silently skipped as a staple.
+      already  — count already in stock; staples — count of staple hits
                  (assumed always available, so nothing to do).
     """
-    lines = split_list(text)
-    index = build_index(load_catalogue(), ALIASES)
     by_id = {i.id: i for i in Ingredient.query.filter_by(is_active=True)}
-    matched, unplaced, seen = [], [], set()
+    matched, unplaced, seen, seen_text = [], [], set(), set()
     already = staples = 0
-    for line in lines:
-        res = resolve_with_index(line, index)
-        ing = by_id.get(res.ingredient_id)
-        if ing is None or (ing.is_staple and res.method == "fuzzy"):
-            unplaced.append({"text": line, "guess": line})
+    for e in entries:
+        ing = by_id.get(e.get("id"))
+        if ing is None or (ing.is_staple and e.get("loose")):
+            key = e["text"].lower()
+            if key not in seen_text:
+                seen_text.add(key)
+                unplaced.append({"text": e["text"], "guess": e.get("guess") or e["text"],
+                                 "category_id": e.get("category_id")})
             continue
         if ing.id in seen:
             continue
@@ -127,9 +131,33 @@ def parse_list(text):
         else:
             matched.append({
                 "id": ing.id, "name": ing.name, "section": ing.category.section,
-                "raw": line if line.lower() != ing.name.lower() else "",
+                "raw": e["text"] if e["text"].lower() != ing.name.lower() else "",
             })
     return {"matched": matched, "unplaced": unplaced, "already": already, "staples": staples}
+
+
+def parse_list(text, ai_match=None):
+    """A pasted/typed list -> the stock sheet's contents. The resolver places
+    what it can, locally. If `ai_match` is given (a callable taking the
+    leftover lines and returning entries, or None on failure), ONLY the lines
+    the resolver couldn't place are sent to it (Phase 33); a failure just
+    leaves them for "Needs a hand"."""
+    lines = split_list(text)
+    index = build_index(load_catalogue(), ALIASES)
+    staple_ids = {i.id for i in Ingredient.query.filter_by(is_active=True, is_staple=True)}
+    placed, leftover = [], []
+    for line in lines:
+        res = resolve_with_index(line, index)
+        loose = res.method == "fuzzy"
+        entry = {"text": line, "id": res.ingredient_id, "guess": line,
+                 "category_id": None, "loose": loose}
+        unsure = res.ingredient_id is None or (loose and res.ingredient_id in staple_ids)
+        (leftover if unsure else placed).append(entry)
+    if leftover and ai_match is not None:
+        ai_entries = ai_match([e["text"] for e in leftover])
+        if ai_entries is not None:
+            leftover = ai_entries
+    return classify(placed + leftover)
 
 
 def sheet_catalogue():

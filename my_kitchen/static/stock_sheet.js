@@ -34,6 +34,7 @@
     return n;
   }
   function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+  function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
   // ---- pills ---------------------------------------------------------------
   function findPill(id) { return picks.querySelector('input[value="' + id + '"]'); }
@@ -71,10 +72,13 @@
     var li = el("li", "needs-row");
     li.dataset.text = line.text;
     li.dataset.guess = line.guess || line.text;
+    if (line.category_id) li.dataset.cat = line.category_id;
     var btn = el("button", "needs-line");
     btn.type = "button";
     btn.appendChild(el("span", "needs-text", line.text));
-    btn.appendChild(el("span", "needs-ask", "What was this?"));
+    // An AI guess that differs from the line reads as a question ("dragon fruit?").
+    var hasGuess = line.guess && line.guess.toLowerCase() !== line.text.toLowerCase();
+    btn.appendChild(el("span", "needs-ask", hasGuess ? cap(line.guess) + "?" : "What was this?"));
     li.appendChild(btn);
     if (atTop) needsList.insertBefore(li, needsList.firstChild); else needsList.appendChild(li);
     refresh();
@@ -110,6 +114,8 @@
     var hits = search(q);
     if (!hits.length) {
       box.appendChild(el("p", "needs-none", q ? "Nothing in your catalogue matches." : "Type what it was."));
+      // With a suggested category, "add it as new" is almost certainly next.
+      if (q && row.dataset.cat) panel.querySelector("[data-needs-new]").hidden = false;
       return;
     }
     hits.forEach(function (c) {
@@ -135,6 +141,7 @@
     var newBox = panel.querySelector("[data-needs-new]");
     var err = panel.querySelector("[data-needs-error]");
     q.value = row.dataset.guess;
+    if (row.dataset.cat) panel.querySelector("[data-needs-cat]").value = row.dataset.cat;
     row.appendChild(panel);
     row.classList.add("is-open");
     renderResults(panel, row);
@@ -150,7 +157,7 @@
       newBox.hidden = !newBox.hidden;
     });
     panel.querySelector("[data-needs-create]").addEventListener("click", function () {
-      var name = q.value.trim();
+      var name = cap(q.value.trim());   // catalogue names start with a capital
       var cat = panel.querySelector("[data-needs-cat]");
       if (!name) { q.focus(); return; }
       if (!cat.value) { err.textContent = "Pick a category first."; err.hidden = false; cat.focus(); return; }
@@ -217,7 +224,8 @@
   });
 
   window.mkStockSheet = {
-    // opts: { mode, title, note, items: [{id, name, section, raw}], unplaced: [{text, guess}], onDone(changedIds) }
+    // opts: { mode, title, note, items: [{id, name, section, raw}],
+    //         unplaced: [{text, guess, category_id}], onDone(changedIds) }
     open: function (opts) {
       state = { mode: opts.mode || "in", onDone: opts.onDone };
       titleEl.textContent = opts.title || "";

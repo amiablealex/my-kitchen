@@ -1,11 +1,16 @@
 from urllib.parse import urlparse
 
-from flask import Blueprint, render_template, request, jsonify, abort, flash
+from flask import (Blueprint, abort, current_app, flash, jsonify, render_template,
+                   request)
+from flask_login import current_user
 
 from ..extensions import db
 from ..models import Category, Ingredient
+from ..llm import receipt as receipt_reader
+from ..llm.providers import provider_reads_images
+from ..usage.service import read_blocked_reason
 from .service import (
-    in_stock_groups, parse_list, search_catalogue, set_stock, sheet_catalogue,
+    classify, in_stock_groups, parse_list, search_catalogue, set_stock, sheet_catalogue,
 )
 
 stock_bp = Blueprint("stock", __name__, url_prefix="/stock")
@@ -32,6 +37,7 @@ def index():
         categories=Category.query.order_by(*Category.ordering()).all(),
         return_to=_safe_return(request.args.get("return_to")),
         sheet_catalogue=sheet_catalogue(),
+        receipt_enabled=receipt_enabled(),
     )
 
 
@@ -116,10 +122,62 @@ def create():
                    section=ing.category.section)
 
 
+def receipt_enabled():
+    """The receipt button shows only when the household allows it AND the
+    provider's models read images — hidden, never a "may not work" note."""
+    cfg = current_app.config
+    return bool(cfg.get("RECEIPT_SCANNING")) and provider_reads_images(cfg)
+
+
 @stock_bp.route("/parse", methods=["POST"])
 def parse():
-    """A typed or pasted list -> the confirmation sheet's contents (Phase 32)."""
-    return jsonify(parse_list(request.form.get("text", "")))
+    """A typed or pasted list -> the confirmation sheet's contents (Phase 32).
+    Lines the resolver can't place get one AI matching call (Phase 33) when
+    today's limits allow; only those lines are sent, as text."""
+    def ai_match(lines):
+        if read_blocked_reason(current_user.id):
+            return None
+        res = receipt_reader.read(current_app.config, current_user.id, lines=lines)
+        return res["lines"] if res["ok"] else None
+    return jsonify(parse_list(request.form.get("text", ""), ai_match=ai_match))
+
+
+def _image_mime(data):
+    """The photo's type from its first bytes — never trust the filename."""
+    if data[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
+@stock_bp.route("/receipt", methods=["POST"])
+def receipt():
+    """Read the framed part of a receipt photo (Phase 33). The browser has
+    already cropped it to the item lines and shrunk it; it's held in memory
+    for the one call and never written anywhere."""
+    if not receipt_enabled():
+        abort(404)
+    blocked = read_blocked_reason(current_user.id)
+    if blocked:
+        return jsonify(ok=False, message=blocked)
+    upload = request.files.get("image")
+    data = upload.read() if upload else b""
+    mime = _image_mime(data)
+    if not mime:
+        return jsonify(ok=False, message="That doesn't look like a photo. Try another one?"), 400
+    res = receipt_reader.read(current_app.config, current_user.id, image=(data, mime))
+    del data, upload
+    if not res["ok"]:
+        current_app.logger.warning("receipt read failed: %s", res["error"])
+        return jsonify(ok=False, message="The receipt couldn't be read just now. Try again, "
+                                         "or paste the receipt text into search instead.")
+    if not res["lines"]:
+        return jsonify(ok=False, message="No food items found in that. Is the frame over "
+                                         "the item lines?")
+    return jsonify(ok=True, **classify(res["lines"]))
 
 
 @stock_bp.route("/bulk", methods=["POST"])

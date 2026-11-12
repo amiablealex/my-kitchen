@@ -176,6 +176,50 @@ def register_cli(app):
         from .resolver.report import run_resolve_report
         run_resolve_report(echo=click.echo)
 
+    @app.cli.command("receipt-eval")
+    @click.argument("folder", type=click.Path(exists=True, file_okay=False))
+    def receipt_eval(folder):
+        """Read real receipt photos and compare with what you expected (Phase 33).
+
+        FOLDER holds photos plus an expected.json: {"photo.jpg": ["Milk",
+        "Chicken thigh", ...]} — the catalogue names you'd want ticked. Keep it
+        OUT of the repo (it's public, and receipts are personal). Each photo is
+        sent whole, so crop them to the item lines first, as the app would.
+        Uses the configured provider and counts towards today's usage."""
+        import json
+        from pathlib import Path
+        from .llm.receipt import read
+        from .models import Ingredient
+        from .stock.routes import _image_mime
+        root = Path(folder)
+        expected = json.loads((root / "expected.json").read_text())
+        names = {i.id: i.name for i in Ingredient.query.filter_by(is_active=True)}
+        hit_total = want_total = extra_total = 0
+        for fname, want in expected.items():
+            data = (root / fname).read_bytes()
+            res = read(app.config, None, image=(data, _image_mime(data) or "image/jpeg"))
+            if not res["ok"]:
+                click.echo(f"{fname}: FAILED — {res['error']}")
+                continue
+            got = {names[e["id"]].lower() for e in res["lines"] if e["id"] in names}
+            want_set = {w.lower() for w in want}
+            missed, extra = sorted(want_set - got), sorted(got - want_set)
+            unplaced = [e["text"] + (f" ({e['guess']})" if e["guess"] else "")
+                        for e in res["lines"] if e["id"] is None]
+            hit_total += len(want_set & got)
+            want_total += len(want_set)
+            extra_total += len(extra)
+            click.echo(f"{fname}: {len(want_set & got)}/{len(want_set)} found")
+            if missed:
+                click.echo("  missed: " + ", ".join(missed))
+            if extra:
+                click.echo("  wrong:  " + ", ".join(extra))
+            if unplaced:
+                click.echo("  for Needs a hand: " + "; ".join(unplaced))
+        if want_total:
+            click.echo(f"\nOverall: {hit_total}/{want_total} found "
+                       f"({100 * hit_total // want_total}%), {extra_total} wrong matches.")
+
     @app.shell_context_processor
     def shell_context():
         return {

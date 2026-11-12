@@ -1,7 +1,8 @@
 """Model-call accounting (Phase 25): daily limits and cost estimates.
 
-Every model call is a DB row (a Generation today; questions join in Phase 27),
-so a limit is just a COUNT over rows. That's correct across both gunicorn
+Every model call is a DB row (a Generation; a question since Phase 27; an
+AiCall for receipt reads and list matches since Phase 33), so a limit is just
+a COUNT over rows. That's correct across both gunicorn
 workers with no in-memory state, and needs no new table.
 
 Cost is never stored. Tokens are, and they're priced here at render time from
@@ -14,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 from flask import current_app
 
-from ..models import Generation, RecipeComment
+from ..models import AiCall, Generation, RecipeComment
 
 # USD per 1M tokens: (input, output). Keyed by model id without the provider
 # prefix stored on generations.model ("gemini:gemini-3.5-flash"). A model not
@@ -31,7 +32,8 @@ MODEL_PRICES = {
 
 
 KIND_LABELS = {None: "Generate", "generate": "Generate",
-               "regenerate": "Try again", "refine": "Refine", "question": "Question"}
+               "regenerate": "Try again", "refine": "Refine", "question": "Question",
+               "receipt": "Receipt", "match": "List match"}
 
 
 def model_id(stored):
@@ -77,6 +79,13 @@ def _questions_since(since, user_id=None):
     return q.count()
 
 
+def _ai_calls_since(since, user_id=None):
+    q = AiCall.query.filter(AiCall.created_at >= since)
+    if user_id is not None:
+        q = q.filter(AiCall.user_id == user_id)
+    return q.count()
+
+
 def limits_today(user_id):
     """Today's counts against the configured limits, for the wizard and the
     usage page. Failed generations count: they can still have cost tokens."""
@@ -84,16 +93,20 @@ def limits_today(user_id):
     start = day_start_utc()
     mine = _generations_since(start, user_id)
     my_questions = _questions_since(start, user_id)
-    household = _generations_since(start) + _questions_since(start)
+    my_reads = _ai_calls_since(start, user_id)
+    household = _generations_since(start) + _questions_since(start) + _ai_calls_since(start)
     gen_limit = int(cfg.get("LIMIT_GENERATIONS_PER_USER_DAY", 10))
     q_limit = int(cfg.get("LIMIT_QUESTIONS_PER_USER_DAY", 20))
     house_limit = int(cfg.get("LIMIT_HOUSEHOLD_CALLS_DAY", 40))
+    read_limit = int(cfg.get("LIMIT_RECEIPT_READS_PER_USER_DAY", 10))
     return {
         "generations": mine, "generations_limit": gen_limit,
         "questions": my_questions, "questions_limit": q_limit,
         "household": household, "household_limit": house_limit,
         "generations_left": max(0, min(gen_limit - mine, house_limit - household)),
         "questions_left": max(0, min(q_limit - my_questions, house_limit - household)),
+        "reads": my_reads, "reads_limit": read_limit,
+        "reads_left": max(0, min(read_limit - my_reads, house_limit - household)),
     }
 
 
@@ -120,6 +133,19 @@ def generation_blocked_reason(user_id):
     if lim["household"] >= lim["household_limit"]:
         return (f"The household has reached today's limit of "
                 f"{lim['household_limit']} AI calls. It resets at midnight.")
+    return None
+
+
+def read_blocked_reason(user_id):
+    """None if this user may have a receipt or list read now, else a calm
+    explanation (Phase 33)."""
+    lim = limits_today(user_id)
+    if lim["reads"] >= lim["reads_limit"]:
+        return (f"You've used all {lim['reads_limit']} of today's receipt reads. "
+                "You can still paste or type a list, and the count resets at midnight.")
+    if lim["household"] >= lim["household_limit"]:
+        return (f"The household has reached today's limit of {lim['household_limit']} "
+                "AI calls. You can still paste or type a list; it resets at midnight.")
     return None
 
 
@@ -158,7 +184,8 @@ def dashboard(user_id):
     """Everything the /usage page shows. Household scale: one pass in Python
     over all generations is cheaper to read than a pile of GROUP BYs."""
     rows = Generation.query.all() + [
-        _QuestionCall(c) for c in RecipeComment.query.filter(RecipeComment.kind == "question")]
+        _QuestionCall(c) for c in RecipeComment.query.filter(RecipeComment.kind == "question")
+    ] + AiCall.query.all()   # an AiCall already has the attributes the summaries read
     rows.sort(key=lambda g: g.created_at or datetime.min, reverse=True)
     now = naive_utc_now()
     today = day_start_utc()

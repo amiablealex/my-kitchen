@@ -8,6 +8,7 @@
 
   {% include "stock/_editor.html" %}
   {% include "stock/_sheet.html" %}
+  {% if receipt_enabled %}{% include "stock/_receipt.html" %}{% endif %}
 
   {% if return_to %}
     {# Mid-wizard: a docked way back, so nobody reaches for the Cook tab (which
@@ -22,4 +23,5 @@
   <script src="{{ url_for('static', filename='toast.js') }}"></script>
   <script src="{{ url_for('static', filename='stock_sheet.js') }}"></script>
   <script src="{{ url_for('static', filename='stock.js') }}"></script>
+  {% if receipt_enabled %}<script src="{{ url_for('static', filename='receipt.js') }}"></script>{% endif %}
 {% endblock %}

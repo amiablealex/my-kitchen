@@ -17,12 +17,13 @@
 
 {% block content %}
   <h1>Usage</h1>
-  <p class="lead">AI calls made by the household — recipes, tries, refines and @kitchen questions — with an estimated cost. Limits reset at midnight.</p>
+  <p class="lead">AI calls made by the household — recipes, tries, refines, @kitchen questions and receipt reads — with an estimated cost. Limits reset at midnight.</p>
 
   <section class="card usage-limits">
     <h2 class="card-title">Today</h2>
     {{ meter(limits.generations, limits.generations_limit, "Your recipe generations") }}
     {{ meter(limits.questions, limits.questions_limit, "Your @kitchen questions") }}
+    {{ meter(limits.reads, limits.reads_limit, "Your receipt and list reads") }}
     {{ meter(limits.household, limits.household_limit, "Household AI calls") }}
   </section>
 

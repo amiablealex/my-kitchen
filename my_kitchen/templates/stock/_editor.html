@@ -11,6 +11,9 @@
     <input type="search" id="stock-search" placeholder="Search, add an item, or paste a list…"
            autocomplete="off" data-search-url="{{ url_for('stock.search') }}"
            data-parse-url="{{ url_for('stock.parse') }}">
+    {% if receipt_enabled %}
+      <button type="button" class="receipt-btn" id="receipt-open" aria-label="Scan a receipt" title="Scan a receipt">{{ icon('receipt') }}</button>
+    {% endif %}
   </label>
 </div>
 
