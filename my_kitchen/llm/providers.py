@@ -1,4 +1,5 @@
 import json
+import re
 
 
 DEFAULT_MODELS = {
@@ -197,6 +198,98 @@ class GeminiProvider:
         return resp.text
 
 
+class OpenAICompatibleProvider:
+    """Any server speaking the OpenAI chat-completions API (Phase 36): Ollama,
+    LM Studio, llama.cpp, vLLM, or a cloud service such as OpenRouter.
+
+    UNTESTED by the author and only as good as the model behind it. Small
+    local models follow the allergy and dislike rules less reliably than the
+    tuned cloud models — the prompt is the only safeguard, so check.
+
+    No SDK: one HTTP POST. `base_url` is the server's address; "/v1" is added
+    when it has no path (so http://host:11434 works for Ollama). JSON mode
+    asks for `response_format: json_object`, retried once without it if the
+    server refuses. Reasoning models' <think>…</think> preamble is stripped.
+    Images go as data URLs; whether the model can read them is the
+    `LLM_IMAGES` option's call, not the code's.
+    """
+    name = "openai_compatible"
+
+    def __init__(self, base_url, api_key=None, model=None, temperature=None, max_tokens=None,
+                 timeout=300, **kwargs):
+        if not base_url:
+            raise ProviderError("LLM_BASE_URL is not set (the address of your model server).")
+        if not model:
+            raise ProviderError("LLM_MODEL is not set (the model's name on your server).")
+        from urllib.parse import urlparse
+        base = base_url.strip().rstrip("/")
+        if urlparse(base).path in ("", "/"):
+            base += "/v1"
+        self.url = base + "/chat/completions"
+        self.api_key = api_key or ""
+        self.model = model
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+        self.timeout = timeout
+        self.last_finish_reason = None
+        self.last_usage = None
+
+    def _post(self, body):
+        import urllib.error
+        import urllib.request
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        req = urllib.request.Request(self.url, data=json.dumps(body).encode(), headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                return json.loads(resp.read().decode("utf-8", "replace"))
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode("utf-8", "replace")[:300]
+            raise ProviderError(f"Model server error {e.code}: {detail}") from e
+        except (urllib.error.URLError, TimeoutError, ValueError) as e:
+            raise ProviderError(f"Couldn't reach the model server at {self.url}: {e}") from e
+
+    def generate(self, system_prompt, user_prompt, brief=None, json_mode=True, thinking=None,
+                 images=None):
+        # thinking is a Gemini knob; ignored here.
+        self.last_finish_reason = None
+        self.last_usage = None
+        content = user_prompt
+        if images:
+            import base64
+            content = [{"type": "image_url", "image_url": {
+                           "url": f"data:{m};base64," + base64.b64encode(b).decode("ascii")}}
+                       for b, m in images] + [{"type": "text", "text": user_prompt}]
+        body = {
+            "model": self.model,
+            "messages": [{"role": "system", "content": system_prompt},
+                         {"role": "user", "content": content}],
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+        }
+        if json_mode:
+            body["response_format"] = {"type": "json_object"}
+        try:
+            data = self._post(body)
+        except ProviderError as e:
+            if not (json_mode and "error 400" in str(e)):
+                raise
+            body.pop("response_format")       # an older server without JSON mode
+            data = self._post(body)
+        try:
+            choice = data["choices"][0]
+            text = choice["message"].get("content") or ""
+        except (KeyError, IndexError, TypeError, AttributeError) as e:
+            raise ProviderError(f"Unexpected reply from the model server: {str(data)[:200]}") from e
+        self.last_finish_reason = choice.get("finish_reason")
+        usage = data.get("usage") or {}
+        if usage:
+            self.last_usage = {"input": _int(usage.get("prompt_tokens")),
+                               "output": _int(usage.get("completion_tokens"))}
+        return re.sub(r"(?s)^\s*<think>.*?</think>\s*", "", text)
+
+
 def _anthropic_content(text, images):
     if not images:
         return text
@@ -211,10 +304,20 @@ def _anthropic_content(text, images):
 # rendered for these; a future text-only provider simply isn't listed (or
 # reads an option), so the feature never appears rather than failing.
 IMAGE_PROVIDERS = {"mock", "gemini", "anthropic"}
+# Providers that are definitely a cloud service. The OpenAI-compatible one may
+# be local or cloud, so user-facing copy says "your AI model" for it.
+CLOUD_PROVIDERS = {"mock", "gemini", "anthropic"}
 
 
 def provider_reads_images(config):
-    return (config.get("LLM_PROVIDER") or "mock").lower() in IMAGE_PROVIDERS
+    provider = (config.get("LLM_PROVIDER") or "mock").lower()
+    if provider == "openai_compatible":
+        return bool(config.get("LLM_IMAGES"))   # only the user knows their model
+    return provider in IMAGE_PROVIDERS
+
+
+def provider_is_cloud(config):
+    return (config.get("LLM_PROVIDER") or "mock").lower() in CLOUD_PROVIDERS
 
 
 def get_provider(config, model=None, max_tokens=None, temperature=None):
@@ -234,7 +337,13 @@ def get_provider(config, model=None, max_tokens=None, temperature=None):
         return AnthropicProvider(api_key=config.get("ANTHROPIC_API_KEY"), **common)
     if provider == "gemini":
         return GeminiProvider(api_key=config.get("GEMINI_API_KEY"), **common)
-    raise ProviderError(f"Unknown LLM_PROVIDER '{provider}'. Use mock, anthropic, or gemini.")
+    if provider == "openai_compatible":
+        return OpenAICompatibleProvider(base_url=config.get("LLM_BASE_URL"),
+                                        api_key=config.get("LLM_API_KEY"),
+                                        timeout=60 * int(config.get("LLM_JOB_TIMEOUT_MINUTES", 5)),
+                                        **common)
+    raise ProviderError(f"Unknown LLM_PROVIDER '{provider}'. Use mock, anthropic, gemini "
+                        "or openai_compatible.")
 
 
 def _mock_payload(brief):

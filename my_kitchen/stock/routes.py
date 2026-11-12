@@ -7,7 +7,7 @@ from flask_login import current_user
 from ..extensions import db
 from ..models import Category, Ingredient
 from ..llm import receipt as receipt_reader
-from ..llm.providers import provider_reads_images
+from ..llm.providers import provider_is_cloud, provider_reads_images
 from ..usage.service import read_blocked_reason
 from .service import (
     classify, in_stock_groups, parse_list, search_catalogue, set_stock, sheet_catalogue,
@@ -38,6 +38,7 @@ def index():
         return_to=_safe_return(request.args.get("return_to")),
         sheet_catalogue=sheet_catalogue(),
         receipt_enabled=receipt_enabled(),
+        cloud_ai=provider_is_cloud(current_app.config),
     )
 
 

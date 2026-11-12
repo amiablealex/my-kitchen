@@ -41,6 +41,10 @@ DIRECT_MAP = {
 SECRET_MAP = {
     "gemini_api_key": "GEMINI_API_KEY",
     "anthropic_api_key": "ANTHROPIC_API_KEY",
+    "llm_base_url": "LLM_BASE_URL",
+    "llm_api_key": "LLM_API_KEY",
+    "llm_images": "LLM_IMAGES",
+    "llm_job_timeout_minutes": "LLM_JOB_TIMEOUT_MINUTES",
 }
 
 

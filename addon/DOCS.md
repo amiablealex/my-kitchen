@@ -4,7 +4,8 @@ Self-hosted, LLM-powered household recipe generator.
 
 ## Requirements
 - Home Assistant OS or Supervised (add-ons aren't available on Container/Core).
-- A Gemini API key (or Anthropic), unless you run the `mock` provider.
+- A Gemini API key (or Anthropic), unless you run the `mock` provider or your
+  own model (see *Your own model*).
 
 ## Install
 1. Settings → Add-ons → Add-on Store → ⋮ (top right) → Repositories.
@@ -20,6 +21,34 @@ Self-hosted, LLM-powered household recipe generator.
 3. Open **My Kitchen** from the Home Assistant sidebar (ingress, over HTTPS) and
    log in. Change the password in the app. (A direct-LAN port is also exposed,
    but the installable PWA only comes fully alive over the HTTPS ingress URL.)
+
+## Your own model (untested)
+**I've tried to let you use your own model, but I haven't been able to test
+it. It will only be as good as your model.** Set `llm_provider:
+openai_compatible` to use any server that speaks the OpenAI chat API: Ollama,
+LM Studio, llama.cpp, vLLM, or a cloud service such as OpenRouter.
+
+- `llm_base_url`: your server's address, e.g. `http://192.168.1.20:11434` for
+  Ollama. `/v1` is added if the address has no path.
+- `llm_model`: the model's name on your server (required, no default).
+  `llm_qa_model` can name a smaller one for @kitchen answers.
+- `llm_api_key`: only if your server or service needs one.
+- `llm_images`: turn on only if the model reads images (a "vision" model).
+  Off, receipt scanning and recipes from photos simply don't appear.
+- `llm_job_timeout_minutes` (default 5): how long a generation may take before
+  it's treated as stuck. Local models on modest hardware can need much
+  longer; two full recipes are a few thousand words of output.
+
+Things to know. Recipe quality was tuned on Gemini; smaller models write
+plainer recipes and may break the JSON format, which shows as a failed
+generation. **They also follow allergy and dislike rules less reliably**, and
+the prompt is the only safeguard, so check recipes for anyone with an allergy.
+A Raspberry Pi is too slow to run a useful model itself; a computer with a
+recent graphics card or Apple Silicon on your network is a better host. The
+Usage page shows these calls' tokens but no cost, since My Kitchen can't know
+your model's price. If you use a model through a cloud service, the receipt
+privacy note still applies: the app says "your AI model" rather than "a cloud
+AI model", because it can't tell which you're using.
 
 ## Model for @kitchen answers
 `llm_qa_model` picks the model that answers @kitchen questions on a recipe.

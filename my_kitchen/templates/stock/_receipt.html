@@ -12,7 +12,9 @@
   </div>
   <div class="sheet-body">
     <div class="receipt-step" data-step="pick">
-      <p class="receipt-privacy"><strong>A cloud AI model reads this photo to find your items.</strong>
+      {# "A cloud AI model" for the cloud providers; the OpenAI-compatible one
+         may be local, so it's "your AI model" there. Never a provider name. #}
+      <p class="receipt-privacy"><strong>{{ "A cloud AI model" if cloud_ai else "Your AI model" }} reads this photo to find your items.</strong>
         You'll frame just the item lines before anything is sent, and only that part leaves your phone.
         The photo isn't stored. If you'd rather not send it, paste the receipt text into search instead.</p>
       <label class="btn btn--primary receipt-pick">{{ icon('add') }} Take or choose a photo

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.36.0
+- **Use your own model (untested).** A new provider, `openai_compatible`,
+  works with any server that speaks the OpenAI chat API: Ollama, LM Studio,
+  llama.cpp, or a service like OpenRouter. I haven't been able to test it
+  with a real model, and it will only be as good as your model. Smaller
+  models are less reliable with allergy rules, so check. See the add-on
+  docs.
+- New options: `llm_base_url`, `llm_api_key`, `llm_images` (whether your
+  model reads images), and `llm_job_timeout_minutes`, which lets a slow model
+  take longer before a generation counts as stuck. The default stays at 5
+  minutes.
+
 ## 0.35.0
 - **Add a recipe from a photo.** *Add a recipe → From a photo*: photograph
   a cookbook page or a handwritten card. A recipe that runs over the page is

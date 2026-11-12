@@ -48,9 +48,9 @@ SECTIONS = SECTION_CHOICES
 # cuisine tag in the create/edit form and the inline tag editor. (Phase 17)
 CUISINE_MEAL_TYPES = [n for n in MEAL_TYPE_NAMES if meal_type_takes_cuisine(n)]
 
-# A running generation older than this is treated as dead (no reaper process —
-# the check lives in the poll + the idempotency guard). Phase 12.
-STALE_AFTER_SECONDS = 5 * 60
+# A running generation older than LLM_JOB_TIMEOUT_MINUTES (default 5) is
+# treated as dead (no reaper process — the check lives in the poll + the
+# idempotency guard). Phase 12; an option since Phase 36, for slow local models.
 
 # Special request (Phase 25): one placeholder is picked per render so the box
 # teaches by example without a wall of help text; the chips add text on tap.
@@ -98,7 +98,7 @@ def _generation_age_seconds(gen):
 
 def _is_stale(gen):
     """A still-"running" row older than the cap is treated as dead."""
-    return _generation_age_seconds(gen) > STALE_AFTER_SECONDS
+    return _generation_age_seconds(gen) > 60 * int(current_app.config.get("LLM_JOB_TIMEOUT_MINUTES", 5))
 
 
 def get_wizard():

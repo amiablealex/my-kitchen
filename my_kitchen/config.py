@@ -38,6 +38,17 @@ class Config:
     LLM_MODEL = os.environ.get("LLM_MODEL", "")            # blank -> provider default
     ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+    # The OpenAI-compatible provider (Phase 36, untested): Ollama, LM Studio,
+    # llama.cpp, OpenRouter… LLM_MODEL is required with it (no default).
+    LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "")
+    LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
+    # Whether that model reads images. Off hides receipt scanning and recipe
+    # photos rather than letting them fail.
+    LLM_IMAGES = os.environ.get("LLM_IMAGES", "false").lower() in ("1", "true", "yes", "on")
+    # How long a generation may run before it's treated as stuck, and the
+    # request timeout for the OpenAI-compatible provider. Local models can be
+    # slow; 5 minutes suits the cloud ones.
+    LLM_JOB_TIMEOUT_MINUTES = int(os.environ.get("LLM_JOB_TIMEOUT_MINUTES", "5"))
 
     # Anti-repetition (wired in a later phase)
     LLM_RECENT_TITLES_N = int(os.environ.get("LLM_RECENT_TITLES_N", "10"))
