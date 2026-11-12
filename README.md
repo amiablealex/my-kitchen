@@ -16,7 +16,7 @@ daily in the kitchen.
 Flask + SQLite, generation via a swappable provider adapter (mock / Anthropic /
 Gemini). Runs happily on a Raspberry Pi on the local network.
 
-<img width="1524" height="661" alt="4-screens" src="https://github.com/user-attachments/assets/766c8dc3-0f73-442a-a270-fab390a4fb3a" />
+<img width="1534" height="547" alt="image" src="https://github.com/user-attachments/assets/e817794c-23ec-48cd-8095-256f2443f14e" />
 
 ## What it does
 
