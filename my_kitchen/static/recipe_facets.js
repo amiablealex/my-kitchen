@@ -75,8 +75,12 @@
     return null;
   }
 
-  var GROUP_NAMES = { source: "Made by", meal: "Meal", cuisine: "Cuisine", cook: "Cook" };
-  var GROUP_ORDER = ["source", "meal", "cuisine", "cook"];
+  // "Needs a hand" (0.36.6) holds housekeeping filters; the server only sends
+  // it while something needs it, so it vanishes once everything's sorted.
+  var GROUP_NAMES = { source: "Made by", meal: "Meal", cuisine: "Cuisine", cook: "Cook",
+                      check: "Needs a hand" };
+  var GROUP_ORDER = ["source", "meal", "cuisine", "cook", "check"];
+  var CHECK_PHRASES = { unlinked: ["has unlinked ingredients", "have unlinked ingredients"] };
   var chips = [];  // [{facet, value, label}]
 
   function hasChip(facet, value) {
@@ -121,8 +125,15 @@
     });
     countLine.hidden = !filtering;
     box.classList.toggle("has-filters", chips.length > 0);
-    countN.textContent = shown + " " + noun + (shown === 1 ? "" : "s") +
-      (ing && shown ? (shown === 1 ? " uses " : " use ") + ing.name : "");
+    // Say what the list is when it's a to-do list or an ingredient search.
+    var check = chips.filter(function (c) { return c.facet === "check"; })[0];
+    var phrase = "";
+    if (check && CHECK_PHRASES[check.value]) {
+      phrase = " " + CHECK_PHRASES[check.value][shown === 1 ? 0 : 1];
+    } else if (ing && shown) {
+      phrase = (shown === 1 ? " uses " : " use ") + ing.name;
+    }
+    countN.textContent = shown + " " + noun + (shown === 1 ? "" : "s") + phrase;
     if (nomatch) nomatch.hidden = !filtering || shown > 0;
     save();
   }

@@ -41,7 +41,7 @@
             {% if row.kind in ('user', 'imported') %}
               <li class="recipe-row" data-archive-key="recipe_id" data-archive-id="{{ row.recipe.id }}" data-title="{{ row.f_title }}"
                   data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
-                  data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}" data-ing="{{ row.f_ing }}">
+                  data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}" data-ing="{{ row.f_ing }}" data-check="{{ row.f_check }}">
                 {{ row_mark(row.recipe.source) }}
                 <div class="row-main">
                   {{ row_title(row.recipe) }}
@@ -52,7 +52,7 @@
             {% elif row.status == "chosen" %}
               <li class="recipe-row" data-archive-key="generation_id" data-archive-id="{{ row.gen.id }}" data-title="{{ row.f_title }}"
                   data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
-                  data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}" data-ing="{{ row.f_ing }}">
+                  data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}" data-ing="{{ row.f_ing }}" data-check="{{ row.f_check }}">
                 {{ row_mark('ai') }}
                 <div class="row-main">
                   {{ row_title(row.chosen) }}
@@ -63,7 +63,7 @@
             {% elif row.status == "unchosen" %}
               <li class="recipe-row recipe-row--pair" data-archive-key="generation_id" data-archive-id="{{ row.gen.id }}" data-archive-n="{{ row.recipes|length }}" data-title="{{ row.f_title }}"
                   data-cuisine="{{ row.f_cuisine }}" data-meal="{{ row.f_meal }}"
-                  data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}" data-ing="{{ row.f_ing }}">
+                  data-cook="{{ row.f_cook }}" data-source="{{ row.f_source }}" data-ing="{{ row.f_ing }}" data-check="{{ row.f_check }}">
                 {{ row_mark('ai') }}
                 <div class="row-main">
                   <div class="row-meta"><a class="pick-tag" href="{{ url_for('wizard.choice', generation_id=row.gen.id) }}">Pick one</a>{% if row.gen.created_by %}<span>{{ row.gen.created_by.name }}</span><span class="sep">·</span>{% endif %}<span>{{ row.gen.created_at | relday }}</span></div>
@@ -74,7 +74,7 @@
               </li>
             {% else %}
               <li class="recipe-row" data-archive-key="generation_id" data-archive-id="{{ row.gen.id }}" data-archive-failed data-title="generation failed"
-                  data-cuisine="" data-meal="" data-cook="{{ row.f_cook }}" data-source="" data-ing="">
+                  data-cuisine="" data-meal="" data-cook="{{ row.f_cook }}" data-source="" data-ing="" data-check="">
                 <span class="source-dot source-dot--failed" aria-hidden="true"></span>
                 <div class="row-main">
                   <div class="row-title"><span class="muted">Generation failed</span></div>

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.36.6
+- **Find recipes with unlinked ingredients.** When any recipe has an ingredient
+  line that isn't linked to your catalogue, the Recipes filters gain a last
+  group, *Needs a hand*, with *Unlinked ingredients*. Pick it for a to-do list
+  ("3 recipes have unlinked ingredients"): open each, use *Link it*, and come
+  back. The group disappears once everything is linked.
+
 ## 0.36.5
 - **The filter button works while you've typed something.** It always shows
   every filter, and picking one keeps your search, so "brown sugar" plus

@@ -18,6 +18,19 @@ history_bp = Blueprint("history", __name__, url_prefix="/history")
 # The filter's labels for a recipe's source, in the panel's order (0.36.2).
 SOURCE_LABELS = {"user": "By hand", "imported": "Imported", "ai": "AI"}
 
+# "Needs a hand" (0.36.6): housekeeping filters, last in the panel and only
+# offered while something needs it. One check so far.
+CHECK_LABELS = {"unlinked": "Unlinked ingredients"}
+
+
+def _unlinked_recipe_ids():
+    """Recipes with an ingredient line not linked to the catalogue: the same
+    rule as the note on the recipe page (unlinked and not a to-buy line), so
+    the filter and the note never disagree."""
+    return {rid for (rid,) in db.session.query(RecipeIngredient.recipe_id)
+            .filter(RecipeIngredient.ingredient_id.is_(None),
+                    RecipeIngredient.to_buy.is_(False)).distinct()}
+
 
 def _row_recipes(row):
     """The recipes a row actually links to — its filterable surface. A chosen
@@ -67,9 +80,10 @@ class _FacetOptions:
     tapped, so it's ordered the way the panel reads: Made by (hand, imported,
     AI), then Meal and Cuisine in the app's own orders, then Cook A–Z."""
 
-    FACETS = ("source", "meal", "cuisine", "cook")
+    FACETS = ("source", "meal", "cuisine", "cook", "check")
     ORDER = {
         "source": list(SOURCE_LABELS),
+        "check": list(CHECK_LABELS),
         "meal": [m.lower() for m in MEAL_TYPE_NAMES],
         "cuisine": [c.lower() for c in CUISINES],
     }
@@ -94,8 +108,10 @@ class _FacetOptions:
         return out
 
 
-def _note_recipe(opts, recipe, cooks):
+def _note_recipe(opts, recipe, cooks, unlinked=()):
     """Record one recipe's facet values against the collector."""
+    if recipe.id in unlinked:
+        opts.note("check", "unlinked", CHECK_LABELS["unlinked"])
     opts.note("cuisine", recipe.cuisine)
     opts.note("meal", recipe.meal_type)
     opts.note("source", recipe.source, SOURCE_LABELS.get(recipe.source, recipe.source))
@@ -103,9 +119,9 @@ def _note_recipe(opts, recipe, cooks):
         opts.note("cook", name)
 
 
-def _attach_facets(rows):
+def _attach_facets(rows, unlinked=()):
     """Decorate each History row with its facet fields and return the options.
-    Walks the rows already in memory — no extra queries."""
+    Walks the rows already in memory; `unlinked` is _unlinked_recipe_ids()."""
     opts = _FacetOptions()
     for row in rows:
         recs = _row_recipes(row)
@@ -115,12 +131,13 @@ def _attach_facets(rows):
         row["f_cook"] = _facet_field(cooks)
         row["f_source"] = _facet_field(r.source for r in recs)
         row["f_title"] = " ".join((r.title or "").lower() for r in recs)
+        row["f_check"] = _facet_field(["unlinked"] if any(r.id in unlinked for r in recs) else [])
         for r in recs:
-            _note_recipe(opts, r, cooks)
+            _note_recipe(opts, r, cooks, unlinked)
     return opts.as_list()
 
 
-def _recipe_facets(recipes):
+def _recipe_facets(recipes, unlinked=()):
     """Facet fields for a flat list of recipes (Favourites, where each row is
     one recipe). Returns (fields_by_recipe_id, options)."""
     opts = _FacetOptions()
@@ -134,8 +151,9 @@ def _recipe_facets(recipes):
             "meal": _facet_field([r.meal_type]),
             "cook": _facet_field(cooks),
             "source": _facet_field([r.source]),
+            "check": _facet_field(["unlinked"] if r.id in unlinked else []),
         }
-        _note_recipe(opts, r, cooks)
+        _note_recipe(opts, r, cooks, unlinked)
     return fields, opts.as_list()
 
 
@@ -256,7 +274,7 @@ def index():
 
     rows.sort(key=lambda row: row["sort_at"] or datetime.min, reverse=True)
 
-    facet_options = _attach_facets(rows)
+    facet_options = _attach_facets(rows, _unlinked_recipe_ids())
     ing_by_recipe, facet_ingredients = _ingredient_search(
         r.id for row in rows for r in _row_recipes(row))
     for row in rows:
@@ -279,7 +297,7 @@ def favourites():
                .filter(Recipe.favourited_by.any(id=current_user.id), Recipe.live())
                .order_by(Recipe.created_at.desc()).all())
     noted_ids = {rid for (rid,) in db.session.query(RecipeComment.recipe_id).distinct()}
-    facets, facet_options = _recipe_facets(recipes)
+    facets, facet_options = _recipe_facets(recipes, _unlinked_recipe_ids())
     ing_by_recipe, facet_ingredients = _ingredient_search(r.id for r in recipes)
     for r in recipes:
         facets[r.id]["ing"] = _ing_field(ing_by_recipe.get(r.id, set()))

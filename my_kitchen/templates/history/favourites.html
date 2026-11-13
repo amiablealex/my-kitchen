@@ -8,7 +8,7 @@
   {% set f = facets[r.id] %}
   <li class="recipe-row" data-title="{{ f.title }}"
       data-cuisine="{{ f.cuisine }}" data-meal="{{ f.meal }}"
-      data-cook="{{ f.cook }}" data-source="{{ f.source }}" data-ing="{{ f.ing }}">
+      data-cook="{{ f.cook }}" data-source="{{ f.source }}" data-ing="{{ f.ing }}" data-check="{{ f.check }}">
     {{ row_mark(r.source) }}
     <div class="row-main">
       {{ row_title(r) }}
