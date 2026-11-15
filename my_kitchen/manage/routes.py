@@ -116,6 +116,11 @@ def ingredient_edit(ingredient_id):
         ing.name = data["name"]
         ing.category_id = data["category_id"]
         ing.is_staple = data["is_staple"]
+        if "parent_id" in request.form:       # absent when the page shows Kinds instead
+            error = _set_parent(ing, request.form.get("parent_id"))
+            if error:
+                flash(error, "error")
+                return redirect(url_for("manage.ingredient_edit", ingredient_id=ing.id))
         try:
             db.session.commit()
         except IntegrityError:
@@ -126,21 +131,84 @@ def ingredient_edit(ingredient_id):
         return redirect(url_for("manage.ingredients"))
     # 0.38.0: what deleting would affect, and the merge sheet's choices
     # (every other active ingredient, grouped like the catalogue).
-    merge_options = (Ingredient.query.join(Category)
-                     .filter(Ingredient.is_active.is_(True), Ingredient.id != ing.id)
-                     .order_by(*Category.ordering(), db.func.lower(Ingredient.name)).all())
+    others = (Ingredient.query.join(Category)
+              .filter(Ingredient.is_active.is_(True), Ingredient.id != ing.id)
+              .order_by(*Category.ordering(), db.func.lower(Ingredient.name)).all())
+    # 0.39.0 "a kind of": the field offers general ones (not themselves kinds);
+    # the Add kinds sheet offers ingredients that are neither a kind nor have
+    # kinds of their own — one level only.
+    parent_options = [o for o in others if o.parent_id is None]
+    kind_options = [o for o in others if o.parent_id is None and not o.kinds]
     return render_template("manage/ingredient_edit.html",
                            ing=ing, categories=_ordered_categories(), sections=SECTION_CHOICES,
-                           used_in=_recipes_using(ing.id), merge_options=merge_options)
+                           used_in=_recipes_using(ing.id), merge_options=others,
+                           parent_options=parent_options, kind_options=kind_options)
 
 
-BULK_ACTIONS = {"move", "staple", "standard", "retire", "restore"}
+def _set_parent(ing, raw):
+    """Make ing a kind of another ingredient, or of nothing (0.39.0). One level
+    only: the general one can't itself be a kind, and an ingredient with kinds
+    can't become one. Returns an error message or None."""
+    raw = (raw or "").strip()
+    if not raw:
+        ing.parent_id = None
+        return None
+    try:
+        parent = db.session.get(Ingredient, int(raw))
+    except ValueError:
+        parent = None
+    if parent is None or parent.id == ing.id or not parent.is_active:
+        return "Pick an ingredient it's a kind of."
+    if parent.parent_id is not None:
+        return f'"{parent.name}" is itself a kind of {parent.parent.name}, so it can\'t have kinds.'
+    if ing.kinds:
+        return f'"{ing.name}" has kinds of its own, so it can\'t be a kind of something else.'
+    ing.parent_id = parent.id
+    return None
+
+
+@manage_bp.route("/ingredients/<int:ingredient_id>/kinds", methods=["POST"])
+def ingredient_kinds_add(ingredient_id):
+    """Add several kinds to a general ingredient at once (0.39.0): the Add
+    kinds sheet on its page. Each must be active, not already a kind and have
+    no kinds of its own."""
+    ing = db.session.get(Ingredient, ingredient_id)
+    if ing is None:
+        abort(404)
+    if ing.parent_id is not None:
+        flash(f'"{ing.name}" is a kind of {ing.parent.name}, so it can\'t have kinds.', "error")
+        return redirect(url_for("manage.ingredient_edit", ingredient_id=ing.id))
+    ids = {int(x) for x in request.form.getlist("kind") if x.isdigit()}
+    added = []
+    for k in Ingredient.query.filter(Ingredient.id.in_(ids)).all() if ids else []:
+        if k.id != ing.id and k.is_active and k.parent_id is None and not k.kinds:
+            k.parent_id = ing.id
+            added.append(k.name)
+    db.session.commit()
+    if added:
+        flash(f'{", ".join(added)} {"is" if len(added) == 1 else "are"} now a kind of {ing.name}.', "success")
+    return redirect(url_for("manage.ingredient_edit", ingredient_id=ing.id))
+
+
+@manage_bp.route("/ingredients/<int:ingredient_id>/kinds/<int:kind_id>/remove", methods=["POST"])
+def ingredient_kind_remove(ingredient_id, kind_id):
+    """Take one kind off a general ingredient, from its Kinds chips (0.39.0)."""
+    k = db.session.get(Ingredient, kind_id)
+    if k is None or k.parent_id != ingredient_id:
+        abort(404)
+    k.parent_id = None
+    db.session.commit()
+    flash(f'{k.name} is no longer a kind of {db.session.get(Ingredient, ingredient_id).name}.', "success")
+    return redirect(url_for("manage.ingredient_edit", ingredient_id=ingredient_id))
+
+
+BULK_ACTIONS = {"move", "staple", "standard", "retire", "reactivate", "restore"}
 
 
 @manage_bp.route("/ingredients/bulk", methods=["POST"])
 def ingredients_bulk():
     """Several ingredients at once, from the list's select mode (0.30.0).
-    Body: {"action": "move"|"staple"|"standard"|"retire"|"restore",
+    Body: {"action": "move"|"staple"|"standard"|"retire"|"reactivate"|"restore",
            "ids": [...], "category_id": n (move only),
            "previous": [{"id", "category_id", "is_staple", "is_active"}] (restore only)}.
     Returns the message for the toast plus each item's previous state, which
@@ -191,6 +259,10 @@ def ingredients_bulk():
         for i in items:
             i.is_staple = False
         message = f"{n} {noun} moved back to standard stock."
+    elif action == "reactivate":   # 0.39.0: from the Retired list
+        for i in items:
+            i.is_active = True
+        message = f"{n} {noun} reactivated."
     else:  # retire
         for i in items:
             i.is_active = False
@@ -235,7 +307,8 @@ def ingredient_activate(ingredient_id):
     ing.is_active = True
     db.session.commit()
     flash(f'Reactivated "{ing.name}".', "success")
-    return redirect(url_for("manage.ingredients"))
+    # 0.39.0: Reactivate lives on the ingredient's own page now; stay there.
+    return redirect(url_for("manage.ingredient_edit", ingredient_id=ing.id))
 
 
 def _unlink_everywhere(ing_id):
@@ -258,6 +331,8 @@ def ingredient_delete(ingredient_id):
         abort(404)
     name, n = ing.name, _recipes_using(ing.id)
     _unlink_everywhere(ing.id)
+    Ingredient.query.filter(Ingredient.parent_id == ing.id).update(   # its kinds stand alone
+        {Ingredient.parent_id: None}, synchronize_session=False)
     db.session.delete(ing)
     db.session.commit()
     after = (f" {_recipes_phrase(n)} used it; those lines are now unlinked, and "
@@ -295,6 +370,16 @@ def ingredient_merge(ingredient_id):
     RecipeIngredient.query.filter(
         RecipeIngredient.alt_ingredient_id == RecipeIngredient.ingredient_id).update(
         {RecipeIngredient.alt_ingredient_id: None}, synchronize_session=False)
+    # "A kind of" (0.39.0): the duplicate's kinds become the kept one's, if
+    # it can have kinds (one level); a kept one that was a kind of the
+    # duplicate stands alone.
+    # Reassigned through the relationship, so the duplicate's kinds collection
+    # empties before it's deleted (otherwise the delete nulls them).
+    if target.parent_id == src.id:
+        target.parent = None
+    for k in list(src.kinds):
+        if k.id != target.id:
+            k.parent = target if target.parent_id is None else None
     target.in_stock = target.in_stock or (src.in_stock and src.is_active)
     if not target.note and src.note:
         target.note = src.note

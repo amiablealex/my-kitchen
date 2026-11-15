@@ -2166,9 +2166,15 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
 .link-or { display: inline; }
 .link-or[hidden] { display: none; }
 .link-or-word { margin: 0 2px 0 4px; font-size: var(--fs-small); color: var(--text-muted); }
-.ri-editor-or p { margin: 0 0 var(--space-2); }
-.ri-editor-or-current { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
-.ri-editor-or [hidden] { display: none; }
+/* 0.39.0: an "or" line's two links as rows in the editor, each with its own
+   Change / Unlink / Remove; the search opens underneath only when asked. */
+.ri-editor-or { margin: 0 0 var(--space-2); }
+.ri-or-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+  min-height: 40px; border-bottom: 1px solid var(--divider); }
+.ri-or-row:last-child { border-bottom: 0; }
+.ri-or-row .link-or-word { margin: 0; }
+.ri-or-actions { display: inline-flex; gap: var(--space-3); margin-left: auto; }
+.ri-editor-or [hidden], .ri-editor-search-area[hidden] { display: none; }
 /* In the recipe form (import review / edit): "or broccoli ×" after the pick. */
 .rf-ing-or { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-small);
   color: var(--text-muted); }
@@ -2180,8 +2186,43 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
 /* Merge into… sheet: a short explanation and a filter above the choices. */
 .sheet-intro { margin: 0 0 var(--space-3); color: var(--text-muted); font-size: var(--fs-small); }
 .sheet-filter { margin: 0 0 var(--space-3); background: var(--surface-2); }
-[data-merge-lane][hidden], [data-merge-name][hidden] { display: none; }
+[data-sheet-lane][hidden], [data-sheet-name][hidden] { display: none; }
 /* A sheet whose contents sit in a <form> (Merge into…): let the form's
    children take part in the sheet's column, so the list scrolls and the
    buttons stay in view. */
 dialog.sheet > form { display: contents; }
+
+/* ============================ 0.39.0 ===================================== */
+/* Kinds on a general ingredient's page: link chips with a small × each, and
+   a dashed "+ Add kinds" chip that opens the sheet. */
+.kinds { margin-top: var(--space-6); }
+.kinds-title { font-size: var(--fs-h3, 1.1rem); margin: 0 0 var(--space-2); }
+.kind-chip { display: inline-flex; align-items: center; }
+.kind-chip form { display: inline; margin: 0; }
+.kind-remove { display: inline-grid; place-items: center; width: 32px; height: 32px; margin-left: -4px;
+  border: 0; background: none; color: var(--text-muted); cursor: pointer; }
+.kind-remove .icon { width: 16px; height: 16px; }
+.link-chip--add { border: 1px dashed var(--divider); background: transparent; color: var(--accent-1);
+  font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.link-chip--add .icon { width: 1em; height: 1em; }
+/* Selecting retired ingredients (0.39.0): one kind of list at a time — the
+   other is dimmed and can't be picked. */
+body.is-selecting--retired .tab-panel, body.is-selecting--retired .tabs,
+body.is-selecting--active [data-retired] { opacity: 0.4; }
+.recipe-group-head--tools { justify-content: flex-end; }
+/* The editor's own copies of a line's links look like its pills but aren't
+   .link-pill, so nothing that reads the row's pills picks them up. */
+.ri-or-pill {
+  display: inline-flex; align-items: center;
+  margin-left: var(--space-2); padding: 1px 10px;
+  border-radius: var(--radius-pill); font-size: var(--fs-small);
+  background: var(--surface-2); color: var(--text-muted);
+  border: 1px solid var(--divider); vertical-align: middle; white-space: nowrap;
+}
+/* Select bar: buttons/menus toggled with [hidden] (a display rule on .btn
+   would otherwise win). */
+.select-bar [hidden] { display: none !important; }
+.ri-or-row .ri-or-pill { margin-left: 0; color: var(--text); }
+.kinds .kind-remove { font-size: 16px; padding: 0; min-height: 0; box-shadow: none; }
+.kinds .kind-remove svg.icon { width: 16px; height: 16px; flex: none; }
+.ri-editor-current[hidden] { display: none; }

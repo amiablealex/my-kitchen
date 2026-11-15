@@ -30,6 +30,6 @@
    return. #}
 {% macro stock_mark(ri) -%}
 {%- set st = ri.stock_state -%}
-{%- set label = {"have": "In stock", "need": "Not in stock", "unlinked": "Not linked"}.get(st) -%}
+{%- set label = ri.stock_label if st == "have" else {"need": "Not in stock", "unlinked": "Not linked"}.get(st) -%}
 <span class="stock-mark stock-mark--{{ st }}"{% if label %} role="img" aria-label="{{ label }}" title="{{ label }}"{% else %} aria-hidden="true"{% endif %}>{{ icon('check') }}</span>
 {%- endmacro %}

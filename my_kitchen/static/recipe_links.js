@@ -45,30 +45,53 @@
 
   var activeRow = null; // the <li> currently being edited
   // Which link the search and add-new act on: the line's main link, or its
-  // "or" alternative (0.38.0) — only offered on a line whose text says "or".
+  // "or" alternative (0.38.0). On an "or" line with a main link (0.39.0) the
+  // editor shows both links as rows, and the search only appears once Change
+  // or Add has been tapped — headed with what it will do.
   var slot = "main";
   var elOr = document.getElementById("ri-editor-or");
-  var elOrCurrent = document.getElementById("ri-editor-or-current");
-  var elAltName = document.getElementById("ri-editor-alt-name");
+  var elOrMain = document.getElementById("ri-or-main");
+  var elOrUnlink = document.getElementById("ri-or-unlink");
+  var elOrAlt = document.getElementById("ri-or-alt");
+  var elOrAltActions = document.getElementById("ri-or-alt-actions");
+  var elOrAdd = document.getElementById("ri-or-add");
   var elAltRemove = document.getElementById("ri-editor-alt-remove");
-  var elOrOffer = document.getElementById("ri-editor-or-offer");
-  var elOrStart = document.getElementById("ri-editor-or-start");
+  var elSearchArea = document.getElementById("ri-editor-search-area");
   var elSearchText = document.getElementById("ri-editor-search-text");
 
-  function setSlot(next) {
-    slot = next;
-    elSearchText.textContent = next === "alt" ? "Link the other ingredient" : "Link to a catalogue ingredient";
+  function linkOf(row, alt) {
+    var p = row.querySelector(alt ? ".link-pill--alt" : ".link-pill:not(.link-pill--alt)");
+    return p && p.dataset.linkedId ? { id: p.dataset.linkedId, name: p.textContent.trim() } : null;
   }
 
-  function syncOrBlock(row) {
-    var mainPill = row.querySelector(".link-pill:not(.link-pill--alt)");
-    var altPill = row.querySelector(".link-pill--alt");
-    var hasMain = mainPill && mainPill.dataset.linkedId;
-    var hasAlt = altPill && altPill.dataset.linkedId;
-    elOr.hidden = !(row.hasAttribute("data-or") && hasMain);
-    elOrCurrent.hidden = !hasAlt;
-    elOrOffer.hidden = !!hasAlt || slot === "alt";
-    if (hasAlt) elAltName.textContent = altPill.textContent.trim();
+  // Lay the editor out for this row: the two-row "or" view, or the plain one.
+  function layout(row) {
+    var main = linkOf(row, false), alt = linkOf(row, true);
+    var orMode = row.hasAttribute("data-or") && !!main;
+    elOr.hidden = !orMode;
+    elCurrent.hidden = orMode || !main;
+    if (main && !orMode) elCurrentName.textContent = main.name;
+    if (orMode) {
+      elOrMain.textContent = main.name;
+      elOrAlt.hidden = elOrAltActions.hidden = !alt;
+      elOrAdd.hidden = !!alt;
+      if (alt) elOrAlt.textContent = alt.name;
+    }
+    elSearchArea.hidden = orMode;   // shown by Change / Add
+    slot = "main";
+    elSearchText.textContent = "Link to a catalogue ingredient";
+  }
+
+  // Change (main or alternative) / Add the other ingredient: open the search.
+  function openSearch(nextSlot, heading) {
+    slot = nextSlot;
+    elSearchText.textContent = heading;
+    elSearchArea.hidden = false;
+    elSearch.value = "";
+    renderResults("");
+    elAddName.value = "";
+    if (elAddDetails) elAddDetails.open = false;
+    elSearch.focus();
   }
 
   // --- edit-mode toggle -------------------------------------------------------
@@ -84,19 +107,7 @@
   // --- open / close the shared editor under a row -----------------------------
   function openEditor(row) {
     activeRow = row;
-    var pill = row.querySelector(".link-pill:not(.link-pill--alt)");
-    var linkedId = pill ? pill.dataset.linkedId : "";
-    var linkedName = linkedId && pill ? pill.textContent.trim() : "";
-    setSlot("main");
-    syncOrBlock(row);
-
     elRawText.textContent = row.dataset.rawText || "";
-    if (linkedId) {
-      elCurrentName.textContent = linkedName;
-      elCurrent.hidden = false;
-    } else {
-      elCurrent.hidden = true;
-    }
 
     elSearch.value = "";
     renderResults("");
@@ -106,9 +117,10 @@
     hideAddError();
     if (elAddDetails) elAddDetails.open = false;
 
+    layout(row);
     row.appendChild(editor); // move the single panel inline under this row
     editor.hidden = false;
-    elSearch.focus();
+    if (!elSearchArea.hidden) elSearch.focus();
   }
 
   function closeEditor() {
@@ -191,11 +203,11 @@
   // Stock mark in the bullet position (0.37.0): the server sends the line's
   // state with every link change, so the mark follows the link.
   var MARK_LABELS = { have: "In stock", need: "Not in stock", unlinked: "Not linked" };
-  function setMark(row, state) {
+  function setMark(row, state, haveLabel) {
     var mark = row.querySelector(".stock-mark");
     if (!mark || !state) return;
     mark.className = "stock-mark stock-mark--" + state;
-    var label = MARK_LABELS[state];
+    var label = state === "have" && haveLabel ? haveLabel : MARK_LABELS[state];
     if (label) {
       mark.setAttribute("role", "img");
       mark.setAttribute("aria-label", label);
@@ -209,7 +221,7 @@
 
   // Both pills and the mark follow the server's answer after any change.
   function setPill(row, d) {
-    setMark(row, d.stock);
+    setMark(row, d.stock, d.stock_label);
     var pill = row.querySelector(".link-pill:not(.link-pill--alt)");
     if (pill) {
       if (d.ingredient_id) {
@@ -297,16 +309,19 @@
       });
   });
 
-  // "Link the other one too": the search and add-new now set the alternative.
-  elOrStart.addEventListener("click", function () {
-    if (!activeRow) return;
-    setSlot("alt");
-    syncOrBlock(activeRow);
-    elSearch.value = "";
-    renderResults("");
-    elAddName.value = "";
-    elSearch.focus();
+  editor.addEventListener("click", function (ev) {
+    var ch = ev.target.closest("[data-or-change]");
+    if (!ch || !activeRow) return;
+    var which = ch.dataset.orChange;
+    var cur = linkOf(activeRow, which === "alt");
+    openSearch(which, "Replace " + (cur ? cur.name : "it") + " with…");
   });
+  elOrAdd.addEventListener("click", function () {
+    if (activeRow) openSearch("alt", "Add the other ingredient");
+  });
+  // Unlink on the "or" view's main row: same as the plain Unlink (the server
+  // promotes the alternative to the main link).
+  elOrUnlink.addEventListener("click", function () { elUnlink.click(); });
 
   // Remove the alternative; the main link stays.
   elAltRemove.addEventListener("click", function () {
@@ -380,7 +395,8 @@
       .then(function (states) {
         if (!states) return;
         list.querySelectorAll(".ingredient-row").forEach(function (row) {
-          setMark(row, states[row.dataset.riId]);
+          var st = states[row.dataset.riId];
+          if (st) setMark(row, st.state, st.label);
         });
       })
       .catch(function () {});

@@ -7,10 +7,10 @@
   <details class="overflow">
     <summary class="icon-btn" aria-label="More actions">{{ icon('more') }}</summary>
     <div class="overflow-menu">
+      {# 0.39.0: Reactivate is on the page itself (the Retired notice), so a
+         retired ingredient's menu only has Merge and Delete. #}
       {% if ing.is_active %}
         {{ danger_form(url_for('manage.ingredient_retire', ingredient_id=ing.id), 'Retire', 'archive', none, none, warn=False) }}
-      {% else %}
-        {{ danger_form(url_for('manage.ingredient_activate', ingredient_id=ing.id), 'Reactivate', 'check', none, none, warn=False) }}
       {% endif %}
       {# 0.38.0: a duplicate ("Baby button mushrooms") is merged, not deleted,
          so its recipe lines move across instead of going unlinked. #}
@@ -30,14 +30,30 @@
   <a class="back-link" href="{{ url_for('manage.ingredients') }}">{{ icon('arrow_back') }} Ingredients</a>
   <header class="edit-head">
     <h1>{{ ing.name }}</h1>
+    {% if ing.is_active %}
     <p class="edit-meta">
-      {%- if not ing.is_active %}Retired, so it's hidden from stock and the wizard
-      {%- elif ing.is_staple %}Staple, assumed always available
+      {%- if ing.is_staple %}Staple, assumed always available
       {%- elif ing.in_stock %}In stock
       {%- else %}Not in stock{% endif %}
+      {%- if ing.parent %}<span class="sep">·</span>a kind of <a href="{{ url_for('manage.ingredient_edit', ingredient_id=ing.parent.id) }}">{{ ing.parent.name }}</a>{% endif %}
       {%- if used_in %}<span class="sep">·</span>used in {{ used_in }} recipe{{ '' if used_in == 1 else 's' }}{% endif %}
     </p>
+    {% endif %}
   </header>
+  {% if not ing.is_active %}
+    {# 0.39.0: once retired, bringing it back is the obvious next step — so
+       it's here, like Restore on an archived recipe, not behind ⋯. #}
+    <div class="notice notice--archived">
+      {{ icon('archive') }}
+      <div class="notice-body">
+        <strong>Retired.</strong> Hidden from stock and Lets Cook; recipes count it as out of stock{% if used_in %} ({{ used_in }} use{{ '' if used_in == 1 else 's' }} it){% endif %}.
+      </div>
+      <form method="post" action="{{ url_for('manage.ingredient_activate', ingredient_id=ing.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn--sm btn--primary">Reactivate</button>
+      </form>
+    </div>
+  {% endif %}
 
   <form class="form" method="post" action="{{ url_for('manage.ingredient_edit', ingredient_id=ing.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -45,6 +61,21 @@
     <label>Category
       {{ category_select(categories, sections, ing.category_id) }}
     </label>
+    {# "A kind of" (0.39.0): on an ingredient with kinds of its own the
+       Kinds section below stands in for it — one level only. #}
+    {% if not ing.kinds %}
+    <label>A kind of <span class="muted">(optional)</span>
+      <select name="parent_id">
+        <option value="">Nothing — it stands on its own</option>
+        {% for o in parent_options %}
+          {% if loop.first or parent_options[loop.index0 - 1].category_id != o.category_id %}<optgroup label="{{ o.category.name }}">{% endif %}
+          <option value="{{ o.id }}"{% if o.id == ing.parent_id %} selected{% endif %}>{{ o.name }}</option>
+          {% if loop.last or parent_options[loop.index0 + 1].category_id != o.category_id %}</optgroup>{% endif %}
+        {% endfor %}
+      </select>
+      <span class="field-hint">For a particular kind of something, as fusilli is a kind of pasta: recipes that ask for the general one can use {{ ing.name | lower }}. One that asks for {{ ing.name | lower }} still needs {{ ing.name | lower }}.</span>
+    </label>
+    {% endif %}
     <div class="edit-field">
       {{ toggle_chip('is_staple', 'Staple', 'assumed always available', checked=ing.is_staple) }}
       <p class="help">Staples never appear in your stock list; recipes use them freely.
@@ -54,6 +85,60 @@
       <button type="submit" class="btn btn--primary"><span>Save</span>{{ icon('check') }}</button>
     </div>
   </form>
+
+  {# Kinds (0.39.0): on anything that isn't itself a kind. Chips open each
+     kind; × takes it off; + Add kinds opens a sheet to tick several. #}
+  {% if not ing.parent %}
+  <section class="kinds" aria-labelledby="kinds-title">
+    <h2 class="kinds-title" id="kinds-title">Kinds</h2>
+    <ul class="chip-list">
+      {% for k in ing.kinds %}
+        <li class="kind-chip"><a class="link-chip{% if not k.is_active %} is-off{% endif %}" href="{{ url_for('manage.ingredient_edit', ingredient_id=k.id) }}">{{ k.name }}</a>
+          <form method="post" action="{{ url_for('manage.ingredient_kind_remove', ingredient_id=ing.id, kind_id=k.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="kind-remove" aria-label="{{ k.name }} isn't a kind of {{ ing.name }}">{{ icon('close') }}</button>
+          </form></li>
+      {% endfor %}
+      <li><button type="button" class="link-chip link-chip--add" data-kinds-open>{{ icon('add') }} Add kinds</button></li>
+    </ul>
+    <p class="help">{% if ing.kinds %}A recipe that asks for {{ ing.name | lower }} can use any of these. One that asks for a particular kind still needs that kind.{% else %}If you keep particular kinds of {{ ing.name | lower }} (shapes of pasta, types of rice), add them here: a recipe that asks for {{ ing.name | lower }} can then use any of them.{% endif %}</p>
+  </section>
+
+  <dialog class="confirm sheet" id="kinds-sheet" aria-labelledby="kinds-sheet-title">
+    <form method="post" action="{{ url_for('manage.ingredient_kinds_add', ingredient_id=ing.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="confirm-head"><span class="confirm-bead sheet-bead" aria-hidden="true">{{ icon('add') }}</span>
+        <h2 id="kinds-sheet-title">Kinds of {{ ing.name }}</h2></div>
+      <p class="sheet-intro">Tick the ones that are a kind of {{ ing.name | lower }}.</p>
+      <div class="pantry-filter sheet-filter">
+        {{ icon('search') }}
+        <input type="search" data-sheet-filter placeholder="Find an ingredient" autocomplete="off" aria-label="Find an ingredient">
+      </div>
+      <div class="sheet-body">
+        {% for o in kind_options %}
+          {% set c = o.category %}
+          {% if loop.first or kind_options[loop.index0 - 1].category_id != o.category_id %}
+          <div class="tag-lane sheet-lane sec-lane--{{ c.section }}" data-sheet-lane>
+            <h3 class="lane-head">{{ c.name }}</h3>
+            <div class="options options--chips">
+          {% endif %}
+                <label class="option sec-pick--{{ c.section }}" data-sheet-name="{{ o.name | lower }}">
+                  <input type="checkbox" name="kind" value="{{ o.id }}">
+                  <span>{{ o.name }}</span>
+                </label>
+          {% if loop.last or kind_options[loop.index0 + 1].category_id != o.category_id %}
+            </div>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="btn btn--primary" data-kinds-go disabled>Add kinds</button>
+        <button type="button" class="btn btn--ghost" data-sheet-cancel>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+  {% endif %}
 
   {# Merge into… (0.38.0): pick the ingredient this one really is. The sheet
      is the confirmation — it says what moves and that it can't be undone. #}
@@ -67,7 +152,7 @@
         which counts as in stock if either was. {{ ing.name }} is then removed; this can’t be undone.</p>
       <div class="pantry-filter sheet-filter">
         {{ icon('search') }}
-        <input type="search" id="merge-filter" placeholder="Find an ingredient" autocomplete="off" aria-label="Find an ingredient">
+        <input type="search" data-sheet-filter placeholder="Find an ingredient" autocomplete="off" aria-label="Find an ingredient">
       </div>
       <div class="sheet-body">
         {# merge_options arrive in catalogue order (section, category, name);
@@ -75,11 +160,11 @@
         {% for o in merge_options %}
           {% set c = o.category %}
           {% if loop.first or merge_options[loop.index0 - 1].category_id != o.category_id %}
-          <div class="tag-lane sheet-lane sec-lane--{{ c.section }}" data-merge-lane>
+          <div class="tag-lane sheet-lane sec-lane--{{ c.section }}" data-sheet-lane>
             <h3 class="lane-head">{{ c.name }}</h3>
             <div class="options options--chips">
           {% endif %}
-                <label class="option sec-pick--{{ c.section }}" data-merge-name="{{ o.name | lower }}">
+                <label class="option sec-pick--{{ c.section }}" data-sheet-name="{{ o.name | lower }}">
                   <input type="radio" name="into" value="{{ o.id }}" data-name="{{ o.name }}">
                   <span>{{ o.name }}</span>
                 </label>
@@ -91,12 +176,12 @@
       </div>
       <div class="btn-row">
         <button type="submit" class="btn btn--primary" data-merge-go disabled>Merge</button>
-        <button type="button" class="btn btn--ghost" data-merge-cancel>Cancel</button>
+        <button type="button" class="btn btn--ghost" data-sheet-cancel>Cancel</button>
       </div>
     </form>
   </dialog>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='ingredient_merge.js') }}"></script>
+<script src="{{ url_for('static', filename='ingredient_sheets.js') }}"></script>
 {% endblock %}

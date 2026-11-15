@@ -25,6 +25,10 @@
   var bar = document.getElementById("select-bar");
   var sheet = document.getElementById("move-sheet");
   var selecting = false;
+  // What's being selected (0.39.0): "active" (the Standard/Staples lists) or
+  // "retired". Never both — they have different actions.
+  var selCtx = null;
+  function ctxOf(el) { return el.closest("[data-retired]") ? "retired" : "active"; }
 
   function activeTab() { var a = document.querySelector(".tab.is-active"); return a ? a.dataset.tab : "standard"; }
   function activePanel() { return panels[activeTab()]; }
@@ -74,6 +78,13 @@
     bar.querySelector(".select-count strong").textContent = n;
     bar.querySelector("[data-move]").disabled = n === 0;
     bar.querySelectorAll("[data-bulk]").forEach(function (b) { b.disabled = n === 0; });
+    var retired = selCtx === "retired";
+    bar.querySelector("[data-move]").hidden = retired;
+    bar.querySelector("[data-active-only]").hidden = retired;
+    var re = bar.querySelector("[data-reactivate]");
+    re.hidden = !retired;
+    re.disabled = n === 0;
+    re.textContent = n ? "Reactivate " + n : "Reactivate";
     // Only the staple action that makes sense for this tab.
     var onStaples = activeTab() === "staples";
     bar.querySelector('[data-bulk="staple"]').hidden = onStaples;
@@ -83,8 +94,10 @@
 
   function syncGroupButtons() {
     document.querySelectorAll("[data-group-select]").forEach(function (b) {
-      b.hidden = !selecting;
-      if (!selecting) return;
+      var always = b.hasAttribute("data-group-always");
+      b.hidden = selecting ? ctxOf(b) !== selCtx : !always;
+      if (!selecting) { if (always) b.textContent = "Select all"; return; }
+      if (b.hidden) return;
       var lis = b.closest(".recipe-group").querySelectorAll("[data-selectable] > li:not([hidden])");
       var all = lis.length && Array.prototype.every.call(lis, function (li) { return li.classList.contains("is-picked"); });
       b.textContent = all ? "Clear" : "Select all";
@@ -97,10 +110,11 @@
     if (a) a.setAttribute("aria-pressed", on ? "true" : "false");
   }
 
-  function startSelecting(firstLi) {
+  function startSelecting(firstLi, ctx) {
     if (!bar) return;
     selecting = true;
-    document.body.classList.add("is-selecting");
+    selCtx = ctx || (firstLi ? ctxOf(firstLi) : "active");
+    document.body.classList.add("is-selecting", "is-selecting--" + selCtx);
     bar.hidden = false;
     var menu = document.querySelector(".topbar details.overflow");
     if (menu) menu.open = false;
@@ -110,7 +124,8 @@
 
   function stopSelecting() {
     selecting = false;
-    document.body.classList.remove("is-selecting");
+    document.body.classList.remove("is-selecting", "is-selecting--active", "is-selecting--retired");
+    selCtx = null;
     picked().forEach(function (li) { setPicked(li, false); });
     if (bar) { bar.hidden = true; var d = bar.querySelector("details"); if (d) d.open = false; }
     syncGroupButtons();
@@ -146,6 +161,7 @@
       if (swallowClick) { swallowClick = false; e.preventDefault(); return; }
       if (!selecting) return;              // normal tap: open the ingredient
       e.preventDefault();
+      if (ctxOf(li) !== selCtx) return;    // the other kind of list is dimmed
       setPicked(li, !li.classList.contains("is-picked"));
       updateBar();
     });
@@ -153,6 +169,7 @@
 
   document.querySelectorAll("[data-group-select]").forEach(function (b) {
     b.addEventListener("click", function () {
+      if (!selecting) startSelecting(null, ctxOf(b));   // Retired's Select all starts it
       var lis = Array.prototype.slice.call(b.closest(".recipe-group").querySelectorAll("[data-selectable] > li:not([hidden])"));
       var all = lis.every(function (li) { return li.classList.contains("is-picked"); });
       lis.forEach(function (li) { setPicked(li, !all); });
@@ -198,6 +215,10 @@
     return bulk(payload).then(function (j) { reloadWithToast(j.message, j.previous); })
       .catch(function (err) { if (window.showToast) window.showToast({ message: err.message }); });
   }
+
+  if (bar) bar.querySelector("[data-reactivate]").addEventListener("click", function () {
+    run({ action: "reactivate" });
+  });
 
   if (bar) bar.querySelectorAll("[data-bulk]").forEach(function (b) {
     b.addEventListener("click", function () {

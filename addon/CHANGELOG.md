@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.39.0
+- **Kinds of an ingredient.** Fusilli, spaghetti and penne can each be *a
+  kind of* pasta. A recipe that asks for pasta is then cookable with any of
+  them in stock, and its tick says which ("In stock (Fusilli)"). A recipe
+  that asks for spaghetti still needs spaghetti. Add kinds from the general
+  ingredient's page (*Kinds* → *+ Add kinds*, several at once), or set *A
+  kind of* on the specific one. One level only.
+- **Clearer editing for "or" lines.** *Edit links* on a line like
+  "cauliflower or broccoli" now shows both links as rows, each with *Change*
+  and *Unlink* or *Remove*, plus *Add the other ingredient*. The search only
+  opens once you've picked which one to change, so it can't replace the
+  wrong one. Other lines edit as before.
+- **Reactivate in bulk.** Retired ingredients can be selected like the rest
+  (press and hold, or *Select all* on the Retired list), with *Reactivate*
+  as the action and Undo after. A selection is either active or retired
+  ingredients, never both.
+- **Reactivate is on a retired ingredient's page**, in a *Retired* notice at
+  the top, instead of behind ⋯.
+
 ## 0.38.0
 - **Merge duplicate ingredients.** An ingredient's ⋯ menu has *Merge into…*,
   for when you have the same thing twice ("Baby button mushrooms" and "Button

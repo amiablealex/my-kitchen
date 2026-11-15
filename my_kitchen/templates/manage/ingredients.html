@@ -90,9 +90,15 @@
   {% if retired %}
     <details class="section">
       <summary>Retired ({{ retired|length }})</summary>
-      <section class="recipe-group recipe-group--plain" data-no-filter style="margin-top:var(--space-3)">
-        <ul class="chip-list">
-          {% for ing in retired %}{{ link_chip(url_for('manage.ingredient_edit', ingredient_id=ing.id), ing.name, ing.category.name ~ (' · staple' if ing.is_staple else ''), off=True) }}{% endfor %}
+      {# 0.39.0: retired ingredients can be selected too (long press, or
+         Select all here, which also starts selecting) — on their own, never
+         mixed with active ones, with Reactivate as the one action. #}
+      <section class="recipe-group recipe-group--plain" data-no-filter data-retired style="margin-top:var(--space-3)">
+        <header class="recipe-group-head recipe-group-head--tools">
+          <button type="button" class="group-select" data-group-select data-group-always>Select all</button>
+        </header>
+        <ul class="chip-list" data-selectable>
+          {% for ing in retired %}{{ link_chip(url_for('manage.ingredient_edit', ingredient_id=ing.id), ing.name, ing.category.name ~ (' · staple' if ing.is_staple else ''), off=True, id=ing.id) }}{% endfor %}
         </ul>
       </section>
     </details>
@@ -107,7 +113,8 @@
     <button type="button" class="icon-btn" data-select-cancel aria-label="Stop selecting">{{ icon('close') }}</button>
     <span class="select-count" aria-live="polite"><strong>0</strong> selected</span>
     <button type="button" class="btn btn--primary btn--sm" data-move disabled>Move to…</button>
-    <details class="overflow overflow--up">
+    <button type="button" class="btn btn--primary btn--sm" data-reactivate hidden disabled>Reactivate</button>
+    <details class="overflow overflow--up" data-active-only>
       <summary class="icon-btn" aria-label="More for selected">{{ icon('more') }}</summary>
       <div class="overflow-menu">
         <button type="button" class="menu-item" data-bulk="staple">{{ icon('push_pin') }}<span>Make staples</span></button>

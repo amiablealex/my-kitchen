@@ -34,7 +34,7 @@ Python for clarity.
 from sqlalchemy.orm import selectinload
 
 from ..extensions import db
-from ..models import Recipe, RecipeIngredient, SURPRISE_ME, meal_type_takes_cuisine
+from ..models import Ingredient, Recipe, RecipeIngredient, SURPRISE_ME, meal_type_takes_cuisine
 
 
 def _cuisine_constrained(meal_type, cuisine):
@@ -66,8 +66,14 @@ def _covers_must_use(recipe, must_use_ids):
     """Every must-use id appears among the recipe's linked ingredient ids."""
     if not must_use_ids:
         return True
-    linked = {i for li in recipe.ingredients
-              for i in (li.ingredient_id, li.alt_ingredient_id) if i is not None}
+    # A line's link and its "or" alternative count (0.38.0), and so does any
+    # kind of a general one (0.39.0): a "pasta" recipe can use the fusilli.
+    linked = set()
+    for li in recipe.ingredients:
+        for ing in (li.ingredient, li.alt_ingredient):
+            if ing is not None:
+                linked.add(ing.id)
+                linked.update(k.id for k in ing.kinds)
     return set(must_use_ids).issubset(linked)
 
 
@@ -108,8 +114,10 @@ def cookable_now():
     q = (
         Recipe.query
         .filter(db.or_(Recipe.source != "ai", Recipe.was_chosen.is_(True)), Recipe.live())
-        .options(selectinload(Recipe.ingredients).selectinload(RecipeIngredient.ingredient),
-                 selectinload(Recipe.ingredients).selectinload(RecipeIngredient.alt_ingredient))
+        .options(selectinload(Recipe.ingredients).selectinload(RecipeIngredient.ingredient)
+                 .selectinload(Ingredient.kinds),
+                 selectinload(Recipe.ingredients).selectinload(RecipeIngredient.alt_ingredient)
+                 .selectinload(Ingredient.kinds))
         .order_by(Recipe.created_at.desc(), Recipe.id.desc())
     )
     return [r for r in q.all() if r.ingredients and _is_cookable(r)]

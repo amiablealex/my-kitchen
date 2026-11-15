@@ -239,6 +239,27 @@ class Ingredient(db.Model):
     note = db.Column(db.String, nullable=True)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+    # "A kind of" (0.39.0): Fusilli.parent -> Pasta. One level only (an
+    # ingredient with kinds can't be a kind — the routes enforce it). A line
+    # linked to the general one is satisfied by any kind in stock; a line
+    # linked to a kind still needs that kind.
+    parent_id = db.Column(db.Integer, db.ForeignKey("ingredients.id"), nullable=True)
+    kinds = db.relationship("Ingredient", backref=db.backref("parent", remote_side=[id]),
+                            order_by="Ingredient.name")
+
+    @property
+    def on_hand(self):
+        """In the kitchen itself: a staple (assumed in), or in stock and not
+        retired."""
+        return self.is_staple or (self.in_stock and self.is_active)
+
+    def available_as(self):
+        """What makes this ingredient available for a recipe line linked to
+        it, or None: itself, or (0.39.0) the first of its kinds on hand. A
+        retired general one still counts its kinds — they're real stock."""
+        if self.on_hand:
+            return self
+        return next((k for k in self.kinds if k.on_hand), None)
 
 
 class Equipment(db.Model):
@@ -498,18 +519,29 @@ class RecipeIngredient(db.Model):
         lines an alternative link may be added to (0.38.0)."""
         return bool(self._OR_WORD.search(self.raw_text or ""))
 
-    @staticmethod
-    def _available(ing):
-        """In the kitchen for cooking purposes: staples are assumed in; a
-        retired ingredient counts as out. The one rule shared by the stock
-        marks and wizard/suggestions._is_cookable."""
-        return ing is not None and (ing.is_staple or (ing.in_stock and ing.is_active))
+    def satisfied_by(self):
+        """The ingredient that lets this line be cooked from what's in, or
+        None: its link (or, 0.39.0, one of the link's kinds), then the "or"
+        alternative likewise. The one rule shared by the stock marks and
+        wizard/suggestions._is_cookable."""
+        for ing in (self.ingredient, self.alt_ingredient):
+            hit = ing.available_as() if ing is not None else None
+            if hit is not None:
+                return hit
+        return None
 
     @property
     def satisfied(self):
-        """The line can be cooked from what's in: its link, or its "or"
-        alternative, is available."""
-        return self._available(self.ingredient) or self._available(self.alt_ingredient)
+        return self.satisfied_by() is not None
+
+    @property
+    def stock_label(self):
+        """The mark's title: "In stock", or "In stock (Fusilli)" when it's
+        another ingredient — a kind, or the "or" alternative — that covers it."""
+        hit = self.satisfied_by()
+        if hit is None or hit is self.ingredient:
+            return "In stock"
+        return f"In stock ({hit.name})"
 
     @property
     def stock_state(self):

@@ -851,13 +851,15 @@ def _recipe_ingredient_or_404(recipe_id, ri_id):
 
 @wizard_bp.route("/recipe/<int:recipe_id>/stock")
 def recipe_stock_states(recipe_id):
-    """{ri_id: stock_state} for the recipe page's marks (0.37.0). Read when the
+    """{ri_id: {state, label}} for the recipe page's marks (0.37.0; label
+    0.39.0, e.g. "In stock (Fusilli)"). Read when the
     page comes back from the back-forward cache, where stock may have changed
     on the stock page in between. Read-only and household-wide."""
     recipe = db.session.get(Recipe, recipe_id)
     if recipe is None:
         abort(404)
-    return jsonify({str(ri.id): ri.stock_state for ri in recipe.ingredients})
+    return jsonify({str(ri.id): {"state": ri.stock_state, "label": ri.stock_label}
+                    for ri in recipe.ingredients})
 
 
 def _link_payload(ri):
@@ -870,6 +872,7 @@ def _link_payload(ri):
         alt_id=ri.alt_ingredient.id if ri.alt_ingredient else None,
         alt_name=ri.alt_ingredient.name if ri.alt_ingredient else None,
         stock=ri.stock_state,
+        stock_label=ri.stock_label,
     )
 
 

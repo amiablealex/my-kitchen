@@ -255,16 +255,29 @@
           Linked to <strong id="ri-editor-current-name"></strong>
           <button type="button" class="btn btn--sm" id="ri-editor-unlink">Unlink</button>
         </div>
-        {# The "or" alternative (0.38.0): only on a line whose wording says
-           "or", and only once it has a main link. #}
+        {# An "or" line with a main link (0.39.0): its two links as rows, each
+           with its own actions. The search only appears once Change or Add is
+           tapped, headed with what it will do, so it never silently replaces
+           the wrong one. Other lines keep the plain editor. #}
         <div class="ri-editor-or" id="ri-editor-or" hidden>
-          <p class="ri-editor-or-current" id="ri-editor-or-current" hidden>
-            Or <strong id="ri-editor-alt-name"></strong>
-            <button type="button" class="btn btn--sm" id="ri-editor-alt-remove">Remove</button>
-          </p>
-          <p class="ri-editor-or-offer" id="ri-editor-or-offer" hidden>This line says “or”.
-            <button type="button" class="text-btn" id="ri-editor-or-start">Link the other one too</button></p>
+          <div class="ri-or-row">
+            <span class="ri-or-pill" id="ri-or-main"></span>
+            <span class="ri-or-actions">
+              <button type="button" class="text-btn" data-or-change="main">Change</button>
+              <button type="button" class="text-btn" id="ri-or-unlink">Unlink</button>
+            </span>
+          </div>
+          <div class="ri-or-row">
+            <span class="link-or-word">or</span>
+            <span class="ri-or-pill" id="ri-or-alt" hidden></span>
+            <span class="ri-or-actions" id="ri-or-alt-actions" hidden>
+              <button type="button" class="text-btn" data-or-change="alt">Change</button>
+              <button type="button" class="text-btn" id="ri-editor-alt-remove">Remove</button>
+            </span>
+            <button type="button" class="text-btn" id="ri-or-add" hidden>Add the other ingredient</button>
+          </div>
         </div>
+        <div class="ri-editor-search-area" id="ri-editor-search-area">
         <label class="ri-editor-search-label"><span id="ri-editor-search-text">Link to a catalogue ingredient</span>
           <input type="search" id="ri-editor-search" autocomplete="off" placeholder="start typing an ingredient…">
         </label>
@@ -285,6 +298,7 @@
             <button type="button" class="btn btn--sm btn--primary" id="ri-add-submit">{{ icon('add') }} Add &amp; link</button>
           </div>
         </details>
+        </div>
       </div>
 
       {# Catalogue for client-side search: [{id, name}], active incl. staples.
