@@ -105,6 +105,11 @@ SPECIAL_REQUEST_MAX_CHARS = 280
 KITCHEN_MENTION = "@kitchen"
 QUESTION_MAX_CHARS = 500
 
+# "Where it's from" on a user or imported recipe (0.37.0): free text such as
+# "Mum's cookbook", shown under the title. Shared by the route and the form.
+SOURCE_NOTE_MAX_CHARS = 80
+
+
 def recipe_cuisine_from(value):
     """Map a generation's requested cuisine to a recipe cuisine TAG. 'Surprise me'
     and None/'' aren't real cuisines -> None; a concrete one is kept (validated
@@ -365,6 +370,10 @@ class Recipe(db.Model):
     # A photo import has no URL, so this is what lets the page say "from a
     # photo". NULL for AI and hand-made recipes (and 0.34 imports).
     import_method = db.Column(db.String, nullable=True)
+    # Where it's from, in the household's words (0.37.0): "Mum's cookbook".
+    # User and imported recipes only (set on the create/edit form). Shown in
+    # place of the web host when both exist — source_url itself stays fixed.
+    source_note = db.Column(db.String, nullable=True)
 
     @property
     def source_host(self):
@@ -374,6 +383,23 @@ class Recipe(db.Model):
         from urllib.parse import urlparse
         host = urlparse(self.source_url).netloc.lower()
         return host[4:] if host.startswith("www.") else host or None
+
+    @property
+    def provenance(self):
+        """(label, url) for the meta line under the title and the print view,
+        or None (0.37.0). One place decides the order: AI recipes say so; then
+        the household's own note; then the web host; then "from a photo". A
+        note on a web import replaces the host as the link text, same link.
+        Pasted-text and hand-made recipes with no note show nothing."""
+        if self.source == "ai":
+            return ("AI generated", None)
+        if self.source_note:
+            return (f"from {self.source_note}", self.source_url)
+        if self.source_host:
+            return (f"from {self.source_host}", self.source_url)
+        if self.import_method == "photo":
+            return ("from a photo", None)
+        return None
 
     # Structured, catalogue-linked ingredient lines (Phase 3b). order_by position
     # so the collection mirrors the recipe's ingredient order; delete-orphan so a
@@ -446,6 +472,20 @@ class RecipeIngredient(db.Model):
 
     # Read-only link to the catalogue ingredient (None when unmatched).
     ingredient = db.relationship("Ingredient")
+
+    @property
+    def stock_state(self):
+        """The recipe page's stock mark for this line (0.37.0): "have" (tick),
+        "need" (pink dot), "unlinked" (dash) or "none" (an optional extra that
+        isn't in — never alarming, as it never blocks cooking). Mirrors
+        wizard/suggestions.is_cookable, so the marks and suggestions agree:
+        staples are assumed in; a retired ingredient counts as out."""
+        ing = self.ingredient
+        if ing is None:
+            return "unlinked"
+        if ing.is_staple or (ing.in_stock and ing.is_active):
+            return "have"
+        return "none" if self.to_buy else "need"
 
 class RecipeComment(db.Model):
     """One household note on a recipe (Phase 19).

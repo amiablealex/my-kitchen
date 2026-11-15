@@ -7,8 +7,10 @@
 {% block page_title %}{{ heading }}{% endblock %}
 {% block content %}
   <h1 class="display">{{ heading }}</h1>
+  {# 0.37: editing returns to the recipe, not the list. #}
+  {% set back_url = url_for('wizard.recipe', recipe_id=recipe.id) if is_edit else url_for('history.index') %}
   {% if mode == "edit" %}
-    <p><a class="back-link" href="{{ url_for('history.index') }}">{{ icon('arrow_back') }} Recipes</a></p>
+    <p><a class="back-link" href="{{ back_url }}">{{ icon('arrow_back') }} {{ recipe.title }}</a></p>
   {% else %}
     <p><a class="back-link" href="{{ url_for('wizard.recipe_add') }}">{{ icon('arrow_back') }} Add a recipe</a></p>
   {% endif %}
@@ -66,6 +68,14 @@
       </label>
     </div>
 
+    {# 0.37: where the recipe is from, shown under the title. For a web import
+       it shows in place of the site's name, still linked to the page. #}
+    <label>Where it's from <span class="muted">(optional)</span>
+      <input type="text" name="source_note" id="rf-source-note" maxlength="{{ source_note_max }}"
+             value="{{ prefill.source_note or '' }}" placeholder="Mum's cookbook" autocomplete="off">
+      {% if source_url %}<span class="field-hint">Links to {{ source_url | urlhost }}. Anything written here shows in its place.</span>{% endif %}
+    </label>
+
     <section class="rf-section">
       <div class="section-head"><h2>Ingredients</h2></div>
       {% if imported %}
@@ -104,9 +114,11 @@
       <button type="button" class="btn btn--sm btn--secondary rf-add-step" data-target="rf-tips-list">{{ icon('add') }} Add tip</button>
     </section>
 
-    <div class="rf-actions">
-      <button type="submit" class="btn btn--primary">{{ "Save changes" if is_edit else ("Save recipe" if is_import else "Create recipe") }}</button>
-      <a class="btn btn--ghost" href="{{ url_for('history.index') }}">Cancel</a>
+    {# 0.37: docked like the wizard, so Save is always in reach on a long form.
+       recipe_form.js hides it while the on-screen keyboard is open. #}
+    <div class="rf-actions wizard-dock form-dock" id="rf-dock">
+      <a class="btn btn--secondary" href="{{ back_url }}">Cancel</a>
+      <button type="submit" class="btn btn--primary">{{ icon('check') }}<span>{{ "Save changes" if is_edit else ("Save recipe" if is_import else "Create recipe") }}</span></button>
     </div>
   </form>
 

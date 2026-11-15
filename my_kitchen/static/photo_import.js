@@ -8,7 +8,7 @@
   if (!form) return;
   var MAX_EDGE = 1600;
   var MAX = +form.dataset.maxPages || 4;
-  var pick = document.getElementById("photo-pick");
+  var picks = form.querySelectorAll(".photo-pick");   // camera + photos (0.37)
   var real = document.getElementById("photo-pages");
   var strip = document.getElementById("photo-strip");
   var addBtn = document.getElementById("photo-add");
@@ -62,12 +62,13 @@
     });
     strip.hidden = pages.length === 0;
     addBtn.hidden = pages.length >= MAX;
-    addBtn.querySelector("span").textContent = pages.length ? "Add another page" : "Add a page";
+    addBtn.querySelector("[data-take]").textContent = pages.length ? "Take another" : "Take a photo";
     go.disabled = pages.length === 0;
     go.textContent = pages.length > 1 ? "Read the recipe (" + pages.length + " pages)" : "Read the recipe";
   }
 
-  pick.addEventListener("change", function () {
+  function onPick() {
+    var pick = this;
     var files = Array.prototype.slice.call(pick.files || []);
     pick.value = "";
     error("");
@@ -81,7 +82,8 @@
         }, function () { error("One photo couldn't be opened, so it was skipped."); });
       });
     }, Promise.resolve());
-  });
+  }
+  Array.prototype.forEach.call(picks, function (p) { p.addEventListener("change", onPick); });
 
   form.addEventListener("submit", function (e) {
     if (!pages.length) { e.preventDefault(); return; }

@@ -24,64 +24,74 @@ the household toggles real stock for everything else via the stock UI.
 """
 
 # (name, section, display_order). The four wizard lanes (sections) are fixed
-# (spec §3); category *names* are configurable. Herb / Fruit / Condiment are new
-# in 3a, slotted alongside the original seven.
+# (spec §3); category *names* are configurable and unique across sections (the
+# receipt scanner maps a category back by name), hence "Other carb" / "Other
+# protein". display_order is a position within the section (0.30.0). 0.37.0
+# split Protein, Carbohydrate and Pantry and paired the vinegars with oils.
+# Fresh installs only — the seed never runs against an existing catalogue.
 CATEGORIES = [
-    ("Protein", "protein", 1),
-    ("Carbohydrate", "carb", 2),
-    ("Vegetable", "veg", 3),
-    ("Herb", "veg", 4),          # new in 3a — fresh herbs (veg lane)
-    ("Fruit", "other", 5),       # new in 3a
-    ("Dairy", "other", 6),
-    ("Spice", "other", 7),
-    ("Oil", "other", 8),
-    ("Condiment", "other", 9),   # new in 3a
-    ("Pantry", "other", 10),
+    ("Meat", "protein", 1),
+    ("Fish", "protein", 2),
+    ("Beans & pulses", "protein", 3),
+    ("Other protein", "protein", 4),
+    ("Pasta", "carb", 1),
+    ("Bread", "carb", 2),
+    ("Grain", "carb", 3),
+    ("Other carb", "carb", 4),
+    ("Vegetable", "veg", 1),
+    ("Herb", "veg", 2),          # fresh herbs (veg lane); dried ones are Spice
+    ("Fruit", "other", 1),
+    ("Dairy", "other", 2),
+    ("Spice", "other", 3),
+    ("Oil & vinegar", "other", 4),
+    ("Condiment", "other", 5),
+    ("Pantry", "other", 6),
+    ("Baking", "other", 7),
 ]
 
 # (name, category, is_staple). in_stock is derived by the seed (= is_staple).
 INGREDIENTS = [
-    # --- Protein (section: protein) ---
-    ("Chicken breast", "Protein", False),
-    ("Chicken thigh", "Protein", False),
-    ("Chicken mince", "Protein", False),
-    ("Beef mince", "Protein", False),
-    ("Beef steak", "Protein", False),
-    ("Sausages", "Protein", False),
-    ("Bacon", "Protein", False),
-    ("Pork chop", "Protein", False),
-    ("Lamb mince", "Protein", False),
-    ("Salmon fillet", "Protein", False),
-    ("White fish fillet", "Protein", False),
-    ("Seabass fillet", "Protein", False),
-    ("Cod fillet", "Protein", False),
-    ("Tuna (tinned)", "Protein", False),
-    ("Prawns", "Protein", False),
-    ("Eggs", "Protein", False),
-    ("Tofu", "Protein", False),
-    ("Chickpeas", "Protein", False),
-    ("Red lentils", "Protein", False),
-    ("Green lentils", "Protein", False),
-    ("Kidney beans", "Protein", False),
-    ("Black beans", "Protein", False),
-    ("Cannellini beans", "Protein", False),
-    ("Butter beans", "Protein", False),
+    # --- Protein (section: protein): Meat, Fish, Other protein, Beans & pulses ---
+    ("Chicken breast", "Meat", False),
+    ("Chicken thigh", "Meat", False),
+    ("Chicken mince", "Meat", False),
+    ("Beef mince", "Meat", False),
+    ("Beef steak", "Meat", False),
+    ("Sausages", "Meat", False),
+    ("Bacon", "Meat", False),
+    ("Pork chop", "Meat", False),
+    ("Lamb mince", "Meat", False),
+    ("Salmon fillet", "Fish", False),
+    ("White fish fillet", "Fish", False),
+    ("Seabass fillet", "Fish", False),
+    ("Cod fillet", "Fish", False),
+    ("Tuna (tinned)", "Fish", False),
+    ("Prawns", "Fish", False),
+    ("Eggs", "Other protein", False),
+    ("Tofu", "Other protein", False),
+    ("Chickpeas", "Beans & pulses", False),
+    ("Red lentils", "Beans & pulses", False),
+    ("Green lentils", "Beans & pulses", False),
+    ("Kidney beans", "Beans & pulses", False),
+    ("Black beans", "Beans & pulses", False),
+    ("Cannellini beans", "Beans & pulses", False),
+    ("Butter beans", "Beans & pulses", False),
 
-    # --- Carbohydrate (section: carb) ---
-    ("Rice", "Carbohydrate", False),
-    ("Pasta", "Carbohydrate", False),
-    ("Egg noodles", "Carbohydrate", False),
-    ("Rice noodles", "Carbohydrate", False),
-    ("Potatoes", "Carbohydrate", False),
-    ("New potatoes", "Carbohydrate", False),
-    ("Sweet potato", "Carbohydrate", False),
-    ("Couscous", "Carbohydrate", False),
-    ("Quinoa", "Carbohydrate", False),
-    ("Bulgur wheat", "Carbohydrate", False),
-    ("Bread", "Carbohydrate", False),
-    ("Tortilla wraps", "Carbohydrate", False),
-    ("Gnocchi", "Carbohydrate", False),
-    ("Oats", "Carbohydrate", False),
+    # --- Carb (section: carb): Grain, Pasta, Other carb, Bread ---
+    ("Rice", "Grain", False),
+    ("Pasta", "Pasta", False),
+    ("Egg noodles", "Other carb", False),
+    ("Rice noodles", "Other carb", False),
+    ("Potatoes", "Other carb", False),
+    ("New potatoes", "Other carb", False),
+    ("Sweet potato", "Other carb", False),
+    ("Couscous", "Grain", False),
+    ("Quinoa", "Grain", False),
+    ("Bulgur wheat", "Grain", False),
+    ("Bread", "Bread", False),
+    ("Tortilla wraps", "Bread", False),
+    ("Gnocchi", "Pasta", False),
+    ("Oats", "Grain", False),
 
     # --- Vegetable (section: veg) ---
     ("Onion", "Vegetable", False),
@@ -179,14 +189,14 @@ INGREDIENTS = [
     ("Cumin seeds", "Spice", True),
     ("Fennel seeds", "Spice", True),
     ("Mustard seeds", "Spice", True),
-    ("Vanilla extract", "Spice", True),
+    ("Vanilla extract", "Baking", True),
 
-    # --- Oil (section: other) — all staples ---
-    ("Olive oil", "Oil", True),
-    ("Vegetable oil", "Oil", True),
-    ("Sunflower oil", "Oil", True),
-    ("Sesame oil", "Oil", True),
-    ("Coconut oil", "Oil", True),
+    # --- Oil & vinegar (section: other) — all staples; vinegars sit with Condiment below ---
+    ("Olive oil", "Oil & vinegar", True),
+    ("Vegetable oil", "Oil & vinegar", True),
+    ("Sunflower oil", "Oil & vinegar", True),
+    ("Sesame oil", "Oil & vinegar", True),
+    ("Coconut oil", "Oil & vinegar", True),
 
     # --- Condiment (category: Condiment; section: other) ---
     ("Soy sauce", "Condiment", True),
@@ -197,9 +207,9 @@ INGREDIENTS = [
     ("Mayonnaise", "Condiment", False),
     ("Dijon mustard", "Condiment", False),
     ("Wholegrain mustard", "Condiment", False),
-    ("Balsamic vinegar", "Condiment", True),
-    ("Red wine vinegar", "Condiment", True),
-    ("White wine vinegar", "Condiment", True),
+    ("Balsamic vinegar", "Oil & vinegar", True),
+    ("Red wine vinegar", "Oil & vinegar", True),
+    ("White wine vinegar", "Oil & vinegar", True),
     ("Honey", "Condiment", True),
     ("Maple syrup", "Condiment", False),
     ("Tomato purée", "Condiment", True),
@@ -210,16 +220,16 @@ INGREDIENTS = [
     ("Thai green curry paste", "Condiment", False),
     ("Hot sauce", "Condiment", False),
 
-    # --- Pantry & baking (category: Pantry; section: other) ---
-    ("Plain flour", "Pantry", True),
-    ("Self-raising flour", "Pantry", True),
-    ("Caster sugar", "Pantry", True),
-    ("Brown sugar", "Pantry", True),
-    ("Cornflour", "Pantry", True),
-    ("Baking powder", "Pantry", True),
-    ("Bicarbonate of soda", "Pantry", True),
-    ("Cocoa powder", "Pantry", False),
-    ("Dark chocolate", "Pantry", False),
+    # --- Baking and Pantry (section: other) ---
+    ("Plain flour", "Baking", True),
+    ("Self-raising flour", "Baking", True),
+    ("Caster sugar", "Baking", True),
+    ("Brown sugar", "Baking", True),
+    ("Cornflour", "Baking", True),
+    ("Baking powder", "Baking", True),
+    ("Bicarbonate of soda", "Baking", True),
+    ("Cocoa powder", "Baking", False),
+    ("Dark chocolate", "Baking", False),
     ("Breadcrumbs", "Pantry", False),
     ("Stock cubes", "Pantry", True),
     # 0.36.2: imported recipes list water ("180 ml lukewarm water"); unlinked,
@@ -229,7 +239,7 @@ INGREDIENTS = [
     ("Passata", "Pantry", False),
     ("Coconut milk", "Pantry", False),
     ("Peanut butter", "Pantry", False),
-    ("Raisins", "Pantry", False),
+    ("Raisins", "Baking", False),
     ("Flaked almonds", "Pantry", False),
     ("Cashews", "Pantry", False),
     ("Sesame seeds", "Pantry", False),

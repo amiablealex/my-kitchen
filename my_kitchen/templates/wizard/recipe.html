@@ -2,7 +2,7 @@
 {% from "_icons.html" import icon %}
 {% from "_person.html" import person_mark %}
 {% from "_source.html" import source_dot %}
-{% from "_ingredients.html" import scalable_line %}
+{% from "_ingredients.html" import scalable_line, stock_mark %}
 {% block title %}{{ recipe.title }} — My Kitchen{% endblock %}
 {% block page_title %}Recipe{% endblock %}
 {% block topbar_actions %}
@@ -126,8 +126,11 @@
       <span class="rm-item" id="tag-meal-pill"{% if not recipe.meal_type %} hidden{% endif %}>{{ recipe.meal_type or "" }}</span>
       <span class="rm-item" id="tag-cuisine-pill"{% if not (cuisine_allowed and recipe.cuisine) %} hidden{% endif %}>{{ recipe.cuisine or "" }}</span>
       {% if band %}<span class="rm-item meta-i">{{ icon('schedule') }}{{ band }}</span>{% endif %}
-      {% if recipe.source_host %}<a class="rm-item rm-source" href="{{ recipe.source_url }}" target="_blank" rel="noopener noreferrer">from {{ recipe.source_host }}</a>
-      {% elif recipe.import_method == "photo" %}<span class="rm-item rm-source--plain">from a photo</span>{% endif %}
+      {# 0.37: Recipe.provenance decides — AI generated / the note / the web
+         host / "from a photo". Linked whenever there's a source URL. #}
+      {% set prov = recipe.provenance %}
+      {% if prov and prov[1] %}<a class="rm-item rm-source" href="{{ prov[1] }}" target="_blank" rel="noopener noreferrer">{{ prov[0] }}</a>
+      {% elif prov %}<span class="rm-item rm-source--plain">{{ prov[0] }}</span>{% endif %}
     </p>
     <div class="recipe-tags-edit" id="recipe-tags-edit" hidden>
       <label>Meal type
@@ -217,12 +220,13 @@
          mode (toggle on) each row reveals an edit button that opens the inline
          link editor. Endpoint URLs are injected with url_for (ingress-safe). #}
       <p class="link-edit-hint" id="link-edit-hint" hidden>Tap a line’s edit button to change its catalogue link.</p>
-      <ul class="ingredient-list" id="ingredient-list">
+      <ul class="ingredient-list ingredient-list--stock" id="ingredient-list"
+          data-stock-url="{{ url_for('wizard.recipe_stock_states', recipe_id=recipe.id) }}">
         {% for ri in recipe.ingredients %}
           <li class="ingredient-row" data-ri-id="{{ ri.id }}" data-raw-text="{{ ri.raw_text }}"{% if ri.to_buy %} data-optional{% endif %}
               data-link-url="{{ url_for('wizard.recipe_ingredient_link', recipe_id=recipe.id, ri_id=ri.id) }}"
               data-add-link-url="{{ url_for('wizard.recipe_ingredient_add_and_link', recipe_id=recipe.id, ri_id=ri.id) }}">
-            {{ scalable_line(ri.amount, ri.unit, ri.raw_text) }}
+            {{ stock_mark(ri) }}{{ scalable_line(ri.amount, ri.unit, ri.raw_text) }}
             {% if ri.to_buy %} <span class="to-buy">(optional extra)</span>{% endif %}
             {% if ri.ingredient %}
               <span class="link-pill" data-linked-id="{{ ri.ingredient.id }}">{{ ri.ingredient.name }}</span>
@@ -286,9 +290,14 @@
     {% endif %}
   </section>
 
+  {# Keep screen on (0.37.0): on the first method heading (Prep, else Cook),
+     like Serves on Ingredients. wake.js shows it only where the browser can
+     hold the screen awake. #}
+  {% set wake_on = "prep" if recipe.prep_steps_json else "cook" %}
+  {% set wake_chip %}<button type="button" class="wake-chip" id="wake-chip" aria-pressed="false" hidden>{{ icon('light_mode') }}<span>Keep screen on</span></button>{% endset %}
   {% if recipe.prep_steps_json %}
   <section class="recipe-section">
-    <h2>Prep</h2>
+    <div class="section-head"><h2>Prep</h2>{% if wake_on == "prep" %}{{ wake_chip }}{% endif %}</div>
     <ol class="method">
       {% for step in recipe.prep_steps_json %}
         <li>{% if step.title %}<span class="step-title">{{ step.title }}.</span> {% endif %}{{ step.text }}{% if step.timer_minutes %} <span class="timer">{{ step.timer_minutes }} min</span>{% endif %}</li>
@@ -298,7 +307,7 @@
   {% endif %}
 
   <section class="recipe-section">
-    <h2>Cook</h2>
+    <div class="section-head"><h2>Cook</h2>{% if wake_on == "cook" %}{{ wake_chip }}{% endif %}</div>
     <ol class="method">
       {% for step in recipe.cook_steps_json %}
         <li>{% if step.title %}<span class="step-title">{{ step.title }}.</span> {% endif %}{{ step.text }}{% if step.timer_minutes %} <span class="timer">{{ step.timer_minutes }} min</span>{% endif %}</li>
@@ -447,4 +456,5 @@
   {% if recipe.ingredients %}
     <script src="{{ url_for('static', filename='recipe_links.js') }}"></script>
   {% endif %}
+  <script src="{{ url_for('static', filename='wake.js') }}"></script>
 {% endblock %}

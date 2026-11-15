@@ -16,8 +16,9 @@
   {% if recipe.blurb %}
     <p class="recipe-blurb">{{ recipe.blurb }}</p>
   {% endif %}
-  {% if recipe.source_host %}<p class="recipe-source muted">From {{ recipe.source_host }}</p>
-  {% elif recipe.import_method == "photo" %}<p class="recipe-source muted">From a photo</p>{% endif %}
+  {# 0.37: same provenance as the recipe page; printed, so no link. #}
+  {% set prov = recipe.provenance %}
+  {% if prov %}<p class="recipe-source muted">{{ prov[0][0] | upper }}{{ prov[0][1:] }}{% if prov[1] and recipe.source_note %} ({{ recipe.source_host }}){% endif %}</p>{% endif %}
   <p class="recipe-serves">
     Serves {{ recipe.servings }}
     {%- if recipe.meal_type %} · {{ recipe.meal_type }}{% endif %}

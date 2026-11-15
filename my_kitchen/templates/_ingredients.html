@@ -1,3 +1,4 @@
+{% from "_icons.html" import icon %}
 {# _ingredients.html — shared render helpers for recipe ingredient lines. #}
 
 {# Join amount + unit + text into a display line, dropping any part that is
@@ -18,4 +19,17 @@
 <span class="ing-amt" data-amount="{{ amount }}">{{ amount }}</span>{% if rest %} {% endif %}
 {%- endif -%}
 {{ rest }}
+{%- endmacro %}
+
+
+{# Stock mark in the bullet position on the recipe page (0.37.0). A quiet
+   lime tick for what's in (staples too), a small pink dot for what's missing,
+   a dash for a line with no catalogue link, and nothing for an optional extra
+   that isn't in. RecipeIngredient.stock_state decides; recipe_links.js swaps
+   the class when a line is linked in place, and refreshes on a back-forward
+   return. #}
+{% macro stock_mark(ri) -%}
+{%- set st = ri.stock_state -%}
+{%- set label = {"have": "In stock", "need": "Not in stock", "unlinked": "Not linked"}.get(st) -%}
+<span class="stock-mark stock-mark--{{ st }}"{% if label %} role="img" aria-label="{{ label }}" title="{{ label }}"{% else %} aria-hidden="true"{% endif %}>{{ icon('check') }}</span>
 {%- endmacro %}

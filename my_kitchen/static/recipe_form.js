@@ -370,4 +370,63 @@
       alert("Add at least one ingredient and pick its catalogue link.");
     }
   });
+
+  // ---- 0.37: docked actions + unsaved-changes guard ------------------------
+  var form = document.getElementById("recipe-form");
+  var dock = document.getElementById("rf-dock");
+
+  // The dock floats above the keyboard on Android and would sit over the
+  // field being typed in, so it steps aside while the on-screen keyboard is
+  // open — detected as the visual viewport shrinking well below its tallest
+  // (a focused field alone doesn't count: no keyboard on desktop, and after
+  // typing a title you can still tap Save once the keyboard is down).
+  function isTextField(el) {
+    if (!el || !form.contains(el)) return false;
+    if (el.tagName === "TEXTAREA") return true;
+    return el.tagName === "INPUT" && /^(text|number|search|url)$/.test(el.type);
+  }
+  var vv = window.visualViewport, tallest = 0;
+  function syncDock() {
+    if (!dock || !vv) return;
+    if (vv.height > tallest) tallest = vv.height;
+    var keyboard = tallest - vv.height > 150;
+    dock.classList.toggle("is-typing", keyboard && isTextField(document.activeElement));
+  }
+  if (vv) {
+    vv.addEventListener("resize", syncDock);
+    window.addEventListener("orientationchange", function () { tallest = 0; setTimeout(syncDock, 300); });
+    document.addEventListener("focusin", syncDock);
+    document.addEventListener("focusout", function () { setTimeout(syncDock, 0); });
+    syncDock();
+  }
+
+  // Warn before leaving only once something has changed, never after Save.
+  // Rows added, removed, reordered or relinked show up as DOM changes in the
+  // lists; the shared picker moving between rows doesn't count.
+  var dirty = false, submitting = false;
+  function markDirty() { dirty = true; }
+  form.addEventListener("input", markDirty);
+  form.addEventListener("change", markDirty);
+  if (window.MutationObserver) {
+    var picker = document.getElementById("rf-picker");
+    var obs = new MutationObserver(function (records) {
+      for (var i = 0; i < records.length; i++) {
+        var r = records[i], nodes = [].slice.call(r.addedNodes).concat([].slice.call(r.removedNodes));
+        if (picker && (r.target === picker || picker.contains(r.target))) continue;
+        if (nodes.length && nodes.every(function (n) { return n === picker; })) continue;
+        markDirty();
+        return;
+      }
+    });
+    ["rf-ing-list", "rf-prep-list", "rf-cook-list", "rf-tips-list"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) obs.observe(el, { childList: true, subtree: true });
+    });
+  }
+  form.addEventListener("submit", function (ev) {
+    if (!ev.defaultPrevented) submitting = true;
+  });
+  window.addEventListener("beforeunload", function (e) {
+    if (dirty && !submitting) { e.preventDefault(); e.returnValue = ""; }
+  });
 })();

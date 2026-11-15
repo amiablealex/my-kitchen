@@ -2113,3 +2113,49 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
 .unlinked-note > .icon { flex: none; width: 1.15em; height: 1.15em; margin-top: 1px; color: var(--accent-1); }
 .unlinked-note strong { color: var(--text); font-weight: 600; }
 .unlinked-note .text-btn { font-size: inherit; }
+
+/* ============================ 0.37.0 niceness pass ===================== */
+/* Recipe form: Save + Cancel ride the wizard dock (.wizard-dock), and step
+   aside while the on-screen keyboard is open — on Android the dock would
+   sit on the keyboard, over the field being typed in. */
+.form-dock { transition: opacity 0.15s; }
+.form-dock.is-typing, .form-dock.is-typing > * { opacity: 0; pointer-events: none; }
+.field-hint { display: block; margin-top: var(--space-1); font-size: var(--fs-small);
+  font-weight: 400; color: var(--text-muted); }
+
+/* Take a photo / Choose a photo: two buttons side by side. Android's photo
+   picker has no camera, so the camera has its own button. */
+.pick-pair { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.pick-pair[hidden] { display: none; }
+.form .pick-pair { margin: 0 0 var(--space-4); }
+.form .pick-pair .photo-add { margin: 0; }
+
+/* Stock marks in the bullet position on the recipe page. A quiet lime tick
+   for what's in (staples too), a small pink dot for what's missing — the one
+   thing that stands out — a dash for an unlinked line, and an empty slot for
+   an optional extra that isn't in. Hung in the left padding so wrapped lines
+   stay aligned; centred on the first line (line-height 1.55 → 0.775em). */
+.ingredient-list--stock li { position: relative; padding-left: 26px; }
+.stock-mark { position: absolute; left: 0; top: calc(var(--space-2) + 0.775em);
+  width: 16px; height: 16px; transform: translateY(-50%);
+  display: flex; align-items: center; justify-content: center; }
+.stock-mark .icon { display: none; width: 16px; height: 16px; vertical-align: 0; }
+.stock-mark--have .icon { display: block; color: var(--accent-2); }
+.stock-mark--need::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent-4); }
+.stock-mark--unlinked::before { content: ""; width: 8px; height: 2px; border-radius: 1px; background: var(--text-muted); opacity: 0.75; }
+
+/* Keep screen on: a petal chip at the end of the first method heading,
+   quiet when off, lime when on. */
+.wake-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px;
+  padding: 0 var(--space-3) 0 10px; border: 1px solid var(--divider); border-radius: var(--petal-sm);
+  background: var(--surface); color: var(--text); font: inherit; font-size: var(--fs-small);
+  font-weight: 600; cursor: pointer; white-space: nowrap; transition: border-radius 0.12s; }
+.wake-chip[hidden] { display: none; }
+.wake-chip .icon { width: 1.1em; height: 1.1em; color: var(--accent-2); }
+.wake-chip:active { border-radius: var(--petal-flip-sm); }
+.wake-chip.is-on { background: var(--accent-2); border-color: var(--accent-2); color: var(--on-accent); }
+.wake-chip.is-on .icon { color: var(--on-accent); }
+@media print { .stock-mark, .wake-chip { display: none !important; } }
+/* Method headings now sit in a .section-head (for the chip): keep the h2's
+   usual space beneath. */
+.recipe-section > .section-head { margin-bottom: var(--space-3); }

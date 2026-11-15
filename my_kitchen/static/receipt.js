@@ -13,7 +13,8 @@
   var MIN_GAP = 0.08;         // the frame can't close up completely
   var TOAST_KEY = "mk-stock-toast";   // stock.js shows it after the reload
 
-  var fileInput = dlg.querySelector("[data-file]");
+  // 0.37: two inputs — camera (capture) and photos — feeding one handler.
+  var fileInputs = dlg.querySelectorAll("[data-file]");
   var img = dlg.querySelector("[data-img]");
   var frame = dlg.querySelector(".frame");
   var shadeTop = dlg.querySelector('[data-shade="top"]');
@@ -40,7 +41,7 @@
   function reset() {
     if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
     img.removeAttribute("src");
-    fileInput.value = "";
+    fileInputs.forEach(function (i) { i.value = ""; });
     top = 0.06; bottom = 0.94;
     error("");
     show("pick");
@@ -53,10 +54,14 @@
   });
   dlg.querySelector("[data-cancel]").addEventListener("click", function () { dlg.close(); reset(); });
   dlg.addEventListener("cancel", reset);
-  anotherBtn.addEventListener("click", function () { fileInput.click(); });
+  // Back to the pick step, so it can be the camera or a saved photo.
+  anotherBtn.addEventListener("click", function () {
+    fileInputs.forEach(function (i) { i.value = ""; });
+    error(""); show("pick");
+  });
 
   // ---- 1. pick ---------------------------------------------------------------
-  fileInput.addEventListener("change", function () {
+  fileInputs.forEach(function (fileInput) { fileInput.addEventListener("change", function () {
     var f = fileInput.files && fileInput.files[0];
     if (!f) return;
     error("");
@@ -65,7 +70,7 @@
     img.onload = function () { top = 0.06; bottom = 0.94; layout(); show("frame"); };
     img.onerror = function () { error("That photo couldn't be opened. Try another one?"); show("pick"); };
     img.src = objectUrl;
-  });
+  }); });
 
   // ---- 2. frame --------------------------------------------------------------
   function layout() {

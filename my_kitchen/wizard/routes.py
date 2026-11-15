@@ -20,6 +20,7 @@ from ..models import (
     meal_type_takes_cuisine, CUISINES, WIZARD_CUISINES, SURPRISE_ME,
     COMMENT_MAX_CHARS, TAG_TYPE_CHOICES, TAG_TYPE_HINTS, utcnow,
     SPECIAL_REQUEST_MAX_CHARS, KITCHEN_MENTION, QUESTION_MAX_CHARS,
+    SOURCE_NOTE_MAX_CHARS,
 )
 from ..llm.importer import PHOTO_MAX_PAGES, ImportProblem, import_recipe
 from ..llm.providers import provider_reads_images
@@ -848,6 +849,17 @@ def _recipe_ingredient_or_404(recipe_id, ri_id):
     return ri
 
 
+@wizard_bp.route("/recipe/<int:recipe_id>/stock")
+def recipe_stock_states(recipe_id):
+    """{ri_id: stock_state} for the recipe page's marks (0.37.0). Read when the
+    page comes back from the back-forward cache, where stock may have changed
+    on the stock page in between. Read-only and household-wide."""
+    recipe = db.session.get(Recipe, recipe_id)
+    if recipe is None:
+        abort(404)
+    return jsonify({str(ri.id): ri.stock_state for ri in recipe.ingredients})
+
+
 @wizard_bp.route("/recipe/<int:recipe_id>/ingredient/<int:ri_id>/link", methods=["POST"])
 def recipe_ingredient_link(recipe_id, ri_id):
     """Re-link or unlink one ingredient line. Body: ingredient_id (an active
@@ -859,7 +871,7 @@ def recipe_ingredient_link(recipe_id, ri_id):
     if raw == "":
         ri.ingredient_id = None
         db.session.commit()
-        return jsonify(ri_id=ri.id, ingredient_id=None, name=None)
+        return jsonify(ri_id=ri.id, ingredient_id=None, name=None, stock=ri.stock_state)
     try:
         ing_id = int(raw)
     except (TypeError, ValueError):
@@ -871,7 +883,7 @@ def recipe_ingredient_link(recipe_id, ri_id):
         return jsonify(error="invalid", message="That ingredient isn’t available."), 400
     ri.ingredient_id = ing.id
     db.session.commit()
-    return jsonify(ri_id=ri.id, ingredient_id=ing.id, name=ing.name)
+    return jsonify(ri_id=ri.id, ingredient_id=ing.id, name=ing.name, stock=ri.stock_state)
 
 
 @wizard_bp.route("/recipe/<int:recipe_id>/ingredient/<int:ri_id>/add-and-link", methods=["POST"])
@@ -907,7 +919,7 @@ def recipe_ingredient_add_and_link(recipe_id, ri_id):
         return jsonify(
             error="exists", message=f'“{data["name"]}” already exists.'
         ), 400
-    return jsonify(ri_id=ri.id, ingredient_id=ing.id, name=ing.name)
+    return jsonify(ri_id=ri.id, ingredient_id=ing.id, name=ing.name, stock=ri.stock_state)
 
 
 @wizard_bp.route("/recipe/<int:recipe_id>/tags", methods=["POST"])
@@ -1041,6 +1053,7 @@ def _save_recipe_from_form(recipe=None, source="user", source_url=None, import_m
     title = (request.form.get("title") or "").strip()
     blurb = (request.form.get("blurb") or "").strip()
     intro = (request.form.get("intro") or "").strip()
+    source_note = " ".join((request.form.get("source_note") or "").split())[:SOURCE_NOTE_MAX_CHARS]
     meal_type, cuisine = _normalise_tags(
         request.form.get("meal_type"), request.form.get("cuisine")
     )
@@ -1086,6 +1099,7 @@ def _save_recipe_from_form(recipe=None, source="user", source_url=None, import_m
 
     recipe.title = title
     recipe.blurb = blurb or None
+    recipe.source_note = source_note or None
     recipe.intro = intro or None
     recipe.servings = servings
     recipe.meal_type = meal_type
@@ -1136,6 +1150,7 @@ def _collect_prefill_from_form():
         "title": request.form.get("title") or "",
         "blurb": request.form.get("blurb") or "",
         "intro": request.form.get("intro") or "",
+        "source_note": request.form.get("source_note") or "",
         "servings": request.form.get("servings") or "",
         "meal_type": request.form.get("meal_type") or "",
         "cuisine": request.form.get("cuisine") or "",
@@ -1173,6 +1188,7 @@ def _recipe_to_prefill(recipe):
         "title": recipe.title or "",
         "blurb": recipe.blurb or "",
         "intro": recipe.intro or "",
+        "source_note": recipe.source_note or "",
         "servings": str(recipe.servings or ""),
         "meal_type": recipe.meal_type or "",
         "cuisine": recipe.cuisine or "",
@@ -1195,7 +1211,7 @@ def _form_context(mode, recipe=None, from_form=False, prefill=None, source_url=N
     elif recipe is not None:
         prefill = _recipe_to_prefill(recipe)
     else:
-        prefill = {"title": "", "blurb": "", "intro": "", "servings": "2",
+        prefill = {"title": "", "blurb": "", "intro": "", "source_note": "", "servings": "2",
                    "meal_type": "", "cuisine": "", "time_band": "",
                    "prep": [], "cook": [], "tips": [], "ingredients": []}
     link_catalogue = [
@@ -1212,7 +1228,7 @@ def _form_context(mode, recipe=None, from_form=False, prefill=None, source_url=N
         "prefill": prefill, "link_catalogue": link_catalogue,
         "categories": categories, "meal_types": MEAL_TYPE_NAMES,
         "cuisines": CUISINES, "cuisine_meal_types": CUISINE_MEAL_TYPES,
-        "time_bands": TIME_BANDS,
+        "time_bands": TIME_BANDS, "source_note_max": SOURCE_NOTE_MAX_CHARS,
         "source_url": source_url or (recipe.source_url if recipe is not None else None),
         "import_method": import_method,
         "imported": mode == "import" or (recipe is not None and recipe.source == "imported"),

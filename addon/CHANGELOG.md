@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.37.0
+- **See what's in stock on a recipe.** Each ingredient line has a mark where
+  the bullet would be: a green tick if you have it (staples count), a small
+  pink dot if you don't, and a dash if the line isn't linked to your
+  catalogue. An optional extra you don't have gets no mark, since it never
+  stops you cooking. Linking a line updates its mark straight away, and the
+  marks refresh when you come back from the stock page.
+- **Keep the screen on while you cook.** A *Keep screen on* button sits on the
+  recipe's first method heading. Tap it and your phone won't dim while the
+  recipe is open; tap again to stop. It only shows where the browser supports
+  it (HTTPS).
+- **Where a recipe is from.** Recipes you write or import have a *Where it's
+  from* field ("Mum's cookbook"), shown under the title and on the print
+  view. On a web import it replaces the site's name and still links to the
+  page. AI recipes now say *AI generated*.
+- **Save is always in reach when editing.** *Save* and *Cancel* float at the
+  bottom of the recipe form (they step aside while the keyboard is open), and
+  leaving with unsaved changes asks first. When editing, *Cancel* and the back
+  link return to the recipe rather than the Recipes list.
+- **Take a photo from inside the app.** Receipt scanning and recipe-from-a-
+  photo now offer *Take a photo* (opens the camera) alongside *Choose a
+  photo*. Recent Android phones don't offer the camera from the photo picker.
+- **New installs start with more useful categories:** Meat, Fish, Beans &
+  pulses and Other protein; Pasta, Bread, Grain and Other carb; Oil & vinegar;
+  and Baking split out of Pantry. Existing catalogues aren't changed. Category
+  names are shared across sections, and the error now says where a name is
+  already used.
+
 ## 0.36.6
 - **Find recipes with unlinked ingredients.** When any recipe has an ingredient
   line that isn't linked to your catalogue, the Recipes filters gain a last

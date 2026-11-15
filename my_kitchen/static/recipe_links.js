@@ -160,7 +160,27 @@
     });
   }
 
-  function setPill(row, id, name) {
+  // Stock mark in the bullet position (0.37.0): the server sends the line's
+  // state with every link change, so the mark follows the link.
+  var MARK_LABELS = { have: "In stock", need: "Not in stock", unlinked: "Not linked" };
+  function setMark(row, state) {
+    var mark = row.querySelector(".stock-mark");
+    if (!mark || !state) return;
+    mark.className = "stock-mark stock-mark--" + state;
+    var label = MARK_LABELS[state];
+    if (label) {
+      mark.setAttribute("role", "img");
+      mark.setAttribute("aria-label", label);
+      mark.setAttribute("title", label);
+      mark.removeAttribute("aria-hidden");
+    } else {
+      ["role", "aria-label", "title"].forEach(function (a) { mark.removeAttribute(a); });
+      mark.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  function setPill(row, id, name, stock) {
+    setMark(row, stock);
     var pill = row.querySelector(".link-pill");
     if (!pill) return;
     if (id) {
@@ -212,7 +232,7 @@
     postForm(row.dataset.linkUrl, { ingredient_id: btn.dataset.ingredientId })
       .then(function (res) {
         if (!res.ok) throw new Error((res.data && res.data.message) || "Could not link.");
-        setPill(row, res.data.ingredient_id, res.data.name);
+        setPill(row, res.data.ingredient_id, res.data.name, res.data.stock);
         closeEditor();
       })
       .catch(function (err) {
@@ -229,7 +249,7 @@
     postForm(row.dataset.linkUrl, { ingredient_id: "" })
       .then(function (res) {
         if (!res.ok) throw new Error((res.data && res.data.message) || "Could not unlink.");
-        setPill(row, null, null);
+        setPill(row, null, null, res.data.stock);
         closeEditor();
       })
       .catch(function (err) {
@@ -276,7 +296,7 @@
         catalogue.sort(function (a, b) {
           return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1;
         });
-        setPill(row, res.data.ingredient_id, res.data.name);
+        setPill(row, res.data.ingredient_id, res.data.name, res.data.stock);
         closeEditor();
       })
       .catch(function () {
@@ -285,5 +305,20 @@
       .finally(function () {
         elAddSubmit.disabled = false;
       });
+  });
+
+  // Back to this page from the stock page: the browser may show its cached
+  // copy, so re-read the marks (0.37.0). A normal load is already fresh.
+  window.addEventListener("pageshow", function (e) {
+    if (!e.persisted || !list.dataset.stockUrl) return;
+    fetch(list.dataset.stockUrl, { headers: { Accept: "application/json" }, credentials: "same-origin" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (states) {
+        if (!states) return;
+        list.querySelectorAll(".ingredient-row").forEach(function (row) {
+          setMark(row, states[row.dataset.riId]);
+        });
+      })
+      .catch(function () {});
   });
 })();

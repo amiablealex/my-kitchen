@@ -231,10 +231,24 @@ def ingredient_delete(ingredient_id):
 # ----------------------------------------------------------------- categories
 
 def _category_name_taken(name, exclude_id=None):
+    """The clashing category, or None. Names are unique across ALL sections
+    (the receipt scanner maps a category back by name)."""
     q = Category.query.filter(db.func.lower(Category.name) == name.lower())
     if exclude_id is not None:
         q = q.filter(Category.id != exclude_id)
-    return q.first() is not None
+    return q.first()
+
+
+def _taken_message(name, clash, section):
+    """0.37: say where the clash is — it may sit in another section, out of
+    sight of the one being added to — and suggest a name that would fit."""
+    labels = dict(SECTION_CHOICES)
+    where = labels.get(clash.section, clash.section)
+    if clash.section != section and section != "other":
+        return (f'"{name}" is already used in {where}. Category names are shared '
+                f'across sections, so try "{name} {labels[section].lower()}".')
+    return f'"{name}" is already used in {where}.'
+
 
 
 def _next_display_order(section):
@@ -276,8 +290,9 @@ def category_add():
     if error:
         flash(error, "error")
         return redirect(url_for("manage.categories"))
-    if _category_name_taken(data["name"]):
-        flash(f'"{data["name"]}" already exists.', "error")
+    clash = _category_name_taken(data["name"])
+    if clash:
+        flash(_taken_message(data["name"], clash, data["section"]), "error")
         return redirect(url_for("manage.categories"))
     db.session.add(Category(display_order=_next_display_order(data["section"]), **data))
     try:
@@ -300,8 +315,9 @@ def category_edit(category_id):
         if error:
             flash(error, "error")
             return redirect(url_for("manage.category_edit", category_id=cat.id))
-        if _category_name_taken(data["name"], exclude_id=cat.id):
-            flash(f'"{data["name"]}" already exists.', "error")
+        clash = _category_name_taken(data["name"], exclude_id=cat.id)
+        if clash:
+            flash(_taken_message(data["name"], clash, data["section"]), "error")
             return redirect(url_for("manage.category_edit", category_id=cat.id))
         cat.name = data["name"]
         if data["section"] != cat.section:
