@@ -570,12 +570,12 @@ def recipe(recipe_id):
     # recipe order. Empty -> the line isn't shown.
     used_up_items, seen = [], set()
     for line in recipe.ingredients:
-        ing = line.ingredient
-        if (ing is None or ing.id in seen or ing.is_staple
-                or not (ing.in_stock and ing.is_active)):
-            continue
-        seen.add(ing.id)
-        used_up_items.append({"id": ing.id, "name": ing.name, "section": ing.category.section})
+        for ing in (line.ingredient, line.alt_ingredient):   # 0.38.0: either half of an "or"
+            if (ing is None or ing.id in seen or ing.is_staple
+                    or not (ing.in_stock and ing.is_active)):
+                continue
+            seen.add(ing.id)
+            used_up_items.append({"id": ing.id, "name": ing.name, "section": ing.category.section})
     return render_template(
         "wizard/recipe.html", recipe=recipe, favourited=favourited,
         used_up_items=used_up_items,
@@ -860,30 +860,72 @@ def recipe_stock_states(recipe_id):
     return jsonify({str(ri.id): ri.stock_state for ri in recipe.ingredients})
 
 
+def _link_payload(ri):
+    """What the link editor needs back after any change: both links and the
+    line's stock mark (0.38.0 adds the "or" alternative)."""
+    return jsonify(
+        ri_id=ri.id,
+        ingredient_id=ri.ingredient.id if ri.ingredient else None,
+        name=ri.ingredient.name if ri.ingredient else None,
+        alt_id=ri.alt_ingredient.id if ri.alt_ingredient else None,
+        alt_name=ri.alt_ingredient.name if ri.alt_ingredient else None,
+        stock=ri.stock_state,
+    )
+
+
+def _set_line_link(ri, ing_id, slot):
+    """Apply a link change to one line. slot "alt" is the "or" alternative
+    (0.38.0): only on a line whose wording says "or"; with no main link yet it
+    becomes the main link. Unlinking the main link promotes the alternative,
+    so a line never has an alternative without a main link. Returns an error
+    message or None."""
+    if slot == "alt":
+        if not ri.offers_or:
+            return "Only a line that says “or” can link a second ingredient."
+        if ing_id is None:
+            ri.alt_ingredient_id = None
+        elif ri.ingredient_id is None:
+            ri.ingredient_id = ing_id
+        elif ing_id == ri.ingredient_id:
+            return "That’s already this line’s link."
+        else:
+            ri.alt_ingredient_id = ing_id
+        return None
+    if ing_id is None:
+        ri.ingredient_id, ri.alt_ingredient_id = ri.alt_ingredient_id, None
+    else:
+        ri.ingredient_id = ing_id
+        if ri.alt_ingredient_id == ing_id:
+            ri.alt_ingredient_id = None
+    return None
+
+
 @wizard_bp.route("/recipe/<int:recipe_id>/ingredient/<int:ri_id>/link", methods=["POST"])
 def recipe_ingredient_link(recipe_id, ri_id):
     """Re-link or unlink one ingredient line. Body: ingredient_id (an active
-    catalogue id to link), or empty/absent to unlink (ingredient_id -> NULL).
-    A manual link/unlink is authoritative — no re-resolution is triggered, and
-    the change is shared across the household (no per-user scoping)."""
+    catalogue id to link), or empty/absent to unlink; slot=alt for the "or"
+    alternative (0.38.0). A manual link/unlink is authoritative — no
+    re-resolution is triggered, and the change is shared across the household
+    (no per-user scoping)."""
     ri = _recipe_ingredient_or_404(recipe_id, ri_id)
+    slot = "alt" if request.form.get("slot") == "alt" else "main"
     raw = (request.form.get("ingredient_id") or "").strip()
-    if raw == "":
-        ri.ingredient_id = None
-        db.session.commit()
-        return jsonify(ri_id=ri.id, ingredient_id=None, name=None, stock=ri.stock_state)
-    try:
-        ing_id = int(raw)
-    except (TypeError, ValueError):
-        return jsonify(error="invalid", message="That ingredient isn’t valid."), 400
-    ing = db.session.get(Ingredient, ing_id)
-    if ing is None or not ing.is_active:
-        # Never link to a missing or retired ingredient — the picker only offers
-        # active ones, so this is a stale-page / tampered-request guard.
-        return jsonify(error="invalid", message="That ingredient isn’t available."), 400
-    ri.ingredient_id = ing.id
+    ing_id = None
+    if raw:
+        try:
+            ing_id = int(raw)
+        except (TypeError, ValueError):
+            return jsonify(error="invalid", message="That ingredient isn’t valid."), 400
+        ing = db.session.get(Ingredient, ing_id)
+        if ing is None or not ing.is_active:
+            # Never link to a missing or retired ingredient — the picker only offers
+            # active ones, so this is a stale-page / tampered-request guard.
+            return jsonify(error="invalid", message="That ingredient isn’t available."), 400
+    error = _set_line_link(ri, ing_id, slot)
+    if error:
+        return jsonify(error="invalid", message=error), 400
     db.session.commit()
-    return jsonify(ri_id=ri.id, ingredient_id=ing.id, name=ing.name, stock=ri.stock_state)
+    return _link_payload(ri)
 
 
 @wizard_bp.route("/recipe/<int:recipe_id>/ingredient/<int:ri_id>/add-and-link", methods=["POST"])
@@ -896,6 +938,10 @@ def recipe_ingredient_add_and_link(recipe_id, ri_id):
     New ingredients default in_stock=False / is_active=True, matching seed +
     manage.ingredient_add."""
     ri = _recipe_ingredient_or_404(recipe_id, ri_id)
+    slot = "alt" if request.form.get("slot") == "alt" else "main"
+    if slot == "alt" and not ri.offers_or:
+        return jsonify(error="invalid",
+                       message="Only a line that says “or” can link a second ingredient."), 400
     data, error = _parse_ingredient_form()
     if error:
         return jsonify(error="validation", message=error), 400
@@ -912,14 +958,14 @@ def recipe_ingredient_add_and_link(recipe_id, ri_id):
     db.session.add(ing)
     try:
         db.session.flush()  # assign ing.id before linking
-        ri.ingredient_id = ing.id
+        _set_line_link(ri, ing.id, slot)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
         return jsonify(
             error="exists", message=f'“{data["name"]}” already exists.'
         ), 400
-    return jsonify(ri_id=ri.id, ingredient_id=ing.id, name=ing.name, stock=ri.stock_state)
+    return _link_payload(ri)
 
 
 @wizard_bp.route("/recipe/<int:recipe_id>/tags", methods=["POST"])
@@ -1008,8 +1054,8 @@ def _parse_ingredient_lines(imported=False):
         if not raw_id and not amount and not unit and not name and not raw:
             continue  # blank row — ignore
         if not raw_id and raw:
-            lines.append({"ingredient_id": None, "raw_text": raw, "amount": amount or None,
-                          "unit": unit or None, "to_buy": to_buy})
+            lines.append({"ingredient_id": None, "alt_ingredient_id": None, "raw_text": raw,
+                          "amount": amount or None, "unit": unit or None, "to_buy": to_buy})
             continue
         if not raw_id:
             return None, "Every ingredient line must be linked to a catalogue ingredient."
@@ -1022,12 +1068,27 @@ def _parse_ingredient_lines(imported=False):
             return None, "An ingredient line is linked to an unavailable ingredient."
         lines.append({
             "ingredient_id": ing.id,
+            "alt_ingredient_id": _form_alt_id(i, ing.id, raw),
             "raw_text": raw or ing.name,
             "amount": amount or None,
             "unit": unit or None,
             "to_buy": to_buy,
         })
     return lines, None
+
+
+def _form_alt_id(i, main_id, raw):
+    """The row's "or" alternative (0.38.0), carried through the form as a
+    hidden field. Kept only on a line whose wording says "or", when it's an
+    active ingredient and not the same as the main link; otherwise dropped."""
+    try:
+        alt_id = int(request.form.get(f"ing-{i}-alt_id") or 0)
+    except ValueError:
+        return None
+    if not alt_id or alt_id == main_id or not RecipeIngredient._OR_WORD.search(raw or ""):
+        return None
+    alt = db.session.get(Ingredient, alt_id)
+    return alt.id if alt is not None and alt.is_active else None
 
 
 def _normalise_tags(meal_type_raw, cuisine_raw):
@@ -1114,7 +1175,8 @@ def _save_recipe_from_form(recipe=None, source="user", source_url=None, import_m
     # edit. position == list order (no reordering UI, so it mirrors on-screen).
     recipe.ingredients = [
         RecipeIngredient(
-            ingredient_id=ln["ingredient_id"], raw_text=ln["raw_text"],
+            ingredient_id=ln["ingredient_id"], alt_ingredient_id=ln["alt_ingredient_id"],
+            raw_text=ln["raw_text"],
             amount=ln["amount"], unit=ln["unit"], to_buy=ln["to_buy"], position=pos,
         )
         for pos, ln in enumerate(lines)
@@ -1141,6 +1203,8 @@ def _collect_prefill_from_form():
         ings.append({
             "ingredient_id": request.form.get(f"ing-{i}-ingredient_id") or "",
             "name": request.form.get(f"ing-{i}-name") or "",
+            "alt_id": request.form.get(f"ing-{i}-alt_id") or "",
+            "alt_name": request.form.get(f"ing-{i}-alt_name") or "",
             "amount": request.form.get(f"ing-{i}-amount") or "",
             "unit": request.form.get(f"ing-{i}-unit") or "",
             "to_buy": request.form.get(f"ing-{i}-to_buy") == "on",
@@ -1178,6 +1242,8 @@ def _recipe_to_prefill(recipe):
         ings.append({
             "ingredient_id": str(ri.ingredient_id) if ri.ingredient_id else "",
             "name": ri.ingredient.name if ri.ingredient else ri.raw_text,
+            "alt_id": str(ri.alt_ingredient_id) if ri.alt_ingredient else "",
+            "alt_name": ri.alt_ingredient.name if ri.alt_ingredient else "",
             "amount": ri.amount or "",
             "unit": ri.unit or "",
             "to_buy": bool(ri.to_buy),
@@ -1375,6 +1441,8 @@ def _import_prefill(r):
         "ingredients": [{
             "ingredient_id": str(i["ingredient_id"]) if i.get("ingredient_id") else "",
             "name": i.get("name") or "", "raw": i["item"],
+            "alt_id": str(i["alt_ingredient_id"]) if i.get("alt_ingredient_id") else "",
+            "alt_name": i.get("alt_name") or "",
             "amount": i["amount"], "unit": i["unit"], "to_buy": False,
         } for i in r["ingredients"]],
     }

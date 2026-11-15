@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 
 from .extensions import db
@@ -435,6 +436,14 @@ class Recipe(db.Model):
         return None
 
     @property
+    def suggestable(self):
+        """Can come up in suggestions and the home page's "could make" line:
+        anything hand-written or imported, and AI recipes that were chosen. An
+        unchosen AI recipe never does, so its unlinked lines don't matter
+        (0.38.0: the unlinked note and filter skip it)."""
+        return self.source != "ai" or bool(self.was_chosen)
+
+    @property
     def is_archived(self):
         return self.archived_at is not None
 
@@ -470,22 +479,50 @@ class RecipeIngredient(db.Model):
     to_buy = db.Column(db.Boolean, default=False, nullable=False)
     position = db.Column(db.Integer, nullable=False)
 
-    # Read-only link to the catalogue ingredient (None when unmatched).
-    ingredient = db.relationship("Ingredient")
+    # The "or" alternative (0.38.0): "1 cup cauliflower or broccoli" can link
+    # both, and either in stock satisfies the line. Deliberately one at most,
+    # and only offered where the line's own wording says "or" (offers_or) —
+    # it's for recipes that name a choice, not a substitution system. Only set
+    # when ingredient_id is set (unlinking the main link promotes this one).
+    alt_ingredient_id = db.Column(db.Integer, db.ForeignKey("ingredients.id"), nullable=True)
+
+    # Read-only links to the catalogue ingredients (None when unmatched).
+    ingredient = db.relationship("Ingredient", foreign_keys=[ingredient_id])
+    alt_ingredient = db.relationship("Ingredient", foreign_keys=[alt_ingredient_id])
+
+    _OR_WORD = re.compile(r"\bor\b", re.IGNORECASE)
+
+    @property
+    def offers_or(self):
+        """True when the line's own text names a choice ("… or …") — the only
+        lines an alternative link may be added to (0.38.0)."""
+        return bool(self._OR_WORD.search(self.raw_text or ""))
+
+    @staticmethod
+    def _available(ing):
+        """In the kitchen for cooking purposes: staples are assumed in; a
+        retired ingredient counts as out. The one rule shared by the stock
+        marks and wizard/suggestions._is_cookable."""
+        return ing is not None and (ing.is_staple or (ing.in_stock and ing.is_active))
+
+    @property
+    def satisfied(self):
+        """The line can be cooked from what's in: its link, or its "or"
+        alternative, is available."""
+        return self._available(self.ingredient) or self._available(self.alt_ingredient)
 
     @property
     def stock_state(self):
         """The recipe page's stock mark for this line (0.37.0): "have" (tick),
         "need" (pink dot), "unlinked" (dash) or "none" (an optional extra that
-        isn't in — never alarming, as it never blocks cooking). Mirrors
-        wizard/suggestions.is_cookable, so the marks and suggestions agree:
-        staples are assumed in; a retired ingredient counts as out."""
-        ing = self.ingredient
-        if ing is None:
+        isn't in — never alarming, as it never blocks cooking). Uses the same
+        rule as suggestions, so the marks and suggestions agree."""
+        if self.ingredient is None:
             return "unlinked"
-        if ing.is_staple or (ing.in_stock and ing.is_active):
+        if self.satisfied:
             return "have"
         return "none" if self.to_buy else "need"
+
 
 class RecipeComment(db.Model):
     """One household note on a recipe (Phase 19).

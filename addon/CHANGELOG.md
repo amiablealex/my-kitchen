@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.38.0
+- **Merge duplicate ingredients.** An ingredient's ⋯ menu has *Merge into…*,
+  for when you have the same thing twice ("Baby button mushrooms" and "Button
+  mushrooms"). Pick the one to keep: every recipe line linked to the
+  duplicate moves across, the kept one counts as in stock if either was, and
+  the duplicate is removed. Nothing ends up unlinked.
+- **"Cauliflower or broccoli" can link both.** When a recipe line says "or"
+  and both ingredients are in your catalogue, the line links both, and either
+  one in stock is enough to cook it. New imports and generated recipes do
+  this automatically; on an existing recipe, use *Edit links* and *Link the
+  other one too*. Only lines that say "or" can have a second link, and only
+  one.
+- **Deleting an ingredient no longer hides problems.** Its recipe lines are
+  properly unlinked, so the recipe says so and *Unlinked ingredients* lists
+  it. Lines left pointing at ingredients deleted before this update are
+  fixed when you update. Deleting or retiring an ingredient that recipes use
+  now tells you how many, and an ingredient's page shows "used in N recipes".
+- **Pick-one pairs are no longer in *Unlinked ingredients*,** and their
+  recipes don't show the unlinked note: a recipe you haven't chosen never
+  comes up in suggestions, so its links don't matter.
+
 ## 0.37.0
 - **See what's in stock on a recipe.** Each ingredient line has a mark where
   the bullet would be: a green tick if you have it (staples count), a small

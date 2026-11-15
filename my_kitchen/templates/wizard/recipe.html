@@ -202,10 +202,11 @@
       {# One line, only while scaled: what changed, what didn't, and the way back. #}
       <p class="servings-note" hidden>Scaled from {{ recipe.servings }}<span class="sep">·</span>the method's amounts are for {{ recipe.servings }}<span class="sep">·</span><button type="button" class="servings-reset">Reset</button></p>
     {% endif %}
-    {% if recipe.ingredients %}
+    {% if recipe.ingredients and recipe.suggestable %}
       {# 0.36.2: a required line with no catalogue link keeps a recipe out of
          suggestions (it can't be checked against stock), so say so, here at the
-         top. recipe_links.js keeps the count right as lines are linked. #}
+         top. recipe_links.js keeps the count right as lines are linked. 0.38.0:
+         not on an unchosen AI recipe, which never comes up in suggestions. #}
       {% set unlinked = recipe.ingredients | selectattr('ingredient_id', 'none') | rejectattr('to_buy') | list %}
       <p class="unlinked-note" id="unlinked-note"{% if not unlinked %} hidden{% endif %}>
         {{ icon('info') }}
@@ -223,7 +224,7 @@
       <ul class="ingredient-list ingredient-list--stock" id="ingredient-list"
           data-stock-url="{{ url_for('wizard.recipe_stock_states', recipe_id=recipe.id) }}">
         {% for ri in recipe.ingredients %}
-          <li class="ingredient-row" data-ri-id="{{ ri.id }}" data-raw-text="{{ ri.raw_text }}"{% if ri.to_buy %} data-optional{% endif %}
+          <li class="ingredient-row" data-ri-id="{{ ri.id }}" data-raw-text="{{ ri.raw_text }}"{% if ri.to_buy %} data-optional{% endif %}{% if ri.offers_or %} data-or{% endif %}
               data-link-url="{{ url_for('wizard.recipe_ingredient_link', recipe_id=recipe.id, ri_id=ri.id) }}"
               data-add-link-url="{{ url_for('wizard.recipe_ingredient_add_and_link', recipe_id=recipe.id, ri_id=ri.id) }}">
             {{ stock_mark(ri) }}{{ scalable_line(ri.amount, ri.unit, ri.raw_text) }}
@@ -233,6 +234,9 @@
             {% else %}
               <span class="link-pill link-pill--none" data-linked-id="">not linked</span>
             {% endif %}
+            {# The "or" alternative (0.38.0): either one in stock will do. #}
+            <span class="link-or"{% if not ri.alt_ingredient %} hidden{% endif %}><span class="link-or-word">or</span>
+              <span class="link-pill link-pill--alt" data-linked-id="{{ ri.alt_ingredient.id if ri.alt_ingredient else '' }}">{{ ri.alt_ingredient.name if ri.alt_ingredient else '' }}</span></span>
             <button type="button" class="ri-edit-btn" aria-label="Edit this ingredient’s catalogue link">{{ icon('edit') }}</button>
           </li>
         {% endfor %}
@@ -251,7 +255,17 @@
           Linked to <strong id="ri-editor-current-name"></strong>
           <button type="button" class="btn btn--sm" id="ri-editor-unlink">Unlink</button>
         </div>
-        <label class="ri-editor-search-label">Link to a catalogue ingredient
+        {# The "or" alternative (0.38.0): only on a line whose wording says
+           "or", and only once it has a main link. #}
+        <div class="ri-editor-or" id="ri-editor-or" hidden>
+          <p class="ri-editor-or-current" id="ri-editor-or-current" hidden>
+            Or <strong id="ri-editor-alt-name"></strong>
+            <button type="button" class="btn btn--sm" id="ri-editor-alt-remove">Remove</button>
+          </p>
+          <p class="ri-editor-or-offer" id="ri-editor-or-offer" hidden>This line says “or”.
+            <button type="button" class="text-btn" id="ri-editor-or-start">Link the other one too</button></p>
+        </div>
+        <label class="ri-editor-search-label"><span id="ri-editor-search-text">Link to a catalogue ingredient</span>
           <input type="search" id="ri-editor-search" autocomplete="off" placeholder="start typing an ingredient…">
         </label>
         <ul class="ri-editor-results" id="ri-editor-results"></ul>

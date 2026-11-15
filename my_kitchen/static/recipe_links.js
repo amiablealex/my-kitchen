@@ -44,6 +44,32 @@
   var elAddSubmit = document.getElementById("ri-add-submit");
 
   var activeRow = null; // the <li> currently being edited
+  // Which link the search and add-new act on: the line's main link, or its
+  // "or" alternative (0.38.0) — only offered on a line whose text says "or".
+  var slot = "main";
+  var elOr = document.getElementById("ri-editor-or");
+  var elOrCurrent = document.getElementById("ri-editor-or-current");
+  var elAltName = document.getElementById("ri-editor-alt-name");
+  var elAltRemove = document.getElementById("ri-editor-alt-remove");
+  var elOrOffer = document.getElementById("ri-editor-or-offer");
+  var elOrStart = document.getElementById("ri-editor-or-start");
+  var elSearchText = document.getElementById("ri-editor-search-text");
+
+  function setSlot(next) {
+    slot = next;
+    elSearchText.textContent = next === "alt" ? "Link the other ingredient" : "Link to a catalogue ingredient";
+  }
+
+  function syncOrBlock(row) {
+    var mainPill = row.querySelector(".link-pill:not(.link-pill--alt)");
+    var altPill = row.querySelector(".link-pill--alt");
+    var hasMain = mainPill && mainPill.dataset.linkedId;
+    var hasAlt = altPill && altPill.dataset.linkedId;
+    elOr.hidden = !(row.hasAttribute("data-or") && hasMain);
+    elOrCurrent.hidden = !hasAlt;
+    elOrOffer.hidden = !!hasAlt || slot === "alt";
+    if (hasAlt) elAltName.textContent = altPill.textContent.trim();
+  }
 
   // --- edit-mode toggle -------------------------------------------------------
   toggle.addEventListener("click", function () {
@@ -58,9 +84,11 @@
   // --- open / close the shared editor under a row -----------------------------
   function openEditor(row) {
     activeRow = row;
-    var pill = row.querySelector(".link-pill");
+    var pill = row.querySelector(".link-pill:not(.link-pill--alt)");
     var linkedId = pill ? pill.dataset.linkedId : "";
     var linkedName = linkedId && pill ? pill.textContent.trim() : "";
+    setSlot("main");
+    syncOrBlock(row);
 
     elRawText.textContent = row.dataset.rawText || "";
     if (linkedId) {
@@ -108,8 +136,8 @@
     var query = (q || "").trim().toLowerCase();
     elResults.innerHTML = "";
     if (!query) return;
-    var pill = activeRow ? activeRow.querySelector(".link-pill") : null;
-    var currentId = pill ? pill.dataset.linkedId : "";
+    var taken = activeRow ? Array.prototype.map.call(activeRow.querySelectorAll(".link-pill"),
+      function (p) { return p.dataset.linkedId; }).filter(Boolean) : [];
     var shown = 0;
     for (var i = 0; i < catalogue.length && shown < 25; i++) {
       var item = catalogue[i];
@@ -120,7 +148,7 @@
       b.type = "button";
       b.className = "ri-result-btn";
       b.dataset.ingredientId = item.id;
-      if (String(item.id) === String(currentId)) {
+      if (taken.indexOf(String(item.id)) !== -1) {
         b.disabled = true;
         b.textContent = item.name + " (linked)";
       } else {
@@ -179,18 +207,27 @@
     }
   }
 
-  function setPill(row, id, name, stock) {
-    setMark(row, stock);
-    var pill = row.querySelector(".link-pill");
-    if (!pill) return;
-    if (id) {
-      pill.textContent = name;
-      pill.classList.remove("link-pill--none");
-      pill.dataset.linkedId = String(id);
-    } else {
-      pill.textContent = "not linked";
-      pill.classList.add("link-pill--none");
-      pill.dataset.linkedId = "";
+  // Both pills and the mark follow the server's answer after any change.
+  function setPill(row, d) {
+    setMark(row, d.stock);
+    var pill = row.querySelector(".link-pill:not(.link-pill--alt)");
+    if (pill) {
+      if (d.ingredient_id) {
+        pill.textContent = d.name;
+        pill.classList.remove("link-pill--none");
+        pill.dataset.linkedId = String(d.ingredient_id);
+      } else {
+        pill.textContent = "not linked";
+        pill.classList.add("link-pill--none");
+        pill.dataset.linkedId = "";
+      }
+    }
+    var or = row.querySelector(".link-or");
+    var alt = row.querySelector(".link-pill--alt");
+    if (or && alt) {
+      or.hidden = !d.alt_id;
+      alt.textContent = d.alt_name || "";
+      alt.dataset.linkedId = d.alt_id ? String(d.alt_id) : "";
     }
     syncUnlinkedNote();
   }
@@ -229,10 +266,10 @@
     if (!btn || btn.disabled || !activeRow) return;
     var row = activeRow;
     btn.disabled = true;
-    postForm(row.dataset.linkUrl, { ingredient_id: btn.dataset.ingredientId })
+    postForm(row.dataset.linkUrl, { ingredient_id: btn.dataset.ingredientId, slot: slot })
       .then(function (res) {
         if (!res.ok) throw new Error((res.data && res.data.message) || "Could not link.");
-        setPill(row, res.data.ingredient_id, res.data.name, res.data.stock);
+        setPill(row, res.data);
         closeEditor();
       })
       .catch(function (err) {
@@ -249,7 +286,7 @@
     postForm(row.dataset.linkUrl, { ingredient_id: "" })
       .then(function (res) {
         if (!res.ok) throw new Error((res.data && res.data.message) || "Could not unlink.");
-        setPill(row, null, null, res.data.stock);
+        setPill(row, res.data);
         closeEditor();
       })
       .catch(function (err) {
@@ -258,6 +295,32 @@
       .finally(function () {
         elUnlink.disabled = false;
       });
+  });
+
+  // "Link the other one too": the search and add-new now set the alternative.
+  elOrStart.addEventListener("click", function () {
+    if (!activeRow) return;
+    setSlot("alt");
+    syncOrBlock(activeRow);
+    elSearch.value = "";
+    renderResults("");
+    elAddName.value = "";
+    elSearch.focus();
+  });
+
+  // Remove the alternative; the main link stays.
+  elAltRemove.addEventListener("click", function () {
+    if (!activeRow) return;
+    var row = activeRow;
+    elAltRemove.disabled = true;
+    postForm(row.dataset.linkUrl, { ingredient_id: "", slot: "alt" })
+      .then(function (res) {
+        if (!res.ok) throw new Error((res.data && res.data.message) || "Could not remove.");
+        setPill(row, res.data);
+        closeEditor();
+      })
+      .catch(function (err) { alert(err.message || "Could not remove — is the server still running?"); })
+      .finally(function () { elAltRemove.disabled = false; });
   });
 
   // Add a new catalogue ingredient + link, in one action.
@@ -281,6 +344,7 @@
     hideAddError();
     elAddSubmit.disabled = true;
     postForm(row.dataset.addLinkUrl, {
+      slot: slot,
       name: name,
       category_id: elAddCategory.value,
       is_staple: elAddStaple.checked ? "on" : "",
@@ -296,7 +360,7 @@
         catalogue.sort(function (a, b) {
           return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1;
         });
-        setPill(row, res.data.ingredient_id, res.data.name, res.data.stock);
+        setPill(row, res.data);
         closeEditor();
       })
       .catch(function () {

@@ -12,6 +12,7 @@ from .core import (
     Index,
     resolve,
     resolve_with_index,
+    resolve_line,
     build_index,
     norm_min,
     norm_core,
@@ -19,6 +20,6 @@ from .core import (
 
 __all__ = [
     "ResolveResult", "UNMATCHED", "Index",
-    "resolve", "resolve_with_index", "build_index",
+    "resolve", "resolve_with_index", "resolve_line", "build_index",
     "norm_min", "norm_core",
 ]

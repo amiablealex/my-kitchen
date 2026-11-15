@@ -15,7 +15,7 @@ from .seeds import pick_seed_for
 # Deterministic free-text -> catalogue resolver (Phase 3a), wired into the write
 # path here in 3b. build_index is built ONCE per generation and reused; the index
 # is plain data (no ORM objects), so it's safe to use across both recipes.
-from ..resolver import build_index, resolve_with_index
+from ..resolver import build_index, resolve_line
 from ..resolver.db import load_catalogue
 from ..resolver.aliases import ALIASES
 
@@ -498,7 +498,7 @@ def _run_generation_job(app, generation_id, user_prompt, brief, mode="generate")
                 # the other gunicorn worker never sees a half-linked recipe.
                 for position, ing in enumerate(r["ingredients"]):
                     item = ing.get("item", "")
-                    result = resolve_with_index(item, index)
+                    result, alt = resolve_line(item, index)   # alt: "X or Y" (0.38.0)
                     recipe.ingredients.append(RecipeIngredient(
                         raw_text=item,
                         amount=_text_or_none(ing.get("amount")),
@@ -506,6 +506,7 @@ def _run_generation_job(app, generation_id, user_prompt, brief, mode="generate")
                         to_buy=bool(ing.get("to_buy", False)),
                         position=position,
                         ingredient_id=result.ingredient_id,
+                        alt_ingredient_id=alt.ingredient_id,
                     ))
                 db.session.add(recipe)
             gen.status = "done"

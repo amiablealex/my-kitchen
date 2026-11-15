@@ -28,7 +28,7 @@ from urllib.parse import urlparse
 
 from ..extensions import db
 from ..models import AiCall, CUISINES, MEAL_TYPE_NAMES
-from ..resolver import build_index, resolve_with_index
+from ..resolver import build_index, resolve_line
 from ..resolver.aliases import ALIASES
 from ..resolver.db import load_catalogue
 from .providers import ProviderError, get_provider
@@ -328,6 +328,7 @@ def import_recipe(cfg, user_id, url=None, text=None, images=None, which=None):
     recipe = restructure(cfg, user_id, source, images=images, which=which)
     index = build_index(load_catalogue(), ALIASES)
     for ing in recipe["ingredients"]:
-        res = resolve_with_index(ing["item"], index)
+        res, alt = resolve_line(ing["item"], index)   # alt: "X or Y" (0.38.0)
         ing["ingredient_id"], ing["name"] = res.ingredient_id, res.matched_name
+        ing["alt_ingredient_id"], ing["alt_name"] = alt.ingredient_id, alt.matched_name
     return recipe, source_url

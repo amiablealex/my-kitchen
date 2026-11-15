@@ -2159,3 +2159,29 @@ body.is-selecting .recipe-row .row-archive { visibility: hidden; }
 /* Method headings now sit in a .section-head (for the chip): keep the h2's
    usual space beneath. */
 .recipe-section > .section-head { margin-bottom: var(--space-3); }
+
+/* ============================ 0.38.0 ===================================== */
+/* A line's "or" alternative: "cauliflower or broccoli" shows both pills,
+   joined by a quiet "or". Either one in stock satisfies the line. */
+.link-or { display: inline; }
+.link-or[hidden] { display: none; }
+.link-or-word { margin: 0 2px 0 4px; font-size: var(--fs-small); color: var(--text-muted); }
+.ri-editor-or p { margin: 0 0 var(--space-2); }
+.ri-editor-or-current { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.ri-editor-or [hidden] { display: none; }
+/* In the recipe form (import review / edit): "or broccoli ×" after the pick. */
+.rf-ing-or { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-small);
+  color: var(--text-muted); }
+.rf-ing-or[hidden] { display: none; }
+.rf-ing-or-name { color: var(--text); }
+.rf-ing-or-remove { border: 0; background: none; color: var(--text-muted); font: inherit;
+  font-size: 1.1em; line-height: 1; padding: 0 4px; cursor: pointer; }
+
+/* Merge into… sheet: a short explanation and a filter above the choices. */
+.sheet-intro { margin: 0 0 var(--space-3); color: var(--text-muted); font-size: var(--fs-small); }
+.sheet-filter { margin: 0 0 var(--space-3); background: var(--surface-2); }
+[data-merge-lane][hidden], [data-merge-name][hidden] { display: none; }
+/* A sheet whose contents sit in a <form> (Merge into…): let the form's
+   children take part in the sheet's column, so the list scrolls and the
+   buttons stay in view. */
+dialog.sheet > form { display: contents; }

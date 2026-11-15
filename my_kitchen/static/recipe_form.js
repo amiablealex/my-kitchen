@@ -111,6 +111,10 @@
     var hidName = row.querySelector(".rf-ing-name");
     var lbl = row.querySelector(".rf-ing-chosen");
     if (byHand) row.querySelector(".rf-ing-raw").value = "";
+    // Picking a new main link (or the same as the alternative, or none) drops
+    // the alternative: it belonged to the line as the resolver read it.
+    var alt = row.querySelector(".rf-ing-alt");
+    if (alt && alt.value && (byHand || !id || String(id) === alt.value)) setRowAlt(row, null, "");
     if (id) {
       hidId.value = String(id);
       hidName.value = name;
@@ -123,6 +127,16 @@
       lbl.classList.add("rf-ing-chosen--empty");
     }
     syncRaw(row);
+  }
+
+  // The line's "or" alternative (0.38.0), found by the resolver on an
+  // import ("cauliflower or broccoli") or already saved. Shown, kept on save
+  // and removable here; adding one is done on the recipe page (Edit links).
+  function setRowAlt(row, id, name) {
+    row.querySelector(".rf-ing-alt").value = id ? String(id) : "";
+    row.querySelector(".rf-ing-altname").value = id ? name : "";
+    row.querySelector(".rf-ing-or-name").textContent = id ? name : "";
+    row.querySelector(".rf-ing-or").hidden = !id;
   }
 
   function addIngredientRow(data) {
@@ -138,6 +152,10 @@
           '<input type="hidden" class="rf-ing-id" name="ing-' + i + '-ingredient_id" value="">' +
           '<input type="hidden" class="rf-ing-name" name="ing-' + i + '-name" value="">' +
           '<input type="hidden" class="rf-ing-raw" name="ing-' + i + '-raw" value="">' +
+          '<input type="hidden" class="rf-ing-alt" name="ing-' + i + '-alt_id" value="">' +
+          '<input type="hidden" class="rf-ing-altname" name="ing-' + i + '-alt_name" value="">' +
+          '<span class="rf-ing-or" hidden>or <span class="rf-ing-or-name"></span>' +
+            '<button type="button" class="rf-ing-or-remove" aria-label="Remove the alternative">&times;</button></span>' +
           '<button type="button" class="btn btn--sm rf-ing-choose">Pick</button>' +
           '<span class="rf-ing-rawnote" hidden></span>' +
         '</div>' +
@@ -152,6 +170,7 @@
     row.querySelector(".rf-ing-raw").value = data.raw || "";
     if (data.ingredient_id) setRowLink(row, data.ingredient_id, data.name || "");
     else syncRaw(row);
+    if (data.ingredient_id && data.alt_id) setRowAlt(row, data.alt_id, data.alt_name || "");
     row.querySelector(".rf-ing-amount").value = data.amount || "";
     row.querySelector(".rf-ing-unit").value = data.unit || "";
     if (data.to_buy) row.querySelector(".rf-ing-tobuycb").checked = true;
@@ -159,6 +178,8 @@
   }
 
   ingList.addEventListener("click", function (ev) {
+    var orRemove = ev.target.closest(".rf-ing-or-remove");
+    if (orRemove) { setRowAlt(orRemove.closest(".rf-ing-row"), null, ""); return; }
     var rm = ev.target.closest(".rf-row-remove");
     if (rm) {
       var r = rm.closest(".rf-ing-row");

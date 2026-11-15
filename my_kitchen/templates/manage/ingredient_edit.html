@@ -12,10 +12,17 @@
       {% else %}
         {{ danger_form(url_for('manage.ingredient_activate', ingredient_id=ing.id), 'Reactivate', 'check', none, none, warn=False) }}
       {% endif %}
+      {# 0.38.0: a duplicate ("Baby button mushrooms") is merged, not deleted,
+         so its recipe lines move across instead of going unlinked. #}
+      <button type="button" class="menu-item" data-merge-open>{{ icon('call_merge') }}<span>Merge into…</span></button>
       <div class="menu-sep"></div>
+      {% if used_in %}
+        {% set delete_body = 'Used in ' ~ used_in ~ (' recipe' if used_in == 1 else ' recipes') ~ ': those lines will be unlinked. If it’s the same as another ingredient, use Merge into… instead, which moves them across.' %}
+      {% else %}
+        {% set delete_body = 'This removes it from your catalogue for good. Retire it instead to hide it but keep it in your history.' %}
+      {% endif %}
       {{ danger_form(url_for('manage.ingredient_delete', ingredient_id=ing.id), 'Delete permanently', 'delete',
-                     'Delete ' ~ ing.name ~ '?',
-                     'This removes it from your catalogue for good. Retire it instead to hide it but keep it in your history.') }}
+                     'Delete ' ~ ing.name ~ '?', delete_body) }}
     </div>
   </details>
 {% endblock %}
@@ -28,6 +35,7 @@
       {%- elif ing.is_staple %}Staple, assumed always available
       {%- elif ing.in_stock %}In stock
       {%- else %}Not in stock{% endif %}
+      {%- if used_in %}<span class="sep">·</span>used in {{ used_in }} recipe{{ '' if used_in == 1 else 's' }}{% endif %}
     </p>
   </header>
 
@@ -46,4 +54,49 @@
       <button type="submit" class="btn btn--primary"><span>Save</span>{{ icon('check') }}</button>
     </div>
   </form>
+
+  {# Merge into… (0.38.0): pick the ingredient this one really is. The sheet
+     is the confirmation — it says what moves and that it can't be undone. #}
+  <dialog class="confirm sheet" id="merge-sheet" aria-labelledby="merge-title">
+    <form method="post" action="{{ url_for('manage.ingredient_merge', ingredient_id=ing.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="confirm-head"><span class="confirm-bead sheet-bead" aria-hidden="true">{{ icon('call_merge') }}</span>
+        <h2 id="merge-title">Merge {{ ing.name }} into…</h2></div>
+      <p class="sheet-intro">For when it’s the same thing under another name.
+        {% if used_in %}Its {{ used_in }} recipe{{ '' if used_in == 1 else 's' }} will use the one you pick{% else %}Nothing uses it yet{% endif %},
+        which counts as in stock if either was. {{ ing.name }} is then removed; this can’t be undone.</p>
+      <div class="pantry-filter sheet-filter">
+        {{ icon('search') }}
+        <input type="search" id="merge-filter" placeholder="Find an ingredient" autocomplete="off" aria-label="Find an ingredient">
+      </div>
+      <div class="sheet-body">
+        {# merge_options arrive in catalogue order (section, category, name);
+           a new lane starts whenever the category changes. #}
+        {% for o in merge_options %}
+          {% set c = o.category %}
+          {% if loop.first or merge_options[loop.index0 - 1].category_id != o.category_id %}
+          <div class="tag-lane sheet-lane sec-lane--{{ c.section }}" data-merge-lane>
+            <h3 class="lane-head">{{ c.name }}</h3>
+            <div class="options options--chips">
+          {% endif %}
+                <label class="option sec-pick--{{ c.section }}" data-merge-name="{{ o.name | lower }}">
+                  <input type="radio" name="into" value="{{ o.id }}" data-name="{{ o.name }}">
+                  <span>{{ o.name }}</span>
+                </label>
+          {% if loop.last or merge_options[loop.index0 + 1].category_id != o.category_id %}
+            </div>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="btn btn--primary" data-merge-go disabled>Merge</button>
+        <button type="button" class="btn btn--ghost" data-merge-cancel>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='ingredient_merge.js') }}"></script>
 {% endblock %}

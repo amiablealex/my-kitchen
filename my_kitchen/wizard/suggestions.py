@@ -48,19 +48,17 @@ def _cuisine_constrained(meal_type, cuisine):
 def _is_cookable(recipe):
     """Every required (non-to_buy) line must be satisfiable from current stock.
     Unlinked required line -> not cookable (can't confirm). Staple -> assumed
-    available. Otherwise the linked ingredient must be in stock and active.
+    available. Otherwise the linked ingredient (or, 0.38.0, the line's "or"
+    alternative) must be in stock and active — RecipeIngredient.satisfied.
     A recipe with no required lines is vacuously cookable (theoretical: legacy
     row-less recipes carry meal_type NULL and are already excluded upstream)."""
     for line in recipe.ingredients:
         if line.to_buy:
             continue  # optional extra — never blocks cookability
-        ing = line.ingredient
-        if ing is None:
+        if line.ingredient is None:
             return False  # required but unlinked — can't confirm
-        if ing.is_staple:
-            continue  # assumed always available
-        if not (ing.in_stock and ing.is_active):
-            return False
+        if not line.satisfied:
+            return False  # neither its link nor its "or" alternative is in (0.38.0)
     return True
 
 
@@ -68,7 +66,8 @@ def _covers_must_use(recipe, must_use_ids):
     """Every must-use id appears among the recipe's linked ingredient ids."""
     if not must_use_ids:
         return True
-    linked = {li.ingredient_id for li in recipe.ingredients if li.ingredient_id is not None}
+    linked = {i for li in recipe.ingredients
+              for i in (li.ingredient_id, li.alt_ingredient_id) if i is not None}
     return set(must_use_ids).issubset(linked)
 
 
@@ -109,7 +108,8 @@ def cookable_now():
     q = (
         Recipe.query
         .filter(db.or_(Recipe.source != "ai", Recipe.was_chosen.is_(True)), Recipe.live())
-        .options(selectinload(Recipe.ingredients).selectinload(RecipeIngredient.ingredient))
+        .options(selectinload(Recipe.ingredients).selectinload(RecipeIngredient.ingredient),
+                 selectinload(Recipe.ingredients).selectinload(RecipeIngredient.alt_ingredient))
         .order_by(Recipe.created_at.desc(), Recipe.id.desc())
     )
     return [r for r in q.all() if r.ingredients and _is_cookable(r)]

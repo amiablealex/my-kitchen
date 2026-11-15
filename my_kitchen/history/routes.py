@@ -26,10 +26,15 @@ CHECK_LABELS = {"unlinked": "Unlinked ingredients"}
 def _unlinked_recipe_ids():
     """Recipes with an ingredient line not linked to the catalogue: the same
     rule as the note on the recipe page (unlinked and not a to-buy line), so
-    the filter and the note never disagree."""
+    the filter and the note never disagree. 0.38.0: only recipes that can be
+    suggested (Recipe.suggestable) — an unchosen AI recipe never comes up in
+    suggestions, so its links don't matter and pick-one pairs drop out."""
     return {rid for (rid,) in db.session.query(RecipeIngredient.recipe_id)
+            .join(Recipe, Recipe.id == RecipeIngredient.recipe_id)
             .filter(RecipeIngredient.ingredient_id.is_(None),
-                    RecipeIngredient.to_buy.is_(False)).distinct()}
+                    RecipeIngredient.to_buy.is_(False),
+                    db.or_(Recipe.source != "ai", Recipe.was_chosen.is_(True)))
+            .distinct()}
 
 
 def _row_recipes(row):
@@ -169,8 +174,10 @@ def _ingredient_search(recipe_ids):
     by_recipe, names = {}, {}
     if not wanted:
         return by_recipe, names
+    # Both a line's link and its "or" alternative (0.38.0) count as using it.
     q = (db.session.query(RecipeIngredient.recipe_id, Ingredient.id, Ingredient.name)
-         .join(Ingredient, RecipeIngredient.ingredient_id == Ingredient.id))
+         .join(Ingredient, db.or_(RecipeIngredient.ingredient_id == Ingredient.id,
+                                  RecipeIngredient.alt_ingredient_id == Ingredient.id)))
     for rid, iid, name in q:
         if rid in wanted:
             by_recipe.setdefault(rid, set()).add(iid)

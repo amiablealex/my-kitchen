@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
 from ..models import (
-    Category, Ingredient, Equipment, DietaryTag, User,
+    Category, Ingredient, Equipment, DietaryTag, RecipeIngredient, User,
     SECTION_CHOICES, SECTION_KEYS, TAG_TYPE_CHOICES, TAG_TYPE_KEYS, TAG_TYPE_HINTS,
 )
 
@@ -124,8 +124,14 @@ def ingredient_edit(ingredient_id):
             return redirect(url_for("manage.ingredient_edit", ingredient_id=ing.id))
         flash(f'Saved "{ing.name}".', "success")
         return redirect(url_for("manage.ingredients"))
+    # 0.38.0: what deleting would affect, and the merge sheet's choices
+    # (every other active ingredient, grouped like the catalogue).
+    merge_options = (Ingredient.query.join(Category)
+                     .filter(Ingredient.is_active.is_(True), Ingredient.id != ing.id)
+                     .order_by(*Category.ordering(), db.func.lower(Ingredient.name)).all())
     return render_template("manage/ingredient_edit.html",
-                           ing=ing, categories=_ordered_categories(), sections=SECTION_CHOICES)
+                           ing=ing, categories=_ordered_categories(), sections=SECTION_CHOICES,
+                           used_in=_recipes_using(ing.id), merge_options=merge_options)
 
 
 BULK_ACTIONS = {"move", "staple", "standard", "retire", "restore"}
@@ -193,6 +199,19 @@ def ingredients_bulk():
     return jsonify(ok=True, message=message, previous=previous)
 
 
+def _recipes_using(ing_id):
+    """How many recipes have a line linked to this ingredient, as its main
+    link or its "or" alternative (0.38.0)."""
+    return (db.session.query(RecipeIngredient.recipe_id)
+            .filter(db.or_(RecipeIngredient.ingredient_id == ing_id,
+                           RecipeIngredient.alt_ingredient_id == ing_id))
+            .distinct().count())
+
+
+def _recipes_phrase(n):
+    return f"{n} recipe{'' if n == 1 else 's'}"
+
+
 @manage_bp.route("/ingredients/<int:ingredient_id>/retire", methods=["POST"])
 def ingredient_retire(ingredient_id):
     ing = db.session.get(Ingredient, ingredient_id)
@@ -200,8 +219,11 @@ def ingredient_retire(ingredient_id):
         abort(404)
     ing.is_active = False
     db.session.commit()
+    n = _recipes_using(ing.id)
+    used = (f" {_recipes_phrase(n)} use it and count it as out of stock while it's retired."
+            if n else "")
     flash(f'Retired "{ing.name}" — hidden from the stock list and the cook wizard, '
-          'kept in history. Reactivate it any time.', "success")
+          f'kept in history. Reactivate it any time.{used}', "success")
     return redirect(url_for("manage.ingredients"))
 
 
@@ -216,16 +238,72 @@ def ingredient_activate(ingredient_id):
     return redirect(url_for("manage.ingredients"))
 
 
+def _unlink_everywhere(ing_id):
+    """Clear an ingredient from every recipe line before it's deleted (0.38.0).
+    A line losing its main link takes its "or" alternative as the main link;
+    otherwise it becomes properly unlinked, so the recipe's note and the
+    Unlinked ingredients filter show it (SQLite isn't enforcing the foreign
+    key, so without this the line kept pointing at nothing)."""
+    RecipeIngredient.query.filter(RecipeIngredient.ingredient_id == ing_id).update(
+        {RecipeIngredient.ingredient_id: RecipeIngredient.alt_ingredient_id,
+         RecipeIngredient.alt_ingredient_id: None}, synchronize_session=False)
+    RecipeIngredient.query.filter(RecipeIngredient.alt_ingredient_id == ing_id).update(
+        {RecipeIngredient.alt_ingredient_id: None}, synchronize_session=False)
+
+
 @manage_bp.route("/ingredients/<int:ingredient_id>/delete", methods=["POST"])
 def ingredient_delete(ingredient_id):
     ing = db.session.get(Ingredient, ingredient_id)
     if ing is None:
         abort(404)
-    name = ing.name
+    name, n = ing.name, _recipes_using(ing.id)
+    _unlink_everywhere(ing.id)
     db.session.delete(ing)
     db.session.commit()
-    flash(f'Permanently deleted "{name}".', "success")
+    after = (f" {_recipes_phrase(n)} used it; those lines are now unlinked, and "
+             "Recipes → Unlinked ingredients lists them." if n else "")
+    flash(f'Permanently deleted "{name}".{after}', "success")
     return redirect(url_for("manage.ingredients"))
+
+
+@manage_bp.route("/ingredients/<int:ingredient_id>/merge", methods=["POST"])
+def ingredient_merge(ingredient_id):
+    """Merge a duplicate into the ingredient it really is (0.38.0): "Baby button
+    mushrooms" into "Button mushrooms". Every recipe line linked to it (main
+    link or "or" alternative) moves across, so nothing goes unlinked; the
+    kept one counts as in stock if either was, and keeps its own note unless
+    it had none. Then the duplicate is deleted. Household-wide, not undoable —
+    the sheet says so before it's used."""
+    src = db.session.get(Ingredient, ingredient_id)
+    if src is None:
+        abort(404)
+    try:
+        target = db.session.get(Ingredient, int(request.form.get("into") or 0))
+    except ValueError:
+        target = None
+    if target is None or target.id == src.id or not target.is_active:
+        flash("Pick an ingredient to merge into.", "error")
+        return redirect(url_for("manage.ingredient_edit", ingredient_id=src.id))
+    lines = (RecipeIngredient.query
+             .filter(db.or_(RecipeIngredient.ingredient_id == src.id,
+                            RecipeIngredient.alt_ingredient_id == src.id)).count())
+    RecipeIngredient.query.filter(RecipeIngredient.ingredient_id == src.id).update(
+        {RecipeIngredient.ingredient_id: target.id}, synchronize_session=False)
+    RecipeIngredient.query.filter(RecipeIngredient.alt_ingredient_id == src.id).update(
+        {RecipeIngredient.alt_ingredient_id: target.id}, synchronize_session=False)
+    # "X or Y" where both are now the same ingredient: one link is enough.
+    RecipeIngredient.query.filter(
+        RecipeIngredient.alt_ingredient_id == RecipeIngredient.ingredient_id).update(
+        {RecipeIngredient.alt_ingredient_id: None}, synchronize_session=False)
+    target.in_stock = target.in_stock or (src.in_stock and src.is_active)
+    if not target.note and src.note:
+        target.note = src.note
+    src_name = src.name
+    db.session.delete(src)
+    db.session.commit()
+    moved = f" {lines} recipe line{'' if lines == 1 else 's'} moved across." if lines else ""
+    flash(f'Merged "{src_name}" into "{target.name}".{moved}', "success")
+    return redirect(url_for("manage.ingredient_edit", ingredient_id=target.id))
 
 
 # ----------------------------------------------------------------- categories

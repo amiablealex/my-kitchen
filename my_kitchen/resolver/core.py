@@ -258,6 +258,48 @@ def resolve_with_index(free_text: str, index: Index,
     return UNMATCHED
 
 
+_OR_SPLIT = re.compile(r"\s+or\s+", re.IGNORECASE)
+
+
+def _side(text: str, index: Index, threshold: float) -> ResolveResult:
+    """Resolve one side of an "or". Stricter than a whole line: the matched
+    catalogue name's words must all appear in the side, so a lone descriptor
+    can't fuzzy-match ("fresh" in "fresh or frozen peas" is not Fresh
+    rosemary), while "broccoli florets" is still Broccoli."""
+    res = resolve_with_index(text, index, threshold)
+    if res.ingredient_id is None or res.method in ("exact", "alias"):
+        return res
+    if set(base_tokens(res.matched_name or "")) <= set(base_tokens(text)):
+        return res
+    return UNMATCHED
+
+
+def resolve_line(free_text: str, index: Index,
+                 threshold: float = FUZZY_THRESHOLD) -> Tuple[ResolveResult, ResolveResult]:
+    """(main, alternative) for one recipe line (0.38.0). The main link is the
+    usual whole-line resolution, unchanged. The alternative is for a line that
+    names a choice — "1 cup cauliflower or broccoli": split on the first " or "
+    and resolve each side alone; only when BOTH sides resolve, to two
+    different ingredients, does the line get an alternative (the side that
+    isn't the main link). If the whole line didn't resolve but both sides do,
+    the left side becomes the main link. Anything less ("fresh or frozen
+    peas", "2 or 3 carrots", "salt, or to taste") gets no alternative."""
+    main = resolve_with_index(free_text, index, threshold)
+    parts = _OR_SPLIT.split(free_text or "", maxsplit=1)
+    if len(parts) != 2:
+        return main, UNMATCHED
+    left = _side(parts[0], index, threshold)
+    right = _side(parts[1], index, threshold)
+    if (left.ingredient_id is None or right.ingredient_id is None
+            or left.ingredient_id == right.ingredient_id):
+        return main, UNMATCHED
+    if main.ingredient_id is None or main.ingredient_id == left.ingredient_id:
+        return (main if main.ingredient_id is not None else left), right
+    if main.ingredient_id == right.ingredient_id:
+        return main, left
+    return main, UNMATCHED
+
+
 def resolve(free_text: str, catalogue: Catalogue, aliases: Aliases,
             threshold: float = FUZZY_THRESHOLD) -> ResolveResult:
     """Convenience entry point matching the brief's surface: build an index from
