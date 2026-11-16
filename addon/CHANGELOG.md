@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.40.1
+- On an ingredient's page, *Save* now floats at the bottom of the screen the
+  whole way down, like the other Manage pages, instead of stopping above the
+  *Kinds* section.
+
 ## 0.40.0
 - **Links to the docs, where they help.** Help text that explains something
   less obvious (merging, kinds, staples, ingredient links, receipts,

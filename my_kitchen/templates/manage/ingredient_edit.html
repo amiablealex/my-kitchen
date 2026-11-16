@@ -56,7 +56,7 @@
     </div>
   {% endif %}
 
-  <form class="form" method="post" action="{{ url_for('manage.ingredient_edit', ingredient_id=ing.id) }}">
+  <form class="form" id="ingredient-form" method="post" action="{{ url_for('manage.ingredient_edit', ingredient_id=ing.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Name <input type="text" name="name" value="{{ ing.name }}" required></label>
     <label>Category
@@ -81,9 +81,6 @@
       {{ toggle_chip('is_staple', 'Staple', 'assumed always available', checked=ing.is_staple) }}
       <p class="help">Staples never appear in your stock list; recipes use them freely.
          In stock and notes are on the <a href="{{ url_for('stock.index') }}">Stock</a> page. {{ docs_link('staples') }}</p>
-    </div>
-    <div class="wizard-dock">
-      <button type="submit" class="btn btn--primary"><span>Save</span>{{ icon('check') }}</button>
     </div>
   </form>
 
@@ -181,6 +178,13 @@
       </div>
     </form>
   </dialog>
+
+  {# 0.40.1: Save floats over the whole page, Kinds included. It sits after
+     everything (Kinds has its own forms, which can't nest inside this one)
+     and submits the form above by id. Kinds' own buttons act at once. #}
+  <div class="wizard-dock">
+    <button type="submit" form="ingredient-form" class="btn btn--primary"><span>Save</span>{{ icon('check') }}</button>
+  </div>
 {% endblock %}
 
 {% block scripts %}
