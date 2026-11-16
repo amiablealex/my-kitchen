@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_docs.html" import docs_link %}
 {% from "manage/_bits.html" import link_chip, toggle_chip, category_select %}
 {% block title %}Manage ingredients — My Kitchen{% endblock %}
 {% block page_title %}Ingredients{% endblock %}
@@ -68,7 +69,7 @@
   {% endif %}
 
   <div class="tab-panel" data-panel="standard">
-    <p class="help">Tap an ingredient to rename it, move it, make it a <strong>staple</strong> (assumed always in stock, so you never tick it in and out) or retire it. Press and hold to select several.</p>
+    <p class="help">Tap an ingredient to rename it, move it, make it a <strong>staple</strong> (assumed always in stock, so you never tick it in and out) or retire it. Press and hold to select several. {{ docs_link('catalogue') }}</p>
     {% if standard %}
       {{ cat_tables(standard, false) }}
       <p class="recipe-nomatch" hidden><em>No ingredients match your filter.</em></p>

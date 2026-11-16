@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_docs.html" import docs_link %}
 {% block title %}Usage — My Kitchen{% endblock %}
 {% block page_title %}Usage{% endblock %}
 
@@ -17,7 +18,7 @@
 
 {% block content %}
   <h1>Usage</h1>
-  <p class="lead">AI calls made by the household — recipes, tries, refines, @kitchen questions and receipt reads — with an estimated cost. Limits reset at midnight.</p>
+  <p class="lead">AI calls made by the household — recipes, tries, refines, @kitchen questions and receipt reads — with an estimated cost. Limits reset at midnight. {{ docs_link('usage') }}</p>
 
   <section class="card usage-limits">
     <h2 class="card-title">Today</h2>

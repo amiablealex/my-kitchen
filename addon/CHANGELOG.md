@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.40.0
+- **Links to the docs, where they help.** Help text that explains something
+  less obvious (merging, kinds, staples, ingredient links, receipts,
+  importing, how diets combine, categories, usage, versions) now ends with a
+  quiet "More on … ↗" that opens the matching part of the docs. There's also
+  a *Help ↗* link in the menu. Set `MY_KITCHEN_DOCS_URL` to point them
+  elsewhere, or to an empty value to turn them all off.
+- **New installs start with a few kinds:** red onion is a kind of onion, new
+  potatoes of potatoes, cherry tomatoes of tomato. Existing catalogues
+  aren't changed.
+
 ## 0.39.0
 - **Kinds of an ingredient.** Fusilli, spaghetti and penne can each be *a
   kind of* pasta. A recipe that asks for pasta is then cookable with any of

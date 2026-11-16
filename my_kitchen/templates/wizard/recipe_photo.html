@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_docs.html" import docs_link %}
 {% block title %}Recipe from a photo — My Kitchen{% endblock %}
 {% block page_title %}From a photo{% endblock %}
 {% block content %}
@@ -8,7 +9,7 @@
      in the create form for checking; the photos aren't kept. #}
   <h1 class="display">From a photo</h1>
   <p><a class="back-link" href="{{ url_for('wizard.recipe_add') }}">{{ icon('arrow_back') }} Add a recipe</a></p>
-  <p class="lead">Take or choose a photo of each page of the recipe, up to {{ max_pages }}. They're read together, so a recipe that runs over the page is fine.</p>
+  <p class="lead">Take or choose a photo of each page of the recipe, up to {{ max_pages }}. They're read together, so a recipe that runs over the page is fine. {{ docs_link('photo') }}</p>
 
   <form method="post" action="{{ url_for('wizard.recipe_import_photo') }}" enctype="multipart/form-data"
         class="form photo-form" id="photo-form" data-max-pages="{{ max_pages }}">

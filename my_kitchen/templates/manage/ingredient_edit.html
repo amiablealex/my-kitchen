@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_docs.html" import docs_link %}
 {% from "manage/_bits.html" import toggle_chip, danger_form, category_select %}
 {% block title %}{{ ing.name }} — My Kitchen{% endblock %}
 {% block page_title %}Ingredients{% endblock %}
@@ -73,13 +74,13 @@
           {% if loop.last or parent_options[loop.index0 + 1].category_id != o.category_id %}</optgroup>{% endif %}
         {% endfor %}
       </select>
-      <span class="field-hint">For a particular kind of something, as fusilli is a kind of pasta: recipes that ask for the general one can use {{ ing.name | lower }}. One that asks for {{ ing.name | lower }} still needs {{ ing.name | lower }}.</span>
+      <span class="field-hint">For a particular kind of something, as fusilli is a kind of pasta: recipes that ask for the general one can use {{ ing.name | lower }}. One that asks for {{ ing.name | lower }} still needs {{ ing.name | lower }}.{% if ing.parent %} {{ docs_link('kinds') }}{% endif %}</span>
     </label>
     {% endif %}
     <div class="edit-field">
       {{ toggle_chip('is_staple', 'Staple', 'assumed always available', checked=ing.is_staple) }}
       <p class="help">Staples never appear in your stock list; recipes use them freely.
-         In stock and notes are on the <a href="{{ url_for('stock.index') }}">Stock</a> page.</p>
+         In stock and notes are on the <a href="{{ url_for('stock.index') }}">Stock</a> page. {{ docs_link('staples') }}</p>
     </div>
     <div class="wizard-dock">
       <button type="submit" class="btn btn--primary"><span>Save</span>{{ icon('check') }}</button>
@@ -101,7 +102,7 @@
       {% endfor %}
       <li><button type="button" class="link-chip link-chip--add" data-kinds-open>{{ icon('add') }} Add kinds</button></li>
     </ul>
-    <p class="help">{% if ing.kinds %}A recipe that asks for {{ ing.name | lower }} can use any of these. One that asks for a particular kind still needs that kind.{% else %}If you keep particular kinds of {{ ing.name | lower }} (shapes of pasta, types of rice), add them here: a recipe that asks for {{ ing.name | lower }} can then use any of them.{% endif %}</p>
+    <p class="help">{% if ing.kinds %}A recipe that asks for {{ ing.name | lower }} can use any of these. One that asks for a particular kind still needs that kind.{% else %}If you keep particular kinds of {{ ing.name | lower }} (shapes of pasta, types of rice), add them here: a recipe that asks for {{ ing.name | lower }} can then use any of them.{% endif %} {{ docs_link('kinds') }}</p>
   </section>
 
   <dialog class="confirm sheet" id="kinds-sheet" aria-labelledby="kinds-sheet-title">
@@ -149,7 +150,7 @@
         <h2 id="merge-title">Merge {{ ing.name }} into…</h2></div>
       <p class="sheet-intro">For when it’s the same thing under another name.
         {% if used_in %}Its {{ used_in }} recipe{{ '' if used_in == 1 else 's' }} will use the one you pick{% else %}Nothing uses it yet{% endif %},
-        which counts as in stock if either was. {{ ing.name }} is then removed; this can’t be undone.</p>
+        which counts as in stock if either was. {{ ing.name }} is then removed; this can’t be undone. {{ docs_link('merging') }}</p>
       <div class="pantry-filter sheet-filter">
         {{ icon('search') }}
         <input type="search" data-sheet-filter placeholder="Find an ingredient" autocomplete="off" aria-label="Find an ingredient">

@@ -1,4 +1,5 @@
 {% from "_icons.html" import icon %}
+{% from "_docs.html" import docs_link %}
 {# Scan a receipt (Phase 33). Three steps in one dialog — pick a photo, frame
    the item lines, read — driven by static/receipt.js. The photo is cropped and
    shrunk in the browser, so only the framed part is ever uploaded. Results
@@ -16,7 +17,7 @@
          may be local, so it's "your AI model" there. Never a provider name. #}
       <p class="receipt-privacy"><strong>{{ "A cloud AI model" if cloud_ai else "Your AI model" }} reads this photo to find your items.</strong>
         You'll frame just the item lines before anything is sent, and only that part leaves your phone.
-        The photo isn't stored. If you'd rather not send it, paste the receipt text into search instead.</p>
+        The photo isn't stored. If you'd rather not send it, paste the receipt text into search instead. {{ docs_link('receipts') }}</p>
       {# 0.37: Android's photo picker has no camera, so the camera gets its own
          button (capture) and saved photos the other. Same handler for both. #}
       <div class="pick-pair">

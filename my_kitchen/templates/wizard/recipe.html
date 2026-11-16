@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_docs.html" import docs_link %}
 {% from "_person.html" import person_mark %}
 {% from "_source.html" import source_dot %}
 {% from "_ingredients.html" import scalable_line, stock_mark %}
@@ -212,7 +213,7 @@
         {{ icon('info') }}
         <span><strong id="unlinked-count">{{ unlinked | length }} ingredient{{ "s aren't" if unlinked | length != 1 else " isn't" }} linked</strong>,
           so this recipe won't come up in suggestions.
-          <button type="button" class="text-btn" id="unlinked-fix">Link it</button></span>
+          <button type="button" class="text-btn" id="unlinked-fix">Link it</button>{% if docs_url %} · {{ docs_link('links') }}{% endif %}</span>
       </p>
       {# Structured source (keystone): render the ordered RecipeIngredient rows.
          The freetext line ({amount} {unit} {raw_text}) is byte-identical to the
@@ -460,7 +461,7 @@
       </div>
       <p class="confirm-quote" id="refine-confirm-quote"></p>
       <p>This sends your change to the AI, which rewrites the whole recipe as <strong>version {{ next_v }}</strong>.
-        Version {{ versions | length }} is kept exactly as it is, one tap back in the trail.</p>
+        Version {{ versions | length }} is kept exactly as it is, one tap back in the trail. {{ docs_link('versions') }}</p>
       <p class="muted">Only want to ask something? Use <span class="mention">{{ kitchen_mention }}</span> in the notes instead. It answers without changing the recipe.</p>
       <div class="btn-row">
         <button type="button" class="btn btn--primary" id="refine-confirm-go">{{ icon('cooking') }} Create v{{ next_v }}</button>

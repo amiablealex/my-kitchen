@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_docs.html" import docs_link %}
 {% block title %}Manage categories — My Kitchen{% endblock %}
 {% block page_title %}Categories{% endblock %}
 {% block content %}
@@ -45,7 +46,7 @@
       </ul>
     </section>
   {% endfor %}
-  <p class="help">Numbers are ingredients, retired ones included. Use Reorder to change the order within a section; to move a category to another section, open it.</p>
+  <p class="help">Numbers are ingredients, retired ones included. Use Reorder to change the order within a section; to move a category to another section, open it. {{ docs_link('categories') }}</p>
   <div hidden id="cat-tree-config" data-reorder-url="{{ url_for('manage.categories_reorder') }}"></div>
 {% endblock %}
 

@@ -251,3 +251,16 @@ INGREDIENTS = [
 # Convenience: the canonical names, in catalogue order. The eval fixture and any
 # DB-free consumer reads this instead of touching the DB.
 CATALOGUE_NAMES = [name for name, _cat, _staple in INGREDIENTS]
+
+
+# "A kind of" pairs set on a fresh install (0.40.0): (kind, general). Only
+# where the starter catalogue already has both and a recipe asking for the
+# general one would happily take the kind ("1 onion" with red onions in).
+# Deliberately short: the shapes, varieties and types a household buys are
+# its own to add. No new ingredient names, so the resolver's catalogue — and
+# its eval — is unchanged.
+KINDS = [
+    ("Red onion", "Onion"),
+    ("New potatoes", "Potatoes"),
+    ("Cherry tomatoes", "Tomato"),
+]

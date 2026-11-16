@@ -1,0 +1,33 @@
+{# Links from the app to the docs (0.40.0). One pattern everywhere: a short
+   "More on merging ↗" at the end of help text that's already there — never a
+   button, heading or new line, at most one per topic per screen, and only
+   where a rule isn't obvious from the screen. Topics and their anchors live
+   here so a docs rename is one edit. Off entirely when DOCS_URL is empty. #}
+{% set _TOPICS = {
+  "merging":   ("merging",   "merging"),
+  "kinds":     ("kinds",     "kinds"),
+  "staples":   ("staples",   "staples"),
+  "catalogue": ("catalogue", "the catalogue"),
+  "links":     ("links",     "ingredient links"),
+  "receipts":  ("receipts",  "receipts"),
+  "import":    ("import",    "importing"),
+  "photo":     ("photo",     "recipes from photos"),
+  "conflicts": ("conflicts", "how diets combine"),
+  "categories":("categories","categories"),
+  "usage":     ("usage",     "usage and limits"),
+  "versions":  ("versions",  "versions"),
+} %}
+
+{% macro docs_link(topic) -%}
+{%- if docs_url -%}
+{%- set t = _TOPICS[topic] -%}
+<a class="docs-link" href="{{ docs_url }}#{{ t[0] }}" target="_blank" rel="noopener">More on {{ t[1] }}<span aria-hidden="true">&nbsp;↗</span><span class="sr-only"> (opens the docs)</span></a>
+{%- endif -%}
+{%- endmacro %}
+
+{# The one general way in: Help in the nav rail / drawer. #}
+{% macro docs_home() -%}
+{%- if docs_url -%}
+<a class="nav-help" href="{{ docs_url }}" target="_blank" rel="noopener">Help<span aria-hidden="true">&nbsp;↗</span><span class="sr-only"> (opens the docs)</span></a>
+{%- endif -%}
+{%- endmacro %}

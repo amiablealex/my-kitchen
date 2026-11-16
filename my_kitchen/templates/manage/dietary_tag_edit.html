@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_docs.html" import docs_link %}
 {% from "manage/_tag_type_picker.html" import tag_type_picker %}
 {% from "manage/_bits.html" import danger_form %}
 {% from "_person.html" import person_mark %}
@@ -32,7 +33,7 @@
     <p class="help">Name the food itself: “Pesto”, not “no pesto”.</p>
     <div class="edit-field">
       {{ tag_type_picker(types, hints, current=tag.type) }}
-      <p class="help">The type decides how recipes treat it, so changing it changes what gets cooked.</p>
+      <p class="help">The type decides how recipes treat it, so changing it changes what gets cooked. {{ docs_link('conflicts') }}</p>
     </div>
     <div class="wizard-dock">
       <button type="submit" class="btn btn--primary"><span>Save</span>{{ icon('check') }}</button>

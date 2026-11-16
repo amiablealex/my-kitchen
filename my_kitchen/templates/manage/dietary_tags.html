@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_docs.html" import docs_link %}
 {% from "manage/_tag_type_picker.html" import tag_type_picker %}
 {% from "manage/_bits.html" import link_row %}
 {% from "_person.html" import person_mark %}
@@ -13,7 +14,7 @@
   <p class="lead">Foods and diets you can assign to people on the
      <a href="{{ url_for('users.index') }}">Household</a> page. A person's tags are sent to the
      recipe generator only when they're picked at the “Cooking for” step, so they apply to
-     the meal you're actually cooking for them.</p>
+     the meal you're actually cooking for them. {{ docs_link('conflicts') }}</p>
 
   <details class="manage-add">
     <summary>{{ icon('add') }} Add a tag</summary>

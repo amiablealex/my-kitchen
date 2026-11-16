@@ -33,6 +33,12 @@ class Config:
     # IANA timezone for displaying stored UTC timestamps locally (zoneinfo handles BST).
     APP_TIMEZONE = os.environ.get("APP_TIMEZONE", "Europe/London")
 
+    # Where the app's "More on …" links and Help point (0.40.0). The public
+    # docs by default; set MY_KITCHEN_DOCS_URL to another copy, or to an empty
+    # string to switch every docs link off (the app then never points outside
+    # your network).
+    DOCS_URL = os.environ.get("MY_KITCHEN_DOCS_URL", "https://my-kitchen.io/docs").rstrip("/")
+
     # --- LLM provider adapter (built out in Checkpoint 5) ---
     LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "mock")  # mock | anthropic | gemini
     LLM_MODEL = os.environ.get("LLM_MODEL", "")            # blank -> provider default

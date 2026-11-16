@@ -17,6 +17,7 @@
   <meta name="mobile-web-app-capable" content="yes">
 </head>
 <body>
+{% from "_docs.html" import docs_home %}
 {% from "_person.html" import person_mark %}
 {% from "_icons.html" import icon, brand_mark %}
 
@@ -76,6 +77,7 @@
       {{ nav_item(url_for('usage.index'),        'usage',      'bar_chart',  'Usage',      nav_active.x) }}
     </nav>
     <div class="nav-foot">
+      {{ docs_home() }}
       <span class="who">{{ person_mark(current_user) }} Logged in as <strong>{{ current_user.name }}</strong></span>
       <form method="post" action="{{ url_for('auth.logout') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

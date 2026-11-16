@@ -99,6 +99,9 @@ def create_app(config_class=Config):
             return "yesterday"
         return shortdate(value)
 
+    # Docs links (0.40.0): a global, so imported macros (_docs.html) see it.
+    app.jinja_env.globals["docs_url"] = app.config.get("DOCS_URL") or ""
+
     @app.template_filter("urlhost")
     def urlhost(value):
         """'https://www.bbcgoodfood.com/recipes/x' -> 'bbcgoodfood.com' (Phase 34)."""

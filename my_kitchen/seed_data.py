@@ -9,7 +9,7 @@ import secrets
 
 from .extensions import db
 from . import models
-from .seed_catalogue import CATEGORIES, INGREDIENTS
+from .seed_catalogue import CATEGORIES, INGREDIENTS, KINDS
 
 
 def seed_reference_data():
@@ -32,6 +32,10 @@ def seed_reference_data():
             name=name, category=cats[cat_name],
             is_staple=staple, in_stock=staple,
         ))
+    db.session.flush()
+    by_name = {i.name: i for i in models.Ingredient.query.all()}
+    for kind, general in KINDS:
+        by_name[kind].parent_id = by_name[general].id
     db.session.commit()
     return True
 

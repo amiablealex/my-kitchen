@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
+{% from "_docs.html" import docs_link %}
 {% block title %}Import a recipe — My Kitchen{% endblock %}
 {% block page_title %}Import a recipe{% endblock %}
 {% block content %}
@@ -7,7 +8,7 @@
      opens in the create form for checking; nothing is saved until then. #}
   <h1 class="display">Import a recipe</h1>
   <p><a class="back-link" href="{{ url_for('wizard.recipe_add') }}">{{ icon('arrow_back') }} Add a recipe</a></p>
-  <p class="lead">Paste a link to a recipe. It's put into My Kitchen's layout (ingredients, prep, cook, tips) with the recipe's own wording, ready for you to check.</p>
+  <p class="lead">Paste a link to a recipe. It's put into My Kitchen's layout (ingredients, prep, cook, tips) with the recipe's own wording, ready for you to check. {{ docs_link('import') }}</p>
 
   <form method="post" action="{{ url_for('wizard.recipe_import') }}" class="form import-form" id="import-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
