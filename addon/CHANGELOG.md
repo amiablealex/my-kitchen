@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.42.1
+- **A calmer, drawn version trail.** A straight line of versions is always
+  one row, whichever version you're on. A branch only appears once a version
+  has actually been made from an earlier one, and it's joined to that version
+  by a line instead of "↳ from v1". The line from the original to the version
+  you're on is lit.
+- *New version* is now a small **+** beside the version you're viewing: a
+  new version is made from that one. On an older version, "This is v1. The
+  newest is v3. Go to v3" is one quiet line rather than a box.
+
 ## 0.42.0
 - **New versions of your own recipes.** Hand-made and imported recipes now
   have *New version* too, the same as AI ones. The new version is written by

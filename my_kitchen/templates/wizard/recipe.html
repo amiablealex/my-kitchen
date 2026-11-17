@@ -63,47 +63,41 @@
     </div>
   {% endif %}
   {# Version trail (Phase 26): the refine lineage, each step labelled with the
-     change that produced it. 0.28: also shown on a single version when it can
-     be refined, because "+ New version" lives at its end. 0.41.0: a tree. The
-     first row runs from the original; a version made from an earlier one
-     starts its own row ("from v1"). Numbers are creation order and never
-     change. A straight line looks exactly as before. #}
-  {% macro new_version_btn(branch=False) -%}
-    <li class="version-new-item">
-      <button type="button" class="version-new" id="refine-toggle" aria-controls="refine"
-              aria-expanded="{{ 'true' if refine_open else 'false' }}"><span class="version-n">{{ icon('add') }}</span><span>New version{% if branch %} from v{{ version_n }}{% endif %}</span></button>
-    </li>
-  {%- endmacro %}
+     change that produced it. Shown on a single version too when it can be
+     refined, for its "+". 0.41.0: a tree; 0.42.1: drawn as one. The first row
+     runs from the original; a version made from an earlier one starts its own
+     row, joined to that version by a line (version_trail.js measures where to
+     draw it; without JS the row is just set in). The "+" sits on the version
+     you're viewing, so a new version from an older one visibly branches from
+     it. The line from the original to the version you're viewing is lit.
+     Numbers are creation order and never change. #}
   {% if fam.size > 1 or can_refine %}
     <nav class="version-trail" aria-label="Recipe versions">
+      <div class="version-tree">
       {% for row in trail_rows %}
-        <ol class="version-row{% if row['from'] %} version-row--branch{% endif %}">
-          {% if row['from'] %}<li class="version-from" aria-label="Made from v{{ row['from'] }}"><span aria-hidden="true">↳</span> from v{{ row['from'] }}</li>{% endif %}
+        <ol class="version-row{% if row['from'] %} version-row--branch{% endif %}"{% if row['from'] %} data-from="{{ row['from'] }}" aria-label="Made from v{{ row['from_n'] }}"{% endif %}>
           {% for node in row['nodes'] %}
-            <li class="{% if node.current %}is-current{% endif %}{% if node.recipe.is_archived %} is-removed{% endif %}">
+            <li class="{% if node.current %}is-current{% endif %}{% if node.on_path %} on-path{% endif %}{% if node.recipe.is_archived %} is-removed{% endif %}" data-v="{{ node.recipe.id }}">
+              {% if row['from'] and loop.first %}<span class="version-elbow{% if node.on_path %} on-path{% endif %}" aria-hidden="true" hidden></span>{% endif %}
               {% if node.current %}
                 <span class="version-step" aria-current="page"><span class="version-n">v{{ node.n }}</span><span class="version-label">{{ node.label }}</span></span>
+                {% if can_refine %}
+                  <button type="button" class="version-plus" id="refine-toggle" aria-controls="refine"
+                          aria-expanded="{{ 'true' if refine_open else 'false' }}"
+                          aria-label="New version from v{{ node.n }}" title="New version from v{{ node.n }}">{{ icon('add') }}</button>
+                {% endif %}
               {% else %}
                 <a class="version-step" href="{{ url_for('wizard.recipe', recipe_id=node.recipe.id) }}"><span class="version-n">v{{ node.n }}</span><span class="version-label">{{ node.label }}</span></a>
               {% endif %}
             </li>
-            {% if node.current and can_refine and new_slot == 'end' %}{{ new_version_btn() }}{% endif %}
           {% endfor %}
         </ol>
       {% endfor %}
-      {% if can_refine and new_slot == 'branch' %}
-        <ol class="version-row version-row--branch version-row--new">
-          <li class="version-from"><span aria-hidden="true">↳</span> from v{{ version_n }}</li>
-          {{ new_version_btn(True) }}
-        </ol>
-      {% endif %}
+      </div>
     </nav>
     {% if main and main.id != recipe.id and not recipe.is_archived %}
-      <div class="notice">
-        {{ icon('info') }}
-        <div class="notice-body">This is v{{ version_n }}. The newest is v{{ fam.number[main.id] }}.</div>
-        <a class="btn btn--sm btn--primary" href="{{ url_for('wizard.recipe', recipe_id=main.id) }}">Go to v{{ fam.number[main.id] }}</a>
-      </div>
+      <p class="version-note">This is v{{ version_n }}. The newest is v{{ fam.number[main.id] }}.
+        <a href="{{ url_for('wizard.recipe', recipe_id=main.id) }}">Go to v{{ fam.number[main.id] }}</a></p>
     {% elif just_refined and parent %}
       <p class="refine-done">{{ icon('check') }} v{{ version_n }} is ready. v{{ fam.number[parent.id] }} is kept, one tap back in the trail.</p>
     {% endif %}
@@ -118,7 +112,7 @@
         <span class="confirm-bead" aria-hidden="true"></span>
         <div>
           <h2 id="refine-title">Make version {{ next_v }}</h2>
-          <p class="refine-sub">{% if new_slot == 'branch' %}Made from v{{ version_n }}, as a new branch. The other versions stay as they are.{% else %}v{{ version_n }} stays in the trail, one tap back.{% endif %}</p>
+          <p class="refine-sub">{% if branching %}Made from v{{ version_n }}, as a new branch. The other versions stay as they are.{% else %}v{{ version_n }} stays in the trail, one tap back.{% endif %}</p>
         </div>
       </div>
       <form method="post" action="{{ url_for('wizard.recipe_refine', recipe_id=recipe.id) }}" id="refine-form">
@@ -542,6 +536,7 @@
 {% block scripts %}
   <script src="{{ url_for('static', filename='recipe_tags.js') }}"></script>
   {% if can_refine %}<script src="{{ url_for('static', filename='refine.js') }}"></script>{% endif %}
+  {% if fam.size > 1 or can_refine %}<script src="{{ url_for('static', filename='version_trail.js') }}"></script>{% endif %}
   <script src="{{ url_for('static', filename='servings.js') }}"></script>
   <script src="{{ url_for('static', filename='notes.js') }}"></script>
   {% if used_up_items %}

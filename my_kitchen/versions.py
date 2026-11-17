@@ -119,43 +119,51 @@ class Family:
                 and not self.live_children(recipe))
 
     def trail(self, current):
-        """The version trail as rows (0.41.0). The first row runs from the
-        original along each version's first child; every other child starts a
-        row of its own, marked with the version it came from. Shows the live
+        """The version trail as rows (0.41.0; drawn as a tree since 0.42.1).
+        The first row runs from the original along each version's first
+        child; every other child starts a row of its own, which the page joins
+        to the version it came from with a drawn line. Shows the live
         versions, plus the one being viewed and what it was made from (so an
         archived version still shows where it sits).
 
-        Returns (rows, new_slot): rows are {"from": n or None, "nodes": [...]},
-        each node {"recipe", "n", "label", "current"}; new_slot is "end" when
-        "+ New version" belongs at the end of the current version's row, or
-        "branch" when the current version already has a version made from it,
-        so a new one starts a branch."""
+        Row order keeps those lines clear of the chips: after a row come the
+        branches made from it, those from its right-most versions first, each
+        followed straight away by its own branches. A line from a version
+        further left then passes below rows that start further right.
+
+        Returns (rows, branching): rows are {"from": parent recipe id or None,
+        "from_n": its number, "nodes": [...]}, each node {"recipe", "n",
+        "label", "current", "on_path"} (on_path: the version being viewed and
+        those it was made from, for the lit line). branching is True when the
+        version being viewed already has a live version made from it, so a
+        new one starts a branch."""
         visible = {r.id for r in self.live} | {current.id} | {a.id for a in self.ancestors(current)}
         # Keep the set closed under "made from", so no row starts mid-air.
         for rid in list(visible):
             visible.update(a.id for a in self.ancestors(self.by_id[rid]))
+        path = {current.id} | {a.id for a in self.ancestors(current)}
 
         def kids(r):
             return [c for c in self.children_of.get(r.id, []) if c.id in visible]
 
         rows = []
 
-        def build(start, from_n):
-            row = {"from": from_n, "nodes": []}
+        def build(start, parent):
+            row = {"from": parent.id if parent else None,
+                   "from_n": self.number[parent.id] if parent else None, "nodes": []}
             rows.append(row)
             pending, r = [], start
             while r is not None:
                 row["nodes"].append({"recipe": r, "n": self.number[r.id], "label": self.label(r),
-                                     "current": r.id == current.id})
+                                     "current": r.id == current.id, "on_path": r.id in path})
                 ks = kids(r)
-                pending.extend((k, self.number[r.id]) for k in ks[1:])
+                pending.extend((k, r) for k in ks[1:])
                 r = ks[0] if ks else None
-            for k, n in pending:
-                build(k, n)
+            for k, p in reversed(pending):
+                build(k, p)
 
         build(self.root, None)
-        new_slot = "branch" if self.live_children(current) else "end"
-        return rows, new_slot
+        return rows, bool(self.live_children(current))
 
 
 def _load(ids):

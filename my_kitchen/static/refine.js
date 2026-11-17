@@ -1,5 +1,5 @@
 // Refine on the recipe page (Phase 26, reshaped in 0.28 and 0.41).
-// - The panel opens from the "+ New version" node in the trail.
+// - The panel opens from the "+" on the version being viewed in the trail.
 // - Chips append their text to the instruction.
 // - Submitting never goes straight to the AI: a confirmation dialog quotes the
 //   instruction and says what will happen. Only its "Create" button submits.
@@ -25,11 +25,6 @@
   var askForm = document.getElementById("refine-ask-form");
   var confirmed = false;
   var fromApp = false;   // text set by mkRefine, not typed: never nudge it back
-
-  // The trail scrolls sideways on a phone; start each row at its newest end.
-  document.querySelectorAll(".version-row").forEach(function (row) {
-    row.scrollLeft = row.scrollWidth;
-  });
 
   function setOpen(on, focus) {
     panel.hidden = !on;

@@ -570,7 +570,7 @@ def recipe(recipe_id):
     # Versions (Phase 26; a tree since 0.41.0): the trail's rows, where
     # "+ New version" goes, and what this version changed from its parent.
     fam = family_of(recipe)
-    trail_rows, new_slot = fam.trail(recipe)
+    trail_rows, branching = fam.trail(recipe)
     main = fam.main
     parent = fam.parent(recipe)
     can_refine = not recipe.is_archived   # any source since 0.42.0
@@ -617,7 +617,7 @@ def recipe(recipe_id):
         cuisine_meal_types=CUISINE_MEAL_TYPES,
         cuisine_allowed=bool(recipe.meal_type and meal_type_takes_cuisine(recipe.meal_type)),
         comment_max_chars=COMMENT_MAX_CHARS,
-        fam=fam, trail_rows=trail_rows, new_slot=new_slot,
+        fam=fam, trail_rows=trail_rows, branching=branching,
         version_n=fam.number[recipe.id], next_v=fam.next_number,
         main=main, parent=parent,
         changes=version_changes(parent, recipe) if parent is not None else [],

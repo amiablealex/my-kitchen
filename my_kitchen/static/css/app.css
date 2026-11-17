@@ -1252,15 +1252,34 @@ p.recipe-intro { display: block; padding: var(--space-4); }
 .retry-form textarea, .refine-panel textarea { width: 100%; resize: vertical; min-height: 3.2em; }
 .choice-nav { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
 
-.version-trail { margin: 0 0 var(--space-3); }
-.version-trail ol { display: flex; align-items: center; gap: 0; list-style: none; margin: 0; padding: 2px 0;
-  overflow-x: auto; -webkit-overflow-scrolling: touch; }
-/* 0.41.0: a version made from an earlier one starts its own row, set in a
-   little and led by "↳ from vN". A straight line is still one row. */
-.version-row--branch { padding-left: var(--space-4); margin-top: 2px; }
-.version-from { color: var(--text-muted); font-size: var(--fs-small); white-space: nowrap; padding-right: 2px; }
-.version-from span { margin-right: 3px; }
+/* 0.42.1: the trail is a tree. One scroller holds the rows (so drawn lines
+   stay attached when it scrolls); a branch row is joined to the version it
+   came from by an elbow that version_trail.js places. The line from the
+   original to the version being viewed is lit. */
+.version-trail { margin: 0 0 var(--space-3); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.version-tree { position: relative; display: flex; flex-direction: column; gap: 10px;
+  width: max-content; min-width: 100%; padding: 2px 0; }
+.version-trail ol { position: relative; display: flex; align-items: center; gap: 0; list-style: none; margin: 0; padding: 0; }
+.version-row--branch { padding-left: var(--space-5); }   /* without JS; the script sets it to meet the line */
+.version-elbow { position: absolute; width: 14px; border: 0 solid var(--divider); border-left-width: 2px;
+  border-bottom-width: 2px; border-bottom-left-radius: 12px; pointer-events: none; }
+.version-elbow[hidden] { display: none; }
+.version-trail li.on-path + li.on-path::before, .version-elbow.on-path { opacity: 0.7; }
+.version-trail li.on-path + li.on-path::before { background: var(--accent-1); }
+.version-elbow.on-path { border-color: var(--accent-1); }
 .version-trail li.is-removed .version-step { border-style: dashed; }
+/* The "+" on the version being viewed: a new version made from it. */
+.version-plus { display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 32px; height: 32px; min-width: 0; min-height: 0; margin-left: 6px; padding: 0;
+  border: 2px dashed var(--accent-1); border-radius: 16px 16px 16px 5px; box-shadow: none;
+  background: transparent; color: var(--accent-1); cursor: pointer; }
+.version-plus .icon { width: 1.1em; height: 1.1em; }
+.version-plus[aria-expanded="true"] { border-style: solid; background: var(--accent-1); color: var(--on-accent); }
+.version-plus:active { border-radius: 16px 5px 16px 16px; }
+/* "This is v1. The newest is v3. Go to v3" — one quiet line, not a notice. */
+.version-note { margin: 0 0 var(--space-3); color: var(--text-muted); font-size: var(--fs-small); }
+.version-note a { color: var(--accent-1); font-weight: 700; text-decoration: none; white-space: nowrap; }
+.version-step { border-style: dashed; }
 .version-trail li { display: flex; align-items: center; flex: none; }
 .version-trail li + li::before { content: ""; width: 18px; height: 2px; background: var(--divider); margin: 0 4px; flex: none; }
 .version-step { display: inline-flex; align-items: center; gap: 6px; max-width: 13rem; min-height: 36px;
@@ -1277,16 +1296,7 @@ a.version-step:hover, a.version-step:focus-visible { border-color: var(--accent-
 .refine-done { display: flex; align-items: center; gap: var(--space-2); color: var(--accent-2); font-size: var(--fs-small); }
 .refine-done .icon { width: 1.2em; height: 1.2em; flex: none; }
 
-/* Refine lives on the trail: the dashed "+ New version" node opens this panel
-   directly underneath it. */
-.version-new { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 var(--space-3) 0 4px;
-  border: 0; border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 2px rgba(86, 208, 187, 0.55);
-  color: var(--accent-1); font-size: var(--fs-small); font-weight: 700; white-space: nowrap; cursor: pointer; }
-.version-new .version-n { background: transparent; border: 2px dashed var(--accent-1); color: var(--accent-1); border-radius: 14px 14px 14px 4px; }
-.version-new .version-n .icon { width: 1.05em; height: 1.05em; }
-.version-new[aria-expanded="true"] { background: var(--accent-1); color: var(--on-accent); box-shadow: none; }
-.version-new[aria-expanded="true"] .version-n { border: 0; background: var(--on-accent); color: var(--accent-1); }
-.version-new:active { border-radius: 999px; }
+/* Refine lives on the trail: the "+" opens this panel directly underneath it. */
 .refine-panel { margin: 0 0 var(--space-5); padding: var(--space-4); background: var(--surface);
   border-radius: var(--petal-lg); box-shadow: inset 0 0 0 2px var(--accent-1); }
 .refine-panel[hidden] { display: none; }
