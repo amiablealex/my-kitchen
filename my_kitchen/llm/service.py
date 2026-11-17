@@ -280,26 +280,47 @@ def start_refine(app, source, instruction, time_label, user_id, stick_to_stock=T
     0.41.0: `source` can be any live version (a family can branch), and
     `stick_to_stock` is the "Stick to what's in stock" box. When ticked, the
     prompt also names the source's required lines that aren't in stock now, so
-    they're kept rather than quietly dropped (and replaced only on request)."""
+    they're kept rather than quietly dropped (and replaced only on request).
+
+    0.42.0: a hand-made or imported recipe has no generation. Its brief comes
+    from the recipe's own tags, and its dietary context is every active
+    household member's allergies and dislikes (as @kitchen uses), with diet
+    preferences left out; the prompt says those lists only stop additions.
+    The household's ids are stored as the refine's cooking-for, so the new
+    version's allergy note works as it does for any AI recipe."""
     gen0 = source.generation
-    state = state_from_generation(gen0)
+    if gen0 is not None:
+        state = state_from_generation(gen0)
+    else:
+        state = {
+            "meal_type": source.meal_type or DEFAULT_MEAL_TYPE,
+            "cuisine": source.cuisine,
+            "time_band": source.time_band or "relaxed",
+            "cooking_for_user_ids": [u.id for u in User.query.filter_by(is_active=True)
+                                     .order_by(User.id).all()],
+            "guest_count": 0,
+        }
     state["selected_ingredient_ids"] = []
     state["special_request"] = None
     state["meal_type"] = source.meal_type or state["meal_type"]
     brief = build_brief(state, time_label, app.config)
+    if gen0 is None:
+        brief["preferences"] = []
     brief["servings"] = source.servings or brief["servings"]
     missing = [ri.raw_text for ri in source.ingredients
                if not ri.to_buy and ri.ingredient is not None and not ri.satisfied]
     user_prompt = build_refine_prompt(brief, recipe_to_contract(source), instruction,
-                                      stick_to_stock=stick_to_stock, missing=missing)
+                                      stick_to_stock=stick_to_stock, missing=missing,
+                                      household_recipe=gen0 is None)
 
     gen = Generation(
         created_by_user_id=user_id, kind="refine",
         source_recipe_id=source.id, instruction=instruction,
-        cuisine=gen0.cuisine, meal_type=source.meal_type or gen0.meal_type,
-        time_band=source.time_band or gen0.time_band, servings=brief["servings"],
-        cooking_for_user_ids=gen0.cooking_for_user_ids or [],
-        guest_count=gen0.guest_count or 0, selected_ingredient_ids=[],
+        cuisine=gen0.cuisine if gen0 is not None else source.cuisine,
+        meal_type=state["meal_type"],
+        time_band=source.time_band or state["time_band"], servings=brief["servings"],
+        cooking_for_user_ids=state["cooking_for_user_ids"] or [],
+        guest_count=state["guest_count"] or 0, selected_ingredient_ids=[],
         raw_prompt=user_prompt, status="running",
     )
     db.session.add(gen)
@@ -470,6 +491,10 @@ def _run_generation_job(app, generation_id, user_prompt, brief, mode="generate")
                     recipe.cuisine = source.cuisine
                     recipe.time_band = source.time_band
                     recipe.was_chosen = True
+                    # 0.42.0: keep the credit: a version of an imported (or
+                    # noted) recipe says where the original came from.
+                    recipe.source_url = source.source_url
+                    recipe.source_note = source.source_note
                 # Resolve each free-text ingredient to a catalogue id and write a
                 # structured recipe_ingredients row. Resolve the `item` STRING only;
                 # amount/unit/to_buy/position are preserved verbatim. to_buy items

@@ -491,15 +491,17 @@ def regenerate(generation_id):
 
 @wizard_bp.route("/recipe/<int:recipe_id>/refine", methods=["POST"])
 def recipe_refine(recipe_id):
-    """Refine (Phase 26): one revised version of an AI recipe, from a short
+    """Refine (Phase 26): one revised version of a recipe, from a short
     change request. 0.41.0: any live version can be refined, so a family can
     branch; "Stick to what's in stock" arrives as use_stock (ticked by default,
-    and an unticked checkbox sends nothing)."""
+    and an unticked checkbox sends nothing). 0.42.0: hand-made and imported
+    recipes too — versions are always the AI's (Edit recipe stays the way to
+    correct one by hand)."""
     recipe = db.session.get(Recipe, recipe_id)
     if recipe is None:
         abort(404)
     back = url_for("wizard.recipe", recipe_id=recipe.id)
-    if recipe.generation is None or recipe.is_archived:
+    if recipe.is_archived:
         abort(400)
     instruction = clean_special_request(request.form.get("instruction"))
     if not instruction:
@@ -508,7 +510,8 @@ def recipe_refine(recipe_id):
     guard = _start_guard(back)
     if guard is not None:
         return guard
-    time_label = dict(TIME_BANDS).get(recipe.time_band or recipe.generation.time_band, "")
+    band = recipe.time_band or (recipe.generation.time_band if recipe.generation else None)
+    time_label = dict(TIME_BANDS).get(band, "")
     app = current_app._get_current_object()
     gen_id = start_refine(app, recipe, instruction, time_label, current_user.id,
                           stick_to_stock=bool(request.form.get("use_stock")))
@@ -570,7 +573,7 @@ def recipe(recipe_id):
     trail_rows, new_slot = fam.trail(recipe)
     main = fam.main
     parent = fam.parent(recipe)
-    can_refine = recipe.generation is not None and not recipe.is_archived
+    can_refine = not recipe.is_archived   # any source since 0.42.0
     # If an allergy was among the brief's combined dietary tags, show a caveat.
     # Re-derived from current tags (no snapshot stored) — consistent with the
     # spec's "an LLM is not a safety guarantee" honesty.

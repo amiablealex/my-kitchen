@@ -54,7 +54,8 @@ def main():
         print(f"\n### {r['name']}")
         print(build_refine_prompt(r["brief"], r["recipe"], r["instruction"],
                                   stick_to_stock=r.get("stick_to_stock", True),
-                                  missing=r.get("missing")))
+                                  missing=r.get("missing"),
+                                  household_recipe=r.get("household_recipe", False)))
 
 
 if __name__ == "__main__":

@@ -314,6 +314,23 @@ _TRAYBAKE_CHORIZO = {
         {"item": "chorizo", "amount": 100, "unit": "g", "to_buy": False},
     ],
 }
+_SATAY = {
+    "title": "Chicken Satay Skewers",
+    "blurb": "Grilled chicken skewers with a peanut dipping sauce.",
+    "intro": "Sticky, smoky skewers with a rich peanut sauce.",
+    "servings": 2,
+    "ingredients": [
+        {"item": "chicken thighs", "amount": 4, "unit": "", "to_buy": False},
+        {"item": "smooth peanut butter", "amount": 3, "unit": "tbsp", "to_buy": False},
+        {"item": "soy sauce", "amount": 2, "unit": "tbsp", "to_buy": False},
+        {"item": "honey", "amount": 1, "unit": "tbsp", "to_buy": False},
+        {"item": "garlic", "amount": 2, "unit": "cloves", "to_buy": False},
+    ],
+    "prep": [{"title": "Marinate", "text": "Toss the chicken with half the soy, honey and garlic.", "timer_minutes": 20}],
+    "cook": [{"title": "Grill", "text": "Thread onto skewers and grill until charred and cooked through.", "timer_minutes": 12},
+             {"title": "Sauce", "text": "Whisk the peanut butter with the rest of the soy and a splash of hot water.", "timer_minutes": None}],
+    "tips": [],
+}
 _REFINE_BRIEF = {
     "must_use": [],
     "available": [_ing("baby potatoes"), _ing("red onion"), _ing("chicken thighs"),
@@ -401,5 +418,30 @@ GOLDEN_REFINES = [
         "instruction": "Make it more nutritious by adding some vegetables",
         "stick_to_stock": False,
         "assert": {"required": ["chicken"], "forbidden": [], "max_to_buy": 0},
+    },
+    # --- 0.42.0: versions of the household's own recipes -----------------------
+    # Hand-made and imported recipes weren't designed around anyone's tags, so
+    # the household's allergies and dislikes only stop ADDITIONS.
+    {
+        "name": "refine_household_keeps_existing",
+        "note": "An imported satay that already has peanuts, a household peanut "
+                "allergy, and a servings change. The peanuts stay: the change didn't "
+                "ask about them, and the household chose this recipe.",
+        "brief": {**_REFINE_BRIEF, "allergies": ["Peanut allergy"]},
+        "recipe": _SATAY,
+        "instruction": "Make this for 4 people",
+        "household_recipe": True,
+        "assert": {"required": ["chicken", "peanut"], "forbidden": [], "max_to_buy": 2, "servings": 4},
+    },
+    {
+        "name": "refine_household_never_adds",
+        "note": "A hand-made traybake, a household that dislikes mushrooms, and a "
+                "request to bulk it out. Something else goes in (beans, more veg, "
+                "grains), never mushrooms.",
+        "brief": {**_REFINE_BRIEF, "avoid": ["Mushrooms"]},
+        "recipe": _TRAYBAKE,
+        "instruction": "Make it more filling",
+        "household_recipe": True,
+        "assert": {"required": ["chicken"], "forbidden": ["mushroom"], "max_to_buy": 2},
     },
 ]

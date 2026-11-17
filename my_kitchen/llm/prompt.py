@@ -301,7 +301,8 @@ REFINE_SYSTEM_PROMPT = f"""{SYSTEM_PROMPT}
 """
 
 
-def build_refine_prompt(brief, current_recipe, instruction, stick_to_stock=True, missing=None):
+def build_refine_prompt(brief, current_recipe, instruction, stick_to_stock=True, missing=None,
+                        household_recipe=False):
     """User prompt for a refine: the current recipe (as contract JSON), the
     cook's change request fenced like the special request, then the same
     pantry and dietary sections the generation brief uses.
@@ -312,7 +313,14 @@ def build_refine_prompt(brief, current_recipe, instruction, stick_to_stock=True,
     ingredient links), so "make it work with what I've got" knows what to
     replace. Unticked, the in-stock list is left out on purpose and the model
     is told it has free rein, with no optional extras: the recipe page's stock
-    marks already show what's missing."""
+    marks already show what's missing.
+
+    0.42.0: `household_recipe` is set when the recipe being revised was written
+    or imported by the household rather than generated. Its allergies and
+    dislikes are then everyone's in the household, and a block after them says
+    they only stop additions: what's already in the recipe was the household's
+    choice and stays unless asked. Unset, nothing is added (AI recipes'
+    prompts are unchanged)."""
     lines = [
         "CURRENT RECIPE (JSON):",
         json.dumps(current_recipe, ensure_ascii=False),
@@ -342,6 +350,16 @@ def build_refine_prompt(brief, current_recipe, instruction, stick_to_stock=True,
                      "the optional-extras rule: set every \"to_buy\" to false.")
         _staples_equipment_lines(brief, lines)
     _dietary_lines(brief, lines)
+    if household_recipe:
+        lines.append("")
+        lines.append("THE HOUSEHOLD'S OWN RECIPE: this one was written or imported by the "
+                     "household, not designed around the allergies and dislikes above, which "
+                     "are everyone's in the household. For this recipe they mean: don't ADD "
+                     "anything on either list, not as an ingredient, an optional extra, a "
+                     "serving suggestion or a substitute. Anything from either list that's "
+                     "already in the current recipe was the household's choice: keep it "
+                     "unless the change request asks to change it. This replaces the allergy "
+                     "and dislike rules above, for this recipe only.")
     lines.append("")
     lines.append(f"Servings: {brief['servings']} (keep this unless the change request asks otherwise).")
     lines.append("")

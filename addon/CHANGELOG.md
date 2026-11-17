@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.42.0
+- **New versions of your own recipes.** Hand-made and imported recipes now
+  have *New version* too, the same as AI ones. The new version is written by
+  the AI; *Edit recipe* is still how you fix the original by hand.
+- **Allergies and dislikes on those versions.** Your own recipes weren't
+  written around anyone's tags, so a new version uses the whole household's
+  allergies and dislikes only to stop the AI *adding* any of them. Anything
+  already in the recipe stays unless you ask. Diet preferences aren't
+  applied.
+- **The credit carries over.** A version of an imported recipe says "AI
+  version of a recipe from bbcgoodfood.com" and links to the original (or
+  uses your "where it's from" note).
+- In Recipes, a refined recipe still turns up when you filter by *Imported*
+  or *By hand*.
+
 ## 0.41.0
 - **Branching versions.** *New version* now works from any version, not just
   the newest. A version made from an earlier one starts its own row in the

@@ -387,15 +387,17 @@ class Recipe(db.Model):
     archived_at = db.Column(db.DateTime, nullable=True)
     archived_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     # Where an imported recipe came from (Phase 34): shown as "from
-    # bbcgoodfood.com" on the recipe page and its print view. NULL otherwise.
+    # bbcgoodfood.com" on the recipe page and its print view. NULL otherwise,
+    # except that an AI version of such a recipe carries it forward (0.42.0).
     source_url = db.Column(db.String, nullable=True)
     # How an imported recipe came in (Phase 35): "link" | "text" | "photo".
     # A photo import has no URL, so this is what lets the page say "from a
     # photo". NULL for AI and hand-made recipes (and 0.34 imports).
     import_method = db.Column(db.String, nullable=True)
     # Where it's from, in the household's words (0.37.0): "Mum's cookbook".
-    # User and imported recipes only (set on the create/edit form). Shown in
-    # place of the web host when both exist — source_url itself stays fixed.
+    # User and imported recipes (set on the create/edit form), and carried to
+    # their AI versions (0.42.0). Shown in place of the web host when both
+    # exist — source_url itself stays fixed.
     source_note = db.Column(db.String, nullable=True)
 
     @property
@@ -415,6 +417,11 @@ class Recipe(db.Model):
         note on a web import replaces the host as the link text, same link.
         Pasted-text and hand-made recipes with no note show nothing."""
         if self.source == "ai":
+            # 0.42.0: a version of an imported or noted recipe carries the
+            # original's link and note forward, so the credit isn't lost.
+            origin = self.source_note or self.source_host
+            if origin:
+                return (f"AI version of a recipe from {origin}", self.source_url)
             return ("AI generated", None)
         if self.source_note:
             return (f"from {self.source_note}", self.source_url)

@@ -138,11 +138,13 @@ def _attach_facets(rows, unlinked=()):
         row["f_cuisine"] = _facet_field(r.cuisine for r in recs)
         row["f_meal"] = _facet_field(r.meal_type for r in recs)
         row["f_cook"] = _facet_field(cooks)
-        row["f_source"] = _facet_field(r.source for r in recs)
+        row["f_source"] = _facet_field([r.source for r in recs] + row.get("also_sources", []))
         row["f_title"] = " ".join((r.title or "").lower() for r in recs)
         row["f_check"] = _facet_field(["unlinked"] if any(r.id in unlinked for r in recs) else [])
         for r in recs:
             _note_recipe(opts, r, cooks, unlinked)
+        for src in row.get("also_sources", []):
+            opts.note("source", src, SOURCE_LABELS.get(src, src))
     return opts.as_list()
 
 
@@ -271,7 +273,18 @@ def index():
         if row is not None:
             rows.append(row)
     for r in user_recipes:
+        # 0.42.0: a hand-made or imported recipe with versions shows through
+        # its main version's row, like any other.
+        if r.id in ctx["hidden_versions"]:
+            continue
         rows.append({"kind": r.source, "sort_at": r.created_at, "recipe": r})
+    # A family row also answers to the original's source, so filtering by
+    # Imported or By hand still finds a recipe that's been refined (0.42.0).
+    for row in rows:
+        if row["kind"] == "generation" and row["chosen"] is not None:
+            fam = ctx["families"].get(row["chosen"].id)
+            if fam is not None and fam.root.source != "ai":
+                row["also_sources"] = [fam.root.source]
 
     rows.sort(key=lambda row: row["sort_at"] or datetime.min, reverse=True)
 
