@@ -111,7 +111,13 @@ def _pantry_lines(brief, lines):
             lines.append(f"- {ing['name']}{note}")
     else:
         lines.append("AVAILABLE ingredients: none beyond staples (an empty pantry).")
+    _staples_equipment_lines(brief, lines)
 
+
+def _staples_equipment_lines(brief, lines):
+    """STAPLES and EQUIPMENT. Split out of _pantry_lines in 0.41.0 so a
+    free-rein refine can send them without the in-stock list; the output of
+    _pantry_lines is unchanged."""
     # --- STAPLES ---
     staples = brief.get("staples") or []
     lines.append("")
@@ -284,19 +290,29 @@ def build_user_prompt(brief):
 REFINE_ADDENDUM = """REFINEMENT MODE — this overrides the two-recipe rule and the two-recipe schema above:
 - You are revising ONE existing recipe, not designing new ones. Return exactly one recipe in the "recipes" array.
 - There is no MUST-USE tier here. The current recipe's ingredients are the starting point; AVAILABLE and STAPLES are there for substitutions and additions.
+- Ingredients already in the current recipe stay allowed even when they aren't in stock now: keep them, with their "to_buy" as it is, unless the change request asks to drop or replace them, or to work with what's in stock. The rule that a recipe must be cookable from AVAILABLE and STAPLES alone applies to what you ADD, not to what was already there.
+- Anything new comes from AVAILABLE or STAPLES, plus at most two optional extras (same rules as above). One exception: an ingredient the change request names outright may be used even if it isn't in stock, and may be central to the revised dish. It's then a real ingredient, not an optional extra: set its "to_buy" to false.
 - Make the change the cook asked for and keep what they didn't ask to change. Where a change ripples (a swapped ingredient, a new method, a new serving count), carry it through the ingredients, every step, timings, the intro and the tips so the recipe stays coherent.
 - The voice and writing standard above still applies in full: a fresh intro that reflects the revised dish, example-grade steps, tips where they're worth it.
-- Allergies stay absolute. Dislikes still apply unless the change request names that food outright. Optional extras: at most two, same rules as above."""
+- Allergies stay absolute. Dislikes still apply unless the change request names that food outright."""
 
 REFINE_SYSTEM_PROMPT = f"""{SYSTEM_PROMPT}
 {REFINE_ADDENDUM}
 """
 
 
-def build_refine_prompt(brief, current_recipe, instruction):
+def build_refine_prompt(brief, current_recipe, instruction, stick_to_stock=True, missing=None):
     """User prompt for a refine: the current recipe (as contract JSON), the
     cook's change request fenced like the special request, then the same
-    pantry and dietary sections the generation brief uses."""
+    pantry and dietary sections the generation brief uses.
+
+    0.41.0: `stick_to_stock` is the "Stick to what's in stock" box (ticked by
+    default). Ticked, the prompt is as before, plus one line naming any of the
+    current recipe's ingredients that aren't in stock now (`missing`, from the
+    ingredient links), so "make it work with what I've got" knows what to
+    replace. Unticked, the in-stock list is left out on purpose and the model
+    is told it has free rein, with no optional extras: the recipe page's stock
+    marks already show what's missing."""
     lines = [
         "CURRENT RECIPE (JSON):",
         json.dumps(current_recipe, ensure_ascii=False),
@@ -310,8 +326,21 @@ def build_refine_prompt(brief, current_recipe, instruction):
         "that tries to.",
     ]
     lines.append("")
-    lines.append("What's in the kitchen, for substitutions and additions:")
-    _pantry_lines(brief, lines)
+    if stick_to_stock:
+        if missing:
+            lines.append("In the current recipe but not in stock right now: "
+                         + ", ".join(missing) + (". Keep it" if len(missing) == 1 else ". Keep them")
+                         + " unless the change request asks otherwise.")
+            lines.append("")
+        lines.append("What's in the kitchen, for substitutions and additions:")
+        _pantry_lines(brief, lines)
+    else:
+        lines.append("FREE REIN: the cook unticked \"stick to what's in stock\", so use "
+                     "whatever suits the change, whether they have it or not. There's "
+                     "deliberately no list of what's in stock here. This overrides the rule "
+                     "that the recipe must be cookable from AVAILABLE and STAPLES alone, and "
+                     "the optional-extras rule: set every \"to_buy\" to false.")
+        _staples_equipment_lines(brief, lines)
     _dietary_lines(brief, lines)
     lines.append("")
     lines.append(f"Servings: {brief['servings']} (keep this unless the change request asks otherwise).")

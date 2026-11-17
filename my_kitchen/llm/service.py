@@ -12,6 +12,7 @@ from .prompt import (
 from .schema import extract_json, validate_and_normalize
 from .providers import get_provider, ProviderError
 from .seeds import pick_seed_for
+from ..versions import family_of, reseat_main
 # Deterministic free-text -> catalogue resolver (Phase 3a), wired into the write
 # path here in 3b. build_index is built ONCE per generation and reused; the index
 # is plain data (no ORM objects), so it's safe to use across both recipes.
@@ -270,11 +271,16 @@ def recipe_to_contract(recipe):
     }
 
 
-def start_refine(app, source, instruction, time_label, user_id):
+def start_refine(app, source, instruction, time_label, user_id, stick_to_stock=True):
     """Refine (Phase 26): one revised version of `source`. Same job machinery as
     generation (status row, thread, poll, resolver); the job supersedes the
     source on success. Dietary context comes from the source generation's
-    cooking-for list, with current tags; must-use is empty by design."""
+    cooking-for list, with current tags; must-use is empty by design.
+
+    0.41.0: `source` can be any live version (a family can branch), and
+    `stick_to_stock` is the "Stick to what's in stock" box. When ticked, the
+    prompt also names the source's required lines that aren't in stock now, so
+    they're kept rather than quietly dropped (and replaced only on request)."""
     gen0 = source.generation
     state = state_from_generation(gen0)
     state["selected_ingredient_ids"] = []
@@ -282,7 +288,10 @@ def start_refine(app, source, instruction, time_label, user_id):
     state["meal_type"] = source.meal_type or state["meal_type"]
     brief = build_brief(state, time_label, app.config)
     brief["servings"] = source.servings or brief["servings"]
-    user_prompt = build_refine_prompt(brief, recipe_to_contract(source), instruction)
+    missing = [ri.raw_text for ri in source.ingredients
+               if not ri.to_buy and ri.ingredient is not None and not ri.satisfied]
+    user_prompt = build_refine_prompt(brief, recipe_to_contract(source), instruction,
+                                      stick_to_stock=stick_to_stock, missing=missing)
 
     gen = Generation(
         created_by_user_id=user_id, kind="refine",
@@ -299,32 +308,6 @@ def start_refine(app, source, instruction, time_label, user_id):
                      args=(app, gen.id, user_prompt, brief, "refine"),
                      daemon=True).start()
     return gen.id
-
-
-def recipe_versions(recipe):
-    """The recipe's refine lineage, oldest first, as [(recipe, label)]. Walks
-    back through refine generations, then forward to the newest finished
-    refine. Linear by design: only the latest version can be refined."""
-    back, seen = [], set()
-    r = recipe
-    while r is not None and r.id not in seen:
-        seen.add(r.id)
-        back.append(r)
-        r = r.refined_from
-    chain = list(reversed(back))
-    r = recipe
-    while True:
-        nxt = (Generation.query
-               .filter(Generation.kind == "refine", Generation.source_recipe_id == r.id,
-                       Generation.status == "done")
-               .order_by(Generation.created_at.desc()).first())
-        if nxt is None or not nxt.recipes or nxt.recipes[0].id in seen:
-            break
-        r = nxt.recipes[0]
-        seen.add(r.id)
-        chain.append(r)
-    return [(v, "Original" if i == 0 else (v.generation.instruction or "Refined"))
-            for i, v in enumerate(chain)]
 
 
 def start_generation(app, wizard_state, time_label, user_id=None, kind=None,
@@ -487,7 +470,6 @@ def _run_generation_job(app, generation_id, user_prompt, brief, mode="generate")
                     recipe.cuisine = source.cuisine
                     recipe.time_band = source.time_band
                     recipe.was_chosen = True
-                    source.was_chosen = False
                 # Resolve each free-text ingredient to a catalogue id and write a
                 # structured recipe_ingredients row. Resolve the `item` STRING only;
                 # amount/unit/to_buy/position are preserved verbatim. to_buy items
@@ -510,6 +492,12 @@ def _run_generation_job(app, generation_id, user_prompt, brief, mode="generate")
                     ))
                 db.session.add(recipe)
             gen.status = "done"
+            if source is not None:
+                # 0.41.0: the newest version becomes the family's main one, and
+                # every other version stops being "chosen" (not just the source,
+                # since it may have been made from an older version).
+                db.session.flush()
+                reseat_main(family_of(source))
             db.session.commit()  # recipes + recipe_ingredients + status="done" land together, atomically
         except Exception as e:
             # Truly unexpected (e.g. a DB error mid-write). Roll back the broken

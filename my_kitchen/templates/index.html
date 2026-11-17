@@ -19,7 +19,7 @@
         {{ icon('arrow_forward', 'home-cookable-arrow') }}
       </summary>
       <div class="sugg-scroller">
-        {% for r in cookable %}{{ sugg_card(r) }}{% endfor %}
+        {% for r in cookable %}{{ sugg_card(r, version_badges.get(r.id)) }}{% endfor %}
       </div>
     </details>
   {% endif %}

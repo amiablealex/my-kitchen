@@ -52,7 +52,9 @@ def main():
     print("\n\n===== REFINES (Phase 26) =====")
     for r in GOLDEN_REFINES:
         print(f"\n### {r['name']}")
-        print(build_refine_prompt(r["brief"], r["recipe"], r["instruction"]))
+        print(build_refine_prompt(r["brief"], r["recipe"], r["instruction"],
+                                  stick_to_stock=r.get("stick_to_stock", True),
+                                  missing=r.get("missing")))
 
 
 if __name__ == "__main__":

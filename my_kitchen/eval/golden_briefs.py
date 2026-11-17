@@ -307,6 +307,13 @@ _TRAYBAKE = {
     "cook": [{"title": "Roast", "text": "Roast everything until golden and the chicken is cooked through.", "timer_minutes": 40}],
     "tips": [],
 }
+_TRAYBAKE_CHORIZO = {
+    **_TRAYBAKE,
+    "title": "Chicken & Chorizo Traybake",
+    "ingredients": _TRAYBAKE["ingredients"] + [
+        {"item": "chorizo", "amount": 100, "unit": "g", "to_buy": False},
+    ],
+}
 _REFINE_BRIEF = {
     "must_use": [],
     "available": [_ing("baby potatoes"), _ing("red onion"), _ing("chicken thighs"),
@@ -346,5 +353,53 @@ GOLDEN_REFINES = [
         "recipe": _TRAYBAKE,
         "instruction": "Add a crunchy peanut topping",
         "assert": {"required": ["chicken"], "forbidden": ["peanut"], "max_to_buy": 2},
+    },
+    # --- 0.41.0: "Stick to what's in stock" -----------------------------------
+    # _TRAYBAKE_CHORIZO's chorizo isn't in _REFINE_BRIEF's AVAILABLE or the
+    # staples, so these also cover "already in the recipe but not in stock now"
+    # (the `missing` line).
+    {
+        "name": "refine_keeps_missing",
+        "note": "Box ticked. Adds vegetables from stock (green beans) and keeps the "
+                "chorizo even though it isn't in stock now: what was already there stays.",
+        "brief": _REFINE_BRIEF,
+        "recipe": _TRAYBAKE_CHORIZO,
+        "instruction": "Make it more nutritious by adding some vegetables",
+        "missing": ["chorizo"],
+        "assert": {"required": ["chicken", "potato", "chorizo"], "forbidden": [], "max_to_buy": 2},
+    },
+    {
+        "name": "refine_named_not_in_stock",
+        "note": "Box ticked, and the request names mushrooms, which aren't in stock. "
+                "The named ingredient wins: mushrooms are in, as a real ingredient "
+                "(to_buy false), not dropped or relegated to an optional extra.",
+        "brief": _REFINE_BRIEF,
+        "recipe": _TRAYBAKE_CHORIZO,
+        "instruction": "Work some mushrooms into this",
+        "missing": ["chorizo"],
+        "assert": {"required": ["chicken", "mushroom"], "forbidden": [], "max_to_buy": 2},
+    },
+    {
+        "name": "refine_work_with_what_ive_got",
+        "note": "Box ticked, and the request asks to fit current stock: the chorizo "
+                "goes from the ingredients (swapped for something in stock or a "
+                "staple, e.g. smoked paprika), no optional extras. Check the chorizo "
+                "by eye: the text may fairly mention the swap, so it isn't a keyword check.",
+        "brief": _REFINE_BRIEF,
+        "recipe": _TRAYBAKE_CHORIZO,
+        "instruction": "Make it work with what I've got",
+        "missing": ["chorizo"],
+        "assert": {"required": ["chicken"], "forbidden": [], "max_to_buy": 0},
+    },
+    {
+        "name": "refine_free_rein",
+        "note": "Box unticked: no in-stock list in the prompt. Vegetables can be "
+                "anything (courgette, peppers, spinach), and nothing is marked as an "
+                "optional extra.",
+        "brief": _REFINE_BRIEF,
+        "recipe": _TRAYBAKE,
+        "instruction": "Make it more nutritious by adding some vegetables",
+        "stick_to_stock": False,
+        "assert": {"required": ["chicken"], "forbidden": [], "max_to_buy": 0},
     },
 ]

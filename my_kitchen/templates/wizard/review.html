@@ -81,7 +81,7 @@
           </div>
         </div>
         <div class="sugg-scroller">
-          {% for r in suggestions %}{{ sugg_card(r) }}{% endfor %}
+          {% for r in suggestions %}{{ sugg_card(r, version_badges.get(r.id)) }}{% endfor %}
         </div>
       </section>
     {% endif %}

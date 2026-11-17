@@ -312,8 +312,9 @@ class Generation(db.Model):
     # --- Regenerate + refine (Phase 26) ---
     # kind: NULL/"generate" (the wizard), "regenerate" (Neither — try again,
     # from parent_generation_id's brief) or "refine" (one revised version of
-    # source_recipe_id, per `instruction`). A refine's single recipe supersedes
-    # its source: the source's was_chosen flips False in the same commit.
+    # source_recipe_id, per `instruction`). A refine's single recipe becomes its
+    # family's main version in the same commit (0.41.0: versions.reseat_main —
+    # every other version's was_chosen goes False, not just the source's).
     kind = db.Column(db.String, nullable=True)
     parent_generation_id = db.Column(db.Integer, db.ForeignKey("generations.id"), nullable=True)
     source_recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id"), nullable=True)
@@ -461,8 +462,17 @@ class Recipe(db.Model):
         """Can come up in suggestions and the home page's "could make" line:
         anything hand-written or imported, and AI recipes that were chosen. An
         unchosen AI recipe never does, so its unlinked lines don't matter
-        (0.38.0: the unlinked note and filter skip it)."""
-        return self.source != "ai" or bool(self.was_chosen)
+        (0.38.0: the unlinked note and filter skip it). 0.41.0: any version of
+        a recipe that has versions can come up too (suggestions pick one per
+        family), so a refine output, or a recipe that was refined, counts."""
+        if self.source != "ai" or self.was_chosen:
+            return True
+        if self.generation is not None and self.generation.kind == "refine":
+            return True
+        return (Generation.query
+                .filter(Generation.kind == "refine", Generation.source_recipe_id == self.id,
+                        Generation.status == "done")
+                .first() is not None)
 
     @property
     def is_archived(self):

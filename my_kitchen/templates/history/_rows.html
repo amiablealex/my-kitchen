@@ -28,7 +28,7 @@
 {% macro row_ind(recipe_id, noted_ids, fav_ids, version=1) -%}
   {% if version > 1 or recipe_id in noted_ids or recipe_id in fav_ids %}
     <span class="row-ind">
-      {% if version > 1 %}<span class="version-badge" title="Refined {{ version - 1 }} time{{ 's' if version > 2 else '' }}">v{{ version }}</span>{% endif %}
+      {% if version > 1 %}<span class="version-badge" title="Version {{ version }}">v{{ version }}</span>{% endif %}
       {% if recipe_id in noted_ids %}<span class="row-note" title="Has notes">{{ icon('comment') }}</span>{% endif %}
       {% if recipe_id in fav_ids %}<span class="row-star" title="Favourite">{{ icon('star_fill') }}</span>{% endif %}
     </span>

@@ -1,14 +1,19 @@
-// Refine on the recipe page (Phase 26, reshaped in 0.28).
-// - The panel opens from the "+ New version" node at the end of the trail.
+// Refine on the recipe page (Phase 26, reshaped in 0.28 and 0.41).
+// - The panel opens from the "+ New version" node in the trail.
 // - Chips append their text to the instruction.
 // - Submitting never goes straight to the AI: a confirmation dialog quotes the
-//   instruction and says what will happen, so a question can't turn into a
-//   full regeneration by accident. Only its "Create" button submits.
+//   instruction and says what will happen. Only its "Create" button submits.
+// - 0.41.0: when the request reads like a question or a swap, the dialog shows
+//   its @kitchen face instead: "Ask @kitchen" posts it as a question in the
+//   notes (no rewrite), "Make vN anyway" carries on. Plain text rules, no
+//   model call; a wrong guess costs one tap. Skipped when the text came from
+//   @kitchen's own "Make this version N" or the servings rewrite, and when
+//   there are no questions left today.
+// - The "Stick to what's in stock" box swaps its one-line hint.
 // - The submit button disables once confirmed (the server's one-running-job-
 //   per-user guard is the real backstop).
 // - window.mkRefine lets the servings scaler pre-fill "Make this for N people"
-//   and open the panel; the same confirmation still applies. @kitchen replies
-//   that propose a major change use it too (Phase 29).
+//   and open the panel; the same confirmation still applies.
 (function () {
   var panel = document.getElementById("refine");
   var box = document.getElementById("refine-instruction");
@@ -16,13 +21,15 @@
   if (!panel || !box || !form) return;
   var toggle = document.getElementById("refine-toggle");
   var dialog = document.getElementById("refine-confirm");
-  var quote = document.getElementById("refine-confirm-quote");
   var submitBtn = document.getElementById("refine-btn");
+  var askForm = document.getElementById("refine-ask-form");
   var confirmed = false;
+  var fromApp = false;   // text set by mkRefine, not typed: never nudge it back
 
-  // The trail scrolls sideways on a phone; start at its newest end.
-  var trail = document.querySelector(".version-trail");
-  if (trail) trail.scrollLeft = trail.scrollWidth;
+  // The trail scrolls sideways on a phone; start each row at its newest end.
+  document.querySelectorAll(".version-row").forEach(function (row) {
+    row.scrollLeft = row.scrollWidth;
+  });
 
   function setOpen(on, focus) {
     panel.hidden = !on;
@@ -38,6 +45,8 @@
   var toNotes = document.getElementById("refine-to-notes");
   if (toNotes) toNotes.addEventListener("click", function () { setOpen(false); });
 
+  box.addEventListener("input", function () { fromApp = false; });
+
   function add(text) {
     var cur = box.value.replace(/[\s,.]+$/, "");
     if (cur.toLowerCase().indexOf(text.toLowerCase()) !== -1) return;
@@ -48,6 +57,23 @@
     chip.addEventListener("click", function () { add(chip.dataset.chip); box.focus(); });
   });
 
+  // "Stick to what's in stock": one hint line that says what each state does.
+  var stock = document.getElementById("refine-use-stock");
+  var hint = panel.querySelector(".refine-stock-hint");
+  if (stock && hint) {
+    stock.addEventListener("change", function () {
+      hint.textContent = stock.checked ? hint.dataset.on : hint.dataset.off;
+    });
+  }
+
+  // Does this read like something to ask rather than a change to make?
+  var QUESTION_START = /^(how|what|why|when|where|which|who|can|could|should|would|will|is|are|do|does|did|am|any|whats|what's|hows|how's)\b/;
+  var SWAP = /\b(instead of|in place of|substitut\w*|swap\w*|replace\w*|don'?t have|do not have|run out|ran out|out of)\b/;
+  function looksLikeQuestion(text) {
+    var t = text.trim().toLowerCase();
+    return /\?\s*$/.test(t) || QUESTION_START.test(t) || SWAP.test(t);
+  }
+
   function go() {
     confirmed = true;
     submitBtn.disabled = true;
@@ -55,15 +81,31 @@
     form.submit();  // bypasses the submit handler below; validation already passed
   }
 
+  function ask(text) {
+    askForm.querySelector("[name=body]").value = askForm.dataset.mention + " " + text;
+    // requestSubmit fires "submit", so notes.js fills in the servings being viewed.
+    if (askForm.requestSubmit) askForm.requestSubmit(); else askForm.submit();
+  }
+
+  function face(asking) {
+    dialog.querySelector(".refine-confirm-normal").hidden = asking;
+    dialog.querySelector(".refine-confirm-ask").hidden = !asking;
+  }
+
   // "submit" only fires once the browser's own validation (required) passes.
   form.addEventListener("submit", function (e) {
     if (confirmed) return;
     e.preventDefault();
     var text = box.value.trim();
+    var asking = !fromApp && askForm && Number(askForm.dataset.questionsLeft || 0) > 0
+                 && looksLikeQuestion(text);
     if (dialog && typeof dialog.showModal === "function") {
-      quote.textContent = "“" + text + "”";
+      dialog.querySelectorAll(".refine-confirm-quote").forEach(function (q) {
+        q.textContent = "“" + text + "”";
+      });
+      face(asking);
       dialog.showModal();
-      document.getElementById("refine-confirm-go").focus();
+      document.getElementById(asking ? "refine-confirm-ask" : "refine-confirm-go").focus();
     } else if (window.confirm("Create a new version of this recipe with: “" + text + "”? The current version is kept.")) {
       go();
     }
@@ -74,14 +116,25 @@
       dialog.close();
       go();
     });
-    document.getElementById("refine-confirm-cancel").addEventListener("click", function () {
+    document.getElementById("refine-confirm-anyway").addEventListener("click", function () {
       dialog.close();
-      box.focus();
+      go();
+    });
+    document.getElementById("refine-confirm-ask").addEventListener("click", function () {
+      dialog.close();
+      ask(box.value.trim());
+    });
+    dialog.querySelectorAll("[data-refine-cancel]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        dialog.close();
+        box.focus();
+      });
     });
   }
 
   window.mkRefine = function (text) {
     box.value = text;
+    fromApp = true;
     setOpen(true, true);
   };
 

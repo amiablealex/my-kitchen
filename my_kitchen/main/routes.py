@@ -3,6 +3,7 @@ from flask_login import current_user
 
 from ..models import Ingredient
 from ..wizard.suggestions import cookable_now
+from ..versions import version_badges
 from .hero import pick_line
 
 main_bp = Blueprint("main", __name__)
@@ -26,6 +27,7 @@ def index():
         "index.html",
         hero_line=hero_line,
         cookable=cookable[:HOME_COOKABLE_CARDS],
+        version_badges=version_badges(cookable[:HOME_COOKABLE_CARDS]),
         cookable_count=len(cookable),
     )
 

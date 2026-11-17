@@ -27,9 +27,22 @@
       <a class="menu-item" href="{{ url_for('wizard.recipe_share', recipe_id=recipe.id) }}">{{ icon('print') }}<span>Print or share</span></a>
       {% if not recipe.is_archived %}
         <div class="menu-sep"></div>
-        <form method="post" action="{{ url_for('wizard.recipe_archive', recipe_id=recipe.id) }}">
+        {# 0.41.0: removing a version (end of a branch only) and archiving the
+           recipe are different actions, and the menu says which is which. #}
+        {% if can_remove %}
+          <form method="post" action="{{ url_for('wizard.recipe_remove_version', recipe_id=recipe.id) }}"
+                data-confirm-title="Remove v{{ version_n }}?" data-confirm-ok="Remove"
+                data-confirm="The other versions stay as they are. You can restore v{{ version_n }} from the Archive.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="menu-item menu-item--warn">{{ icon('delete') }}<span>Remove this version</span></button>
+          </form>
+        {% endif %}
+        {% set fam_live = fam.live | length %}
+        <form method="post" action="{{ url_for('wizard.recipe_archive', recipe_id=recipe.id) }}"
+              {% if fam_live > 1 %}data-confirm-title="Archive all {{ fam_live }} versions?" data-confirm-ok="Archive all"
+              data-confirm="This archives the whole recipe, every version. You can restore it from the Archive."{% endif %}>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="menu-item menu-item--warn">{{ icon('archive') }}<span>Archive this recipe</span></button>
+          <button type="submit" class="menu-item menu-item--warn">{{ icon('archive') }}<span>{% if fam_live > 1 %}Archive recipe (all {{ fam_live }} versions){% else %}Archive this recipe{% endif %}</span></button>
         </form>
       {% endif %}
     </div>
@@ -49,38 +62,50 @@
       </form>
     </div>
   {% endif %}
-  {# Version trail (Phase 26): the refine lineage, oldest first, each step
-     labelled with the change that produced it. 0.28: also shown on a single
-     version when it can be refined, because "+ New version" lives at its end. #}
-  {% set next_v = versions | length + 1 %}
-  {% if versions | length > 1 or can_refine %}
+  {# Version trail (Phase 26): the refine lineage, each step labelled with the
+     change that produced it. 0.28: also shown on a single version when it can
+     be refined, because "+ New version" lives at its end. 0.41.0: a tree. The
+     first row runs from the original; a version made from an earlier one
+     starts its own row ("from v1"). Numbers are creation order and never
+     change. A straight line looks exactly as before. #}
+  {% macro new_version_btn(branch=False) -%}
+    <li class="version-new-item">
+      <button type="button" class="version-new" id="refine-toggle" aria-controls="refine"
+              aria-expanded="{{ 'true' if refine_open else 'false' }}"><span class="version-n">{{ icon('add') }}</span><span>New version{% if branch %} from v{{ version_n }}{% endif %}</span></button>
+    </li>
+  {%- endmacro %}
+  {% if fam.size > 1 or can_refine %}
     <nav class="version-trail" aria-label="Recipe versions">
-      <ol>
-        {% for v, label in versions %}
-          <li class="{% if v.id == recipe.id %}is-current{% endif %}">
-            {% if v.id == recipe.id %}
-              <span class="version-step" aria-current="page"><span class="version-n">v{{ loop.index }}</span><span class="version-label">{{ label }}</span></span>
-            {% else %}
-              <a class="version-step" href="{{ url_for('wizard.recipe', recipe_id=v.id) }}"><span class="version-n">v{{ loop.index }}</span><span class="version-label">{{ label }}</span></a>
-            {% endif %}
-          </li>
-        {% endfor %}
-        {% if can_refine %}
-          <li class="version-new-item">
-            <button type="button" class="version-new" id="refine-toggle" aria-controls="refine"
-                    aria-expanded="{{ 'true' if refine_open else 'false' }}"><span class="version-n">{{ icon('add') }}</span><span>New version</span></button>
-          </li>
-        {% endif %}
-      </ol>
+      {% for row in trail_rows %}
+        <ol class="version-row{% if row['from'] %} version-row--branch{% endif %}">
+          {% if row['from'] %}<li class="version-from" aria-label="Made from v{{ row['from'] }}"><span aria-hidden="true">↳</span> from v{{ row['from'] }}</li>{% endif %}
+          {% for node in row['nodes'] %}
+            <li class="{% if node.current %}is-current{% endif %}{% if node.recipe.is_archived %} is-removed{% endif %}">
+              {% if node.current %}
+                <span class="version-step" aria-current="page"><span class="version-n">v{{ node.n }}</span><span class="version-label">{{ node.label }}</span></span>
+              {% else %}
+                <a class="version-step" href="{{ url_for('wizard.recipe', recipe_id=node.recipe.id) }}"><span class="version-n">v{{ node.n }}</span><span class="version-label">{{ node.label }}</span></a>
+              {% endif %}
+            </li>
+            {% if node.current and can_refine and new_slot == 'end' %}{{ new_version_btn() }}{% endif %}
+          {% endfor %}
+        </ol>
+      {% endfor %}
+      {% if can_refine and new_slot == 'branch' %}
+        <ol class="version-row version-row--branch version-row--new">
+          <li class="version-from"><span aria-hidden="true">↳</span> from v{{ version_n }}</li>
+          {{ new_version_btn(True) }}
+        </ol>
+      {% endif %}
     </nav>
-    {% if not is_latest %}
+    {% if main and main.id != recipe.id and not recipe.is_archived %}
       <div class="notice">
         {{ icon('info') }}
-        <div class="notice-body">You're looking at an earlier version of this recipe.</div>
-        <a class="btn btn--sm btn--primary" href="{{ url_for('wizard.recipe', recipe_id=versions[-1][0].id) }}">Latest version</a>
+        <div class="notice-body">This is v{{ version_n }}. The newest is v{{ fam.number[main.id] }}.</div>
+        <a class="btn btn--sm btn--primary" href="{{ url_for('wizard.recipe', recipe_id=main.id) }}">Go to v{{ fam.number[main.id] }}</a>
       </div>
-    {% elif just_refined %}
-      <p class="refine-done">{{ icon('check') }} Refined: “{{ versions[-1][1] }}”. The earlier version is one tap back in the trail above.</p>
+    {% elif just_refined and parent %}
+      <p class="refine-done">{{ icon('check') }} v{{ version_n }} is ready. v{{ fam.number[parent.id] }} is kept, one tap back in the trail.</p>
     {% endif %}
   {% endif %}
 
@@ -93,7 +118,7 @@
         <span class="confirm-bead" aria-hidden="true"></span>
         <div>
           <h2 id="refine-title">Make version {{ next_v }}</h2>
-          <p class="refine-sub">v{{ versions | length }} stays in the trail, one tap back.</p>
+          <p class="refine-sub">{% if new_slot == 'branch' %}Made from v{{ version_n }}, as a new branch. The other versions stay as they are.{% else %}v{{ version_n }} stays in the trail, one tap back.{% endif %}</p>
         </div>
       </div>
       <form method="post" action="{{ url_for('wizard.recipe_refine', recipe_id=recipe.id) }}" id="refine-form">
@@ -106,6 +131,13 @@
             <button type="button" class="request-chip" data-chip="{{ chip }}">{{ icon('add') }}{{ chip }}</button>
           {% endfor %}
         </div>
+        {# 0.41.0: ticked keeps anything new to what's in stock (ingredients
+           already in the recipe stay either way). Unticked gives free rein. #}
+        <label class="refine-stock">
+          <input type="checkbox" name="use_stock" value="1" id="refine-use-stock" checked>
+          <span><strong>Stick to what's in stock</strong>
+            <span class="refine-stock-hint" data-on="Anything new comes from what you have. What's already in the recipe stays." data-off="Free rein: anything goes, and what you don't have shows as missing.">Anything new comes from what you have. What's already in the recipe stays.</span></span>
+        </label>
         <div class="btn-row">
           <button type="submit" class="btn btn--primary" id="refine-btn">{{ icon('cooking') }} Create v{{ next_v }}</button>
           <button type="button" class="btn btn--ghost" id="refine-cancel">Cancel</button>
@@ -163,7 +195,15 @@
     <p class="recipe-blurb">{{ recipe.blurb }}</p>
   {% endif %}
 
-  {% if recipe.generation and recipe.generation.special_request %}
+  {# What steered this recipe. A later version (0.41.0) shows the change it
+     was made with and, worked out from the ingredient lines, what changed;
+     the original keeps the wizard's "You asked for". #}
+  {% if parent and recipe.generation and recipe.generation.instruction %}
+    <div class="recipe-request">{{ icon('comment') }}
+      <div><span>From v{{ fam.number[parent.id] }}, you asked: <q>{{ recipe.generation.instruction }}</q></span>
+        {% if changes %}<span class="recipe-changes">{{ changes | join(' ') }}</span>{% endif %}</div>
+    </div>
+  {% elif recipe.generation and recipe.generation.special_request %}
     <p class="recipe-request">{{ icon('comment') }}<span>You asked for: <q>{{ recipe.generation.special_request }}</q></span></p>
   {% endif %}
 
@@ -455,19 +495,46 @@
     {# Shown before every refine (including "rewrite the method for N"), so a
        plain question never turns into a full regeneration by accident. #}
     <dialog class="confirm" id="refine-confirm" aria-labelledby="refine-confirm-title">
-      <div class="confirm-head">
-        <span class="confirm-bead" aria-hidden="true"></span>
-        <h2 id="refine-confirm-title">Create a new version?</h2>
+      {# Two faces (0.41.0). Usually: "Create a new version?". When the request
+         reads like a question or a swap, refine.js shows the @kitchen face
+         instead, which answers in the notes without rewriting the recipe. #}
+      <div class="refine-confirm-normal">
+        <div class="confirm-head">
+          <span class="confirm-bead" aria-hidden="true"></span>
+          <h2 id="refine-confirm-title">Create a new version?</h2>
+        </div>
+        <p class="confirm-quote refine-confirm-quote"></p>
+        <p>This sends your change to the AI, which rewrites the whole recipe as <strong>version {{ next_v }}</strong>.
+          Version {{ version_n }} is kept exactly as it is, one tap back in the trail. {{ docs_link('versions') }}</p>
+        <p class="muted">Only want to ask something? Use <span class="mention">{{ kitchen_mention }}</span> in the notes instead. It answers without changing the recipe.</p>
+        <div class="btn-row">
+          <button type="button" class="btn btn--primary" id="refine-confirm-go">{{ icon('cooking') }} Create v{{ next_v }}</button>
+          <button type="button" class="btn btn--ghost" data-refine-cancel>Not yet</button>
+        </div>
       </div>
-      <p class="confirm-quote" id="refine-confirm-quote"></p>
-      <p>This sends your change to the AI, which rewrites the whole recipe as <strong>version {{ next_v }}</strong>.
-        Version {{ versions | length }} is kept exactly as it is, one tap back in the trail. {{ docs_link('versions') }}</p>
-      <p class="muted">Only want to ask something? Use <span class="mention">{{ kitchen_mention }}</span> in the notes instead. It answers without changing the recipe.</p>
-      <div class="btn-row">
-        <button type="button" class="btn btn--primary" id="refine-confirm-go">{{ icon('cooking') }} Create v{{ next_v }}</button>
-        <button type="button" class="btn btn--ghost" id="refine-confirm-cancel">Not yet</button>
+      <div class="refine-confirm-ask" hidden>
+        <div class="confirm-head">
+          {{ source_dot('ai') }}
+          <h2>Ask {{ kitchen_mention }} instead?</h2>
+        </div>
+        <p class="confirm-quote refine-confirm-quote"></p>
+        <p>This reads like a question or a swap. {{ kitchen_mention }} can answer it in the notes without rewriting the recipe, and offers a new version if the change is a big one.</p>
+        <div class="btn-row">
+          <button type="button" class="btn btn--primary" id="refine-confirm-ask">{{ source_dot('ai') }} Ask {{ kitchen_mention }}</button>
+          <button type="button" class="btn btn--secondary" id="refine-confirm-anyway">Make v{{ next_v }} anyway</button>
+          <button type="button" class="btn btn--ghost" data-refine-cancel>Not yet</button>
+        </div>
       </div>
     </dialog>
+    {# "Ask @kitchen" from the dialog posts the request as a question, exactly
+       as if it had been typed into the notes with the mention. #}
+    <form method="post" id="refine-ask-form" hidden data-mention="{{ kitchen_mention }}"
+          data-questions-left="{{ questions_left }}"
+          action="{{ url_for('wizard.recipe_comment_add', recipe_id=recipe.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="viewing_servings" class="js-viewing-servings" value="">
+      <input type="hidden" name="body" value="">
+    </form>
   {% endif %}
 
 {% endblock %}

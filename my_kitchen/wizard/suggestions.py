@@ -22,6 +22,10 @@ A saved Recipe R is suggested iff ALL hold:
   * MUST-USE — every wizard must-use ingredient id appears among R's linked
     ingredient ids.
   * LIVE — not archived (Phase 24).
+  * ONE PER FAMILY (0.41.0) — every live version of a recipe with versions
+    is a candidate (a cut-down v2 may be cookable when the newest isn't), but
+    only one card shows per recipe: the main version if it qualifies, else
+    the newest version that does. See versions.one_per_family.
 
 NOT filtered by: time band (display-only badge), cooking-for / allergies /
 preferences (the allergy machinery stays on the generate path), or servings.
@@ -35,6 +39,16 @@ from sqlalchemy.orm import selectinload
 
 from ..extensions import db
 from ..models import Ingredient, Recipe, RecipeIngredient, SURPRISE_ME, meal_type_takes_cuisine
+from ..versions import families, one_per_family
+
+
+def _provenance(fams):
+    """Chosen AI recipes, anything not from the AI, and (0.41.0) every version
+    of a recipe with versions."""
+    clause = [Recipe.source != "ai", Recipe.was_chosen.is_(True)]
+    if fams:
+        clause.append(Recipe.id.in_(list(fams)))
+    return db.or_(*clause)
 
 
 def _cuisine_constrained(meal_type, cuisine):
@@ -82,8 +96,9 @@ def suggest_recipes(meal_type, cuisine, must_use_ids, limit=None):
     Pure DB + Python; no LLM, no resolver. `meal_type` is always set (the wizard
     defaults Dinner); `cuisine` may be a real cuisine, the Surprise sentinel, or
     None; `must_use_ids` is the wizard's selected_ingredient_ids (may be empty)."""
+    fams = families()
     q = Recipe.query.filter(
-        db.or_(Recipe.source != "ai", Recipe.was_chosen.is_(True)),
+        _provenance(fams),
         Recipe.live(),
         Recipe.meal_type == meal_type,
     )
@@ -91,16 +106,9 @@ def suggest_recipes(meal_type, cuisine, must_use_ids, limit=None):
         q = q.filter(Recipe.cuisine == cuisine)
     q = q.order_by(Recipe.created_at.desc(), Recipe.id.desc())
 
-    out = []
-    for r in q.all():
-        if not _covers_must_use(r, must_use_ids):
-            continue
-        if not _is_cookable(r):
-            continue
-        out.append(r)
-        if limit is not None and len(out) >= limit:
-            break
-    return out
+    out = [r for r in q.all() if _covers_must_use(r, must_use_ids) and _is_cookable(r)]
+    out = one_per_family(out, fams)
+    return out[:limit] if limit is not None else out
 
 
 def cookable_now():
@@ -111,13 +119,14 @@ def cookable_now():
     structured lines (legacy, pre-keystone) are skipped rather than counted as
     vacuously cookable. Lines + their ingredients are eager-loaded, since this
     walks the whole bank on every home page load."""
+    fams = families()
     q = (
         Recipe.query
-        .filter(db.or_(Recipe.source != "ai", Recipe.was_chosen.is_(True)), Recipe.live())
+        .filter(_provenance(fams), Recipe.live())
         .options(selectinload(Recipe.ingredients).selectinload(RecipeIngredient.ingredient)
                  .selectinload(Ingredient.kinds),
                  selectinload(Recipe.ingredients).selectinload(RecipeIngredient.alt_ingredient)
                  .selectinload(Ingredient.kinds))
         .order_by(Recipe.created_at.desc(), Recipe.id.desc())
     )
-    return [r for r in q.all() if r.ingredients and _is_cookable(r)]
+    return one_per_family([r for r in q.all() if r.ingredients and _is_cookable(r)], fams)

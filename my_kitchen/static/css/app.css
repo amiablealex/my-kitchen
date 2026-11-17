@@ -863,6 +863,7 @@ p.recipe-intro { display: block; padding: var(--space-4); }
 .sugg-card:hover { background: var(--surface-2); text-decoration: none; }
 .sugg-card-top { display: flex; align-items: center; }
 .sugg-card-title { font-family: var(--font-display); font-weight: 700; font-size: 1.02rem; line-height: 1.2; }
+.sugg-card-top .version-badge { margin-left: 6px; }
 .sugg-card-tags { display: flex; flex-wrap: wrap; gap: var(--space-1); }
 .sugg-card-serves { font-size: var(--fs-small); }
 @media (min-width: 620px) { .sugg-card { flex-basis: 240px; } }
@@ -1221,6 +1222,8 @@ p.recipe-intro { display: block; padding: var(--space-4); }
 .recipe-request { display: flex; align-items: flex-start; gap: var(--space-2); color: var(--text-muted); font-size: var(--fs-small); }
 .recipe-request .icon { width: 1.1em; height: 1.1em; flex: none; margin-top: 2px; color: var(--accent-1); }
 .recipe-request q { color: var(--text); font-style: italic; }
+.recipe-request > div { display: grid; gap: 2px; }
+.recipe-changes { color: var(--text-muted); }
 
 /* --- usage page (Phase 25) --- */
 .usage-limits { display: grid; gap: var(--space-3); }
@@ -1249,8 +1252,15 @@ p.recipe-intro { display: block; padding: var(--space-4); }
 .retry-form textarea, .refine-panel textarea { width: 100%; resize: vertical; min-height: 3.2em; }
 .choice-nav { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
 
-.version-trail { margin: 0 0 var(--space-3); overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.version-trail ol { display: flex; align-items: center; gap: 0; list-style: none; margin: 0; padding: 2px 0; }
+.version-trail { margin: 0 0 var(--space-3); }
+.version-trail ol { display: flex; align-items: center; gap: 0; list-style: none; margin: 0; padding: 2px 0;
+  overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* 0.41.0: a version made from an earlier one starts its own row, set in a
+   little and led by "↳ from vN". A straight line is still one row. */
+.version-row--branch { padding-left: var(--space-4); margin-top: 2px; }
+.version-from { color: var(--text-muted); font-size: var(--fs-small); white-space: nowrap; padding-right: 2px; }
+.version-from span { margin-right: 3px; }
+.version-trail li.is-removed .version-step { border-style: dashed; }
 .version-trail li { display: flex; align-items: center; flex: none; }
 .version-trail li + li::before { content: ""; width: 18px; height: 2px; background: var(--divider); margin: 0 4px; flex: none; }
 .version-step { display: inline-flex; align-items: center; gap: 6px; max-width: 13rem; min-height: 36px;
@@ -1287,6 +1297,16 @@ a.version-step:hover, a.version-step:focus-visible { border-color: var(--accent-
 .refine-hint { display: flex; gap: var(--space-2); align-items: flex-start; margin: var(--space-4) 0 0;
   padding-top: var(--space-3); border-top: 1px solid var(--divider); color: var(--text-muted); font-size: var(--fs-small); }
 .refine-hint .source-dot { margin: 1px 0 0; width: 16px; height: 16px; }
+/* "Stick to what's in stock" (0.41.0) */
+.refine-stock { display: flex; align-items: flex-start; gap: var(--space-2); margin-top: var(--space-3);
+  font-size: var(--fs-small); cursor: pointer; }
+.refine-stock input { margin: 3px 0 0; flex: none; width: 18px; height: 18px; accent-color: var(--accent-1); }
+.refine-stock strong { display: block; font-weight: 600; color: var(--text); }
+.refine-stock-hint { display: block; color: var(--text-muted); }
+/* The dialog's @kitchen face (0.41.0) */
+.refine-confirm-ask[hidden], .refine-confirm-normal[hidden] { display: none; }
+.refine-confirm-ask .confirm-head .source-dot { width: 22px; height: 22px; flex: none; }
+.refine-confirm-ask .btn-row { flex-wrap: wrap; }
 
 /* --- @kitchen questions (Phase 27) --- */
 .mention { display: inline-block; padding: 0 6px; border-radius: 6px; background: var(--surface-2);

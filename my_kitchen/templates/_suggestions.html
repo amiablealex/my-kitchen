@@ -3,11 +3,14 @@
    (Phase 31). #}
 {% from "_source.html" import source_dot %}
 
-{% macro sugg_card(r) %}
+{# version: shown as a "v2" badge when the card opens a version that isn't
+   the recipe's newest (0.41.0) — versions.version_badges. #}
+{% macro sugg_card(r, version=None) %}
   <a class="sugg-card" href="{{ url_for('wizard.recipe', recipe_id=r.id) }}">
     <span class="sugg-card-top">
       {{ source_dot(r.source) }}
       <span class="sugg-card-title">{{ r.title }}</span>
+      {% if version %}<span class="version-badge" title="An earlier version of this recipe">v{{ version }}</span>{% endif %}
     </span>
     {% if r.meal_type or r.cuisine or r.time_band %}
       <span class="sugg-card-tags">

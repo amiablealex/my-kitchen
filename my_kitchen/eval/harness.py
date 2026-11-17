@@ -145,7 +145,8 @@ def run_eval(config, provider_name=None, temperature=None, only=None, echo=print
         expected = 1 if refine else 2
         if refine:
             system, user_prompt = REFINE_SYSTEM_PROMPT, build_refine_prompt(
-                b["brief"], b["recipe"], b["instruction"])
+                b["brief"], b["recipe"], b["instruction"],
+                stick_to_stock=b.get("stick_to_stock", True), missing=b.get("missing"))
         else:
             system, user_prompt = SYSTEM_PROMPT, build_user_prompt(b["brief"])
         try:

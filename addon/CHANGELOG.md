@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.41.0
+- **Branching versions.** *New version* now works from any version, not just
+  the newest. A version made from an earlier one starts its own row in the
+  trail ("↳ from v1"); a straight line of versions looks as it did. Numbers
+  are the order versions were made in and never change. On an older version,
+  the note says which is newest, with a button to go there.
+- **Stick to what's in stock.** A box on *New version*, ticked by default.
+  Ticked, anything new comes from what you have, and what's already in the
+  recipe stays even if you've run out of it. An ingredient you name in the
+  request is used even when you don't have it. Untick it for free rein. The
+  *No extras* chip is now *Make it work with what I've got*, which swaps out
+  what you don't have.
+- **Remove a version.** In ⋯, *Remove this version* on the last version of a
+  branch (not the original). It goes to the Archive and can be restored. On
+  a recipe with versions, archiving says *Archive recipe (all 3 versions)*
+  and takes them all; restoring brings them all back. Archiving the newest
+  version no longer hides the rest.
+- **What changed.** A later version shows "From v1, you asked: …" and a line
+  worked out from the ingredients: what was added (and whether you have it),
+  what was dropped, and any change in servings.
+- **Questions go to @kitchen.** If a new-version request reads like a
+  question or a swap, the confirmation offers *Ask @kitchen* instead, which
+  answers in the notes without rewriting the recipe. *Make vN anyway* still
+  goes ahead.
+- **Suggestions use every version.** The wizard and the home page's "you
+  could make" line can offer any version that's cookable, one card per
+  recipe: the newest if it fits, otherwise the newest one that does, with a
+  small "v2" badge when it isn't the newest.
+
 ## 0.40.1
 - On an ingredient's page, *Save* now floats at the bottom of the screen the
   whole way down, like the other Manage pages, instead of stopping above the

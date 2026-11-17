@@ -5,6 +5,7 @@ from datetime import datetime
 from ..extensions import db
 from ..models import (CUISINES, MEAL_TYPE_NAMES, Generation, Ingredient, Recipe, RecipeComment,
                       RecipeIngredient, User, utcnow)
+from ..versions import families, reseat_main
 
 history_bp = Blueprint("history", __name__, url_prefix="/history")
 
@@ -28,13 +29,16 @@ def _unlinked_recipe_ids():
     rule as the note on the recipe page (unlinked and not a to-buy line), so
     the filter and the note never disagree. 0.38.0: only recipes that can be
     suggested (Recipe.suggestable) — an unchosen AI recipe never comes up in
-    suggestions, so its links don't matter and pick-one pairs drop out."""
-    return {rid for (rid,) in db.session.query(RecipeIngredient.recipe_id)
+    suggestions, so its links don't matter and pick-one pairs drop out.
+    0.41.0: every version of a recipe with versions can be suggested."""
+    in_families = set(families())
+    rows = (db.session.query(RecipeIngredient.recipe_id, Recipe.source, Recipe.was_chosen)
             .join(Recipe, Recipe.id == RecipeIngredient.recipe_id)
             .filter(RecipeIngredient.ingredient_id.is_(None),
-                    RecipeIngredient.to_buy.is_(False),
-                    db.or_(Recipe.source != "ai", Recipe.was_chosen.is_(True)))
-            .distinct()}
+                    RecipeIngredient.to_buy.is_(False))
+            .distinct())
+    return {rid for rid, source, chosen in rows
+            if source != "ai" or chosen or rid in in_families}
 
 
 def _row_recipes(row):
@@ -195,32 +199,17 @@ def _lineage_context(generations):
 
     - A regenerate round replaces its parent while the parent has no chosen
       recipe: a chain of "Neither — try again" shows as ONE row, the latest.
-    - A finished refine replaces the generation its source recipe came from;
-      the lineage is represented by its newest version's row.
+    - A recipe with versions shows as one row, its main version's (0.41.0:
+      the newest live one, see versions.py). Every other version is hidden;
+      `versions` is each one's number in its family (creation order).
     Error rounds and refines replace nothing."""
-    done = [g for g in generations if (g.status or "done") == "done"]
     regen_parents = {g.parent_generation_id for g in generations
                      if g.kind == "regenerate" and g.status != "error"}
-    refined_sources = {g.source_recipe_id for g in done if g.kind == "refine"}
-    by_recipe_gen = {g.id: g for g in generations}
-
-    versions = {}
-
-    def version(recipe, depth=0):
-        if recipe.id in versions:
-            return versions[recipe.id]
-        gen = by_recipe_gen.get(recipe.generation_id)
-        n = 1
-        if gen is not None and gen.kind == "refine" and gen.source_recipe is not None and depth < 50:
-            n = version(gen.source_recipe, depth + 1) + 1
-        versions[recipe.id] = n
-        return n
-
-    for g in done:
-        for r in g.recipes:
-            version(r)
-    return {"regen_parents": regen_parents, "refined_sources": refined_sources,
-            "versions": versions}
+    fams = families()
+    hidden = {rid for rid, fam in fams.items() if fam.main is None or fam.main.id != rid}
+    versions = {rid: fam.number[rid] for rid, fam in fams.items()}
+    return {"regen_parents": regen_parents, "hidden_versions": hidden,
+            "versions": versions, "families": fams}
 
 
 def _generation_row(gen, ctx=None):
@@ -233,7 +222,12 @@ def _generation_row(gen, ctx=None):
     neither is. A failed generation has no recipes, so it carries its own
     archived_at."""
     if ctx is not None:
-        if any(r.id in ctx["refined_sources"] for r in gen.recipes):
+        # A version that isn't its family's main one is shown through the main
+        # one's row. A pair whose pick was refined has no chosen recipe left
+        # (the pick stood down), so the whole row goes; a pair where only the
+        # unpicked one was refined keeps its pick (0.41.0).
+        if (any(r.id in ctx["hidden_versions"] for r in gen.recipes)
+                and not any(r.was_chosen for r in gen.recipes)):
             return None
         if gen.id in ctx["regen_parents"] and not any(r.was_chosen for r in gen.recipes):
             return None
@@ -345,9 +339,19 @@ def _archive_one(item, ctx):
             _archive([], gen)
             return [], gen.id
         # A picked pair archives the pick; an unpicked pair archives both.
+        # 0.41.0: a row stands for a recipe with all its versions, so the
+        # whole family goes, as from the recipe page's menu.
         recs = [row["chosen"]] if row["status"] == "chosen" else row["recipes"]
-        _archive(recs)
-        return [r.id for r in recs], None
+        fams = ctx()["families"]
+        out = []
+        for r in recs:
+            fam = fams.get(r.id)
+            out.extend(fam.live if fam is not None else [r])
+        _archive(out)
+        for r in recs:
+            if r.id in fams:
+                reseat_main(fams[r.id])
+        return [r.id for r in out], None
     if item.get("recipe_id") is not None:
         recipe = db.session.get(Recipe, int(item["recipe_id"]))
         if recipe is None or recipe.is_archived:
@@ -391,6 +395,12 @@ def row_restore():
     for r in Recipe.query.filter(Recipe.id.in_(ids)).all() if ids else []:
         r.archived_at = None
         r.archived_by_user_id = None
+    if ids:
+        db.session.flush()
+        fams = families()
+        for rid in ids:
+            if rid in fams:
+                reseat_main(fams[rid])
     gids = [int(g) for g in (data.get("generation_ids") or [])]
     if data.get("generation_id") is not None:          # pre-0.30.1 shape
         gids.append(int(data["generation_id"]))
@@ -404,7 +414,22 @@ def row_restore():
 def archived():
     """The archive: every archived recipe, most recently archived first, each
     with a restore button. Failed generations aren't listed — there's nothing
-    in one to restore."""
+    in one to restore. 0.41.0: a recipe archived with all its versions is one
+    row ("all 3 versions"); a version removed on its own is a row of its own,
+    with its number."""
     recipes = (Recipe.query.filter(Recipe.archived_at.isnot(None))
                .order_by(Recipe.archived_at.desc(), Recipe.id.desc()).all())
-    return render_template("history/archived.html", recipes=recipes)
+    fams = families()
+    rows, shown = [], set()
+    for r in recipes:
+        fam = fams.get(r.id)
+        if fam is None:
+            rows.append({"recipe": r, "version": None, "family": None})
+        elif not fam.live:
+            if fam.root.id not in shown:
+                shown.add(fam.root.id)
+                newest = fam.members[-1]
+                rows.append({"recipe": newest, "version": None, "family": fam.size})
+        else:
+            rows.append({"recipe": r, "version": fam.number[r.id], "family": None})
+    return render_template("history/archived.html", rows=rows)

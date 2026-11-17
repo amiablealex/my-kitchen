@@ -27,8 +27,9 @@ from ..llm.providers import provider_reads_images
 from ..llm.qa import answer_question
 from ..llm.service import (
     start_generation, combined_dietary, clean_special_request,
-    start_regeneration, start_refine, regenerate_round, recipe_versions,
+    start_regeneration, start_refine, regenerate_round,
 )
+from ..versions import family_of, reseat_main, version_changes, version_badges
 from ..usage.service import (
     generation_blocked_reason, import_blocked_reason, question_blocked_reason, limits_today,
 )
@@ -301,6 +302,7 @@ def review():
         allergies=allergies, avoid=avoid, preferences=preferences,
         tag_hints=TAG_TYPE_HINTS,
         suggestions=suggestions,
+        version_badges=version_badges(suggestions),
         special_request=w.get("special_request") or "",
         special_request_max=SPECIAL_REQUEST_MAX_CHARS,
         special_request_placeholder=random.choice(SPECIAL_REQUEST_PLACEHOLDERS),
@@ -490,17 +492,15 @@ def regenerate(generation_id):
 @wizard_bp.route("/recipe/<int:recipe_id>/refine", methods=["POST"])
 def recipe_refine(recipe_id):
     """Refine (Phase 26): one revised version of an AI recipe, from a short
-    change request. Only the latest version of a recipe can be refined, which
-    keeps its history a straight line."""
+    change request. 0.41.0: any live version can be refined, so a family can
+    branch; "Stick to what's in stock" arrives as use_stock (ticked by default,
+    and an unticked checkbox sends nothing)."""
     recipe = db.session.get(Recipe, recipe_id)
     if recipe is None:
         abort(404)
     back = url_for("wizard.recipe", recipe_id=recipe.id)
     if recipe.generation is None or recipe.is_archived:
         abort(400)
-    if recipe_versions(recipe)[-1][0].id != recipe.id:
-        flash("There's a newer version of this recipe — refine that one instead.", "info")
-        return redirect(back)
     instruction = clean_special_request(request.form.get("instruction"))
     if not instruction:
         flash("Tell the kitchen what you'd like to change first.", "info")
@@ -510,10 +510,34 @@ def recipe_refine(recipe_id):
         return guard
     time_label = dict(TIME_BANDS).get(recipe.time_band or recipe.generation.time_band, "")
     app = current_app._get_current_object()
-    gen_id = start_refine(app, recipe, instruction, time_label, current_user.id)
+    gen_id = start_refine(app, recipe, instruction, time_label, current_user.id,
+                          stick_to_stock=bool(request.form.get("use_stock")))
     session["active_generation_id"] = gen_id
     session.modified = True
     return redirect(url_for("wizard.generating", generation_id=gen_id))
+
+
+@wizard_bp.route("/recipe/<int:recipe_id>/remove-version", methods=["POST"])
+def recipe_remove_version(recipe_id):
+    """Remove one version (0.41.0). Works like archive (reversible, from the
+    Archive page), but only at the end of a branch and never on the original,
+    which is what archiving the recipe is for. The family's main version is
+    re-pointed, so History and suggestions follow."""
+    recipe = db.session.get(Recipe, recipe_id)
+    if recipe is None:
+        abort(404)
+    fam = family_of(recipe)
+    if not fam.removable(recipe):
+        flash("Only the last version on a branch can be removed.", "info")
+        return redirect(url_for("wizard.recipe", recipe_id=recipe.id))
+    n = fam.number[recipe.id]
+    parent = fam.parent(recipe)
+    recipe.archived_at = utcnow()
+    recipe.archived_by_user_id = current_user.id
+    reseat_main(fam)
+    db.session.commit()
+    flash(f"Removed v{n}. It's in the Archive if you want it back.", "success")
+    return redirect(url_for("wizard.recipe", recipe_id=(parent or fam.main or recipe).id))
 
 
 @wizard_bp.route("/choose/<int:recipe_id>", methods=["POST"])
@@ -531,7 +555,7 @@ def choose(recipe_id):
     return redirect(url_for("wizard.recipe", recipe_id=recipe.id, fresh=1))
 
 
-REFINE_CHIPS = ["Make it spicier", "Simpler method", "No extras — use what I've got", "Make it lighter"]
+REFINE_CHIPS = ["Make it spicier", "Simpler method", "Make it work with what I've got", "Make it lighter"]
 
 
 @wizard_bp.route("/recipe/<int:recipe_id>")
@@ -540,9 +564,13 @@ def recipe(recipe_id):
     if recipe is None:
         abort(404)
     favourited = recipe in current_user.favourite_recipes
-    # Refine lineage (Phase 26): oldest first; the strip only renders past one.
-    versions = recipe_versions(recipe)
-    is_latest = versions[-1][0].id == recipe.id
+    # Versions (Phase 26; a tree since 0.41.0): the trail's rows, where
+    # "+ New version" goes, and what this version changed from its parent.
+    fam = family_of(recipe)
+    trail_rows, new_slot = fam.trail(recipe)
+    main = fam.main
+    parent = fam.parent(recipe)
+    can_refine = recipe.generation is not None and not recipe.is_archived
     # If an allergy was among the brief's combined dietary tags, show a caveat.
     # Re-derived from current tags (no snapshot stored) — consistent with the
     # spec's "an LLM is not a safety guarantee" honesty.
@@ -586,8 +614,12 @@ def recipe(recipe_id):
         cuisine_meal_types=CUISINE_MEAL_TYPES,
         cuisine_allowed=bool(recipe.meal_type and meal_type_takes_cuisine(recipe.meal_type)),
         comment_max_chars=COMMENT_MAX_CHARS,
-        versions=versions, is_latest=is_latest,
-        can_refine=(recipe.generation is not None and is_latest and not recipe.is_archived),
+        fam=fam, trail_rows=trail_rows, new_slot=new_slot,
+        version_n=fam.number[recipe.id], next_v=fam.next_number,
+        main=main, parent=parent,
+        changes=version_changes(parent, recipe) if parent is not None else [],
+        can_remove=fam.removable(recipe),
+        can_refine=can_refine,
         refine_open=bool(request.args.get("fresh")),
         just_refined=bool(request.args.get("refined")),
         refine_chips=REFINE_CHIPS, refine_max=SPECIAL_REQUEST_MAX_CHARS,
@@ -1492,27 +1524,39 @@ def toggle_favourite(recipe_id):
 
 @wizard_bp.route("/recipe/<int:recipe_id>/archive", methods=["POST"])
 def recipe_archive(recipe_id):
-    """Archive one recipe from its own page (Phase 24). Household-wide and
+    """Archive a recipe from its own page (Phase 24). Household-wide and
     reversible: the page stays put and shows a restore banner, which is the
-    undo."""
+    undo. 0.41.0: a recipe with versions archives the whole family (the menu
+    says so); removing one version is recipe_remove_version."""
     recipe = db.session.get(Recipe, recipe_id)
     if recipe is None:
         abort(404)
-    if not recipe.is_archived:
-        recipe.archived_at = utcnow()
-        recipe.archived_by_user_id = current_user.id
-        db.session.commit()
-    flash("Archived — it's out of your lists. Restore it any time.", "success")
+    fam = family_of(recipe)
+    now = utcnow()
+    for r in fam.live:
+        r.archived_at = now
+        r.archived_by_user_id = current_user.id
+    reseat_main(fam)
+    db.session.commit()
+    msg = (f"Archived all {fam.size} versions" if fam.size > 1 else "Archived")
+    flash(msg + " — it's out of your lists. Restore it any time.", "success")
     return redirect(url_for("wizard.recipe", recipe_id=recipe.id))
 
 
 @wizard_bp.route("/recipe/<int:recipe_id>/restore", methods=["POST"])
 def recipe_restore(recipe_id):
+    """Restore (Phase 24). 0.41.0: when the whole family is archived, restore
+    brings every version back; otherwise this version comes back along with
+    any versions it was made from, so it never sits on a missing branch."""
     recipe = db.session.get(Recipe, recipe_id)
     if recipe is None:
         abort(404)
-    recipe.archived_at = None
-    recipe.archived_by_user_id = None
+    fam = family_of(recipe)
+    back = fam.members if not fam.live else [recipe] + fam.ancestors(recipe)
+    for r in back:
+        r.archived_at = None
+        r.archived_by_user_id = None
+    reseat_main(fam)
     db.session.commit()
     flash("Restored to your recipes.", "success")
     nxt = request.form.get("next")
